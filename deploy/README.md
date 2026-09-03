@@ -34,6 +34,12 @@ machine. Marshal reads specs and git history from it and fetches
 `MARSHAL_SPEC_REV` on every poll; it never writes to it. Give the clone a
 read-only deploy key if the repository is private.
 
+When the clone's remote is SSH, put that key on the `marshal-ssh` volume as
+`/home/marshal/.ssh/id_ed25519` with a `known_hosts` beside it. The image
+carries `openssh-client` and `GIT_SSH_COMMAND` pins the key with
+`IdentitiesOnly=yes`, so git never offers another identity and never stops to
+ask — `GIT_TERMINAL_PROMPT=0` would fail the fetch rather than hang.
+
 ## 3. Start the board
 
 ```bash
@@ -56,8 +62,25 @@ marshal init --app-root captain-yard-web \
   --epics _bmad-output/epics.md \
   --public-url https://marshal.<domain> \
   --ports 3100-3110 --database mongodb://127.0.0.1:27101/cy1 --database mongodb://127.0.0.1:27102/cy2
-marshal setup --token <your API token from the board's settings>
+marshal setup --token <a session JWT, see below>
 ```
+
+**`--token` must be a session JWT, not an API token.** The board's *Settings →
+API tokens* page mints `tk_…` tokens, and `setup` rejects them: it calls
+`GET /user/bots`, and Vikunja does not accept API tokens on `/user/*` routes
+whatever scopes are ticked. The error is a flat `401 ... missing, malformed,
+expired or otherwise invalid token provided`, which reads like a bad credential
+rather than the wrong kind of one. Use a login JWT (`eyJ…`) instead:
+
+```bash
+curl -s -X POST https://board.<domain>/api/v1/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"you","password":"..."}' | jq -r .token
+```
+
+Write it to a file with `umask 077` and pass it as `MARSHAL_SETUP_TOKEN` rather
+than on the command line. Session JWTs are short-lived, so mint it immediately
+before the run.
 
 `marshal setup` creates `bot-marshal-<repo>` and `bot-ci-<repo>`, shares the
 project with them, mints their tokens, sets the project's receipt bot and the
@@ -68,6 +91,22 @@ kanban view's claim bucket, and registers the signed webhook to
 - copy the Marshal token (credential store, account `bot-marshal-<repo>`) into
   `.env` as `MARSHAL_TOKEN`;
 - copy `.marshal/webhook-secret` into `.env` as `MARSHAL_WEBHOOK_SECRET`.
+
+### Rotating
+
+`marshal setup --rotate --skip-webhook` mints fresh bot tokens, and prints only
+the **CI** token. Marshal's own token is not shown: it goes into the veans
+credential store, and since the container has no `dbus-launch` the keyring
+write fails and it falls back to
+`/home/marshal/.config/veans/credentials.yml` — which is why `.config` is a
+volume. A fresh `marshal-config` volume comes up root-owned, because that
+directory is not in the image; `chown marshal:marshal /home/marshal/.config`
+before `veans login` writes to it.
+
+Minting does not revoke the previous token. A running `marshal serve` keeps
+polling on the value already in `.env`, so a rotation needs no restart and
+`MARSHAL_TOKEN` does not have to be replaced. If Marshal's token is ever
+genuinely lost, `veans login` mints a new one for the bot user.
 
 Commit `.veans.yml` and `.marshal.yml`; `.marshal/` is gitignored.
 

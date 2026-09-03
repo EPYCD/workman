@@ -10,7 +10,7 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${VERSION}"
 
 # git is what Marshal reads the repository with; wget is the healthcheck.
 FROM alpine:3.20
-RUN apk add --no-cache git ca-certificates tzdata wget \
+RUN apk add --no-cache git openssh-client ca-certificates tzdata wget \
  && adduser -D -u 10001 marshal
 COPY --from=build /out/marshal /usr/local/bin/marshal
 COPY --from=build /out/veans /usr/local/bin/veans
