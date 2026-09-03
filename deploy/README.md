@@ -103,11 +103,38 @@ task stays in review.
 
 ## Updating
 
+Both services build from this checkout, so an update is a pull and a rebuild
+in the same directory:
+
 ```bash
-docker compose pull && docker compose up -d      # prebuilt images
-docker compose build && docker compose up -d     # from this checkout
+cd <this checkout>
+git pull origin main
+
+cd deploy
+docker compose exec db pg_dump -U workman workman > backup-$(date +%F).sql
+docker compose up -d --build
+docker compose logs -f workman        # migrations apply during startup
 ```
 
-Migrations run on start. `marshal serve` is stateless apart from
-`.marshal/` (ledger, pool registry, dedupe flags), kept in the
-`marshal-state` volume.
+**`--build` is not optional.** Each service names an `image:` as well as a
+`build:`, so once an image exists locally a plain `docker compose up -d`
+reuses it: the containers restart, everything looks healthy, and none of the
+new code is running.
+
+**Take the dump first.** Migrations apply themselves when the API starts
+(`pkg/initialize`) and they do not roll back, so the backup has to predate
+the new container.
+
+`WORKMAN_IMAGE` and `MARSHAL_IMAGE` exist for the day these are published to
+a registry. Nothing publishes them today — the upstream release pipeline is
+deliberately unwired and pushed to its own namespace — so the default tags do
+not resolve and `docker compose pull` fails. Build locally.
+
+Marshal is built from `../veans`, meaning the copy inside *this* repository.
+If veans is developed in its own repository, bring the change back here
+before rebuilding, or the deployment silently keeps running the vendored
+copy.
+
+State lives in three volumes: `workman-db` (Postgres), `workman-files`
+(attachments) and `marshal-state` (`.marshal/` — ledger, pool registry,
+dedupe flags). Marshal holds nothing else, so it can be recreated freely.
