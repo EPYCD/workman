@@ -1,0 +1,34 @@
+# Watches go-vikunja/vikunja for commits this fork has not taken.
+#
+# Its own stack: it reads the dormant tracking checkout, not the coordinated
+# clone, and it should keep running when the board is restarted.
+#
+#   cp .env.example .env    # DISCORD_WEBHOOK_URL, optional
+#   docker compose up -d
+#   docker compose logs -f watch
+
+services:
+  watch:
+    # The marshal image already carries git and a POST-capable GNU wget, and it
+    # is built here anyway.
+    image: ${MARSHAL_IMAGE:-ghcr.io/epycd/marshal:latest}
+    restart: unless-stopped
+    # 1000 owns the checkout. Never root: a root-owned object in .git breaks
+    # git for the human who uses this clone, which is the whole point of it.
+    user: "1000:1000"
+    entrypoint: ["/bin/sh", "/watch.sh"]
+    env_file: .env
+    environment:
+      WATCH_INTERVAL: ${WATCH_INTERVAL:-21600}
+    volumes:
+      - ${WATCH_REPO_PATH:-/home/subin/srv/vikunja-pm}:/repo
+      - ./watch.sh:/watch.sh:ro
+      - watch-state:/state
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+volumes:
+  watch-state:

@@ -61,4 +61,7 @@ plans/
 # .marshal/ is per-checkout state (webhook-secret, ledger, dedupe flags) —
 # the trailing slash keeps the committed .marshal.yml config tracked.
 deploy/.env
+# ...and any nested stack's, e.g. deploy/upstream-watch/.env. The plain rule
+# above does not match a subdirectory, and these hold webhook URLs.
+deploy/*/.env
 .marshal/
