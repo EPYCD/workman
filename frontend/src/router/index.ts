@@ -304,6 +304,14 @@ const router = createRouter({
 			},
 		},
 		{
+			path: '/projects/:projectId/settings/gates',
+			name: 'project.settings.gates',
+			component: () => import('@/views/project/settings/ProjectSettingsGates.vue'),
+			meta: {
+				showAsModal: true,
+			},
+		},
+		{
 			path: '/projects/:projectId/settings/discord',
 			name: 'project.settings.discord',
 			component: () => import('@/views/project/settings/ProjectSettingsDiscord.vue'),
