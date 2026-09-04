@@ -80,9 +80,16 @@ services:
       MARSHAL_DISCORD_WEBHOOK: ${DISCORD_WEBHOOK_URL:-}
       MARSHAL_LISTEN: 0.0.0.0:8090
       GIT_TERMINAL_PROMPT: "0"
+      GIT_SSH_COMMAND: ssh -i /home/marshal/.ssh/id_ed25519 -o IdentitiesOnly=yes -o UserKnownHostsFile=/home/marshal/.ssh/known_hosts
     volumes:
       - ${REPO_PATH}:/repo
       - marshal-state:/repo/.marshal
+      # The deploy key for the coordinated repository's SSH remote.
+      - marshal-ssh:/home/marshal/.ssh
+      # veans credential store (bot tokens). No keyring in the container, so
+      # it falls back to a file here; without this volume a container
+      # recreate loses the bot's token and needs `veans login` again.
+      - marshal-config:/home/marshal/.config
     depends_on:
       workman:
         condition: service_healthy
@@ -106,3 +113,5 @@ volumes:
   workman-files:
   workman-db:
   marshal-state:
+  marshal-ssh:
+  marshal-config:
