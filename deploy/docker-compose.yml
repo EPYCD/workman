@@ -99,6 +99,48 @@ services:
       timeout: 5s
       retries: 5
 
+  # Keeps the coordinated clone's working tree current. The spec needs none of
+  # this — Marshal resolves it at origin/main and fetches every tick — but its
+  # own configuration (.marshal.yml, .veans.yml) is read from the working tree
+  # at process start, so a merged setting looked ignored until someone pulled
+  # and restarted by hand.
+  #
+  # Runs as 10001, the clone's owner, so it never leaves a root-owned object in
+  # .git — that would break Marshal's own fetch.
+  #
+  # It does NOT restart Marshal: doing so needs /var/run/docker.sock, which is
+  # root-equivalent on the host and too much standing privilege for a loop that
+  # needs it a few times a year. When a config file changes it logs ACTION
+  # NEEDED and you run `docker compose restart marshal`. To automate it anyway,
+  # mount the socket and add the host's docker group to this service.
+  repo-sync:
+    # The marshal image itself: it already carries git, openssh-client, and a
+    # `marshal` user at uid 10001. ssh refuses to run when the uid it is given
+    # has no /etc/passwd entry, which rules out a bare git image here.
+    image: ${MARSHAL_IMAGE:-ghcr.io/epycd/marshal:latest}
+    restart: unless-stopped
+    user: "10001:10001"
+    entrypoint: ["/bin/sh", "/repo-sync.sh"]
+    environment:
+      SYNC_INTERVAL: ${REPO_SYNC_INTERVAL:-300}
+      SYNC_REF: ${MARSHAL_BASE_BRANCH:-origin/main}
+      MARSHAL_CONTAINER: deploy-marshal-1
+      # Same key and known_hosts Marshal fetches with.
+      GIT_SSH_COMMAND: ssh -i /home/marshal/.ssh/id_ed25519 -o IdentitiesOnly=yes -o UserKnownHostsFile=/home/marshal/.ssh/known_hosts
+      GIT_TERMINAL_PROMPT: "0"
+    volumes:
+      - ${REPO_PATH}:/repo
+      - ./repo-sync.sh:/repo-sync.sh:ro
+      # The deploy key, so the fetch authenticates the same way Marshal's does.
+      - marshal-ssh:/home/marshal/.ssh
+    depends_on:
+      - marshal
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
