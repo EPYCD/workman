@@ -26,6 +26,9 @@ export default class ProjectModel extends AbstractModel<IProject> implements IPr
 	backgroundBlurHash = ''
 	parentProjectId = 0
 	receiptBotId = 0
+	discordUsername = ''
+	discordAvatarUrl = ''
+	discordEvents = ''
 	views: IProjectView[] = []
 	
 	created: Date = null

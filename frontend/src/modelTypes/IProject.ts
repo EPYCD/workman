@@ -21,6 +21,9 @@ export interface IProject extends IAbstract {
 	backgroundBlurHash: string
 	parentProjectId: number
 	receiptBotId: number
+	discordUsername: string
+	discordAvatarUrl: string
+	discordEvents: string
 	views: IProjectView[]
 	
 	created: Date

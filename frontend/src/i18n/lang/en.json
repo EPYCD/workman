@@ -588,6 +588,18 @@
         "title": "Favorites"
       }
     },
+    "discord": {
+      "title": "Discord relay",
+      "explanation": "How Marshal presents this project in Discord. Changes apply on its next poll, so there is nothing to restart.",
+      "webhookLivesElsewhere": "The channel webhook URL is not set here. It is a credential, so it stays in the relay's own environment (MARSHAL_DISCORD_WEBHOOK) rather than in the database, where it would end up in every backup.",
+      "username": "Post as",
+      "usernamePlaceholder": "Leave empty to use the webhook's own name",
+      "avatar": "Avatar URL",
+      "events": "Only these events",
+      "eventsPlaceholder": "task.done,receipt.red",
+      "eventsHelp": "Comma separated. Leave empty to post everything the relay knows about: claims, releases, done, gate receipts, pull requests and findings.",
+      "saveSuccess": "The Discord relay settings were saved successfully."
+    },
     "webhooks": {
       "title": "Webhooks",
       "targetUrl": "Target URL",
