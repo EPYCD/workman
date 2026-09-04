@@ -105,6 +105,21 @@ func checkDoneAllowed(s *xorm.Session, a web.Auth, task *Task, current *TaskBuck
 		return nil
 	}
 
+	// A container is exempt. It has no branch, no commit and no pull request,
+	// so a truthful receipt for it cannot exist, and requiring one wedges it:
+	// it cannot be closed, and it cannot declare paths to satisfy anything
+	// else without colliding with its own children. The exemption does not
+	// waive the rule, it inherits it — a container is complete only when every
+	// child is done, and each of those had to pass this same gate. A container
+	// with an open child is not complete and is not exempt.
+	container, err := isCompleteContainer(s, task.ID)
+	if err != nil {
+		return err
+	}
+	if container {
+		return nil
+	}
+
 	has, err := s.Where("task_id = ? AND merged = ? AND passed = ?", task.ID, true, true).Exist(&TaskReceipt{})
 	if err != nil {
 		return err
@@ -129,4 +144,27 @@ func checkDoneAllowed(s *xorm.Session, a web.Auth, task *Task, current *TaskBuck
 		}
 	}
 	return nil
+}
+
+// isCompleteContainer reports whether the task has subtasks and every one of
+// them is done. A task with no subtasks is not a container, so the common case
+// costs one indexed lookup and stops there.
+func isCompleteContainer(s *xorm.Session, taskID int64) (bool, error) {
+	relations := []*TaskRelation{}
+	if err := s.Where("task_id = ? AND relation_kind = ?", taskID, RelationKindSubtask).Find(&relations); err != nil {
+		return false, err
+	}
+	if len(relations) == 0 {
+		return false, nil
+	}
+
+	ids := make([]int64, 0, len(relations))
+	for _, relation := range relations {
+		ids = append(ids, relation.OtherTaskID)
+	}
+	open, err := s.In("id", ids).And("done = ?", false).Count(&Task{})
+	if err != nil {
+		return false, err
+	}
+	return open == 0, nil
 }

@@ -241,3 +241,55 @@ func TestProjectReceiptBot(t *testing.T) {
 		db.AssertExists(t, "projects", map[string]interface{}{"id": 1, "receipt_bot_id": 0}, false)
 	})
 }
+
+// A container has no branch, commit or pull request, so it can never hold a
+// receipt of its own. It is exempt — but only once every child is done, and
+// each of those had to pass this same gate, so the exemption inherits their
+// receipts rather than waiving the rule.
+func TestDoneContainerExemption(t *testing.T) {
+	user1 := &user.User{ID: 1}
+
+	t.Run("a container with an open child is not exempt", func(t *testing.T) {
+		db.LoadAndAssertFixtures(t)
+		receiptProject(t)
+		s := db.NewSession()
+		defer s.Close()
+
+		// Task 1 has subtask 29 in the fixtures, and 29 is not done.
+		err := (&Task{ID: 1, Done: true}).Update(s, user1)
+		require.Error(t, err)
+		assert.True(t, IsErrTaskDoneRequiresReceipt(err), "got %v", err)
+		_ = s.Rollback()
+	})
+
+	t.Run("a container closes without a receipt once every child is done", func(t *testing.T) {
+		db.LoadAndAssertFixtures(t)
+		bot := receiptProject(t)
+		s := db.NewSession()
+		defer s.Close()
+
+		// The child closes the only way it can: through the gate.
+		require.NoError(t, (&TaskReceipt{TaskID: 29, CommitSHA: "abc1234", Merged: true, Gates: greenGates()}).Create(s, bot))
+		require.NoError(t, (&Task{ID: 29, Done: true}).Update(s, user1))
+
+		// The parent now closes with no receipt of its own.
+		require.NoError(t, (&Task{ID: 1, Done: true}).Update(s, user1))
+		require.NoError(t, s.Commit())
+		db.AssertExists(t, "tasks", map[string]interface{}{"id": 1, "done": true}, false)
+	})
+
+	t.Run("a leaf with no children is still gated", func(t *testing.T) {
+		db.LoadAndAssertFixtures(t)
+		receiptProject(t)
+		s := db.NewSession()
+		defer s.Close()
+
+		// Task 3 is open and appears in no relation at all, so nothing about
+		// this change reaches it. (Task 2 would be useless here: the fixtures
+		// have it already done, so setting it done never reaches the gate.)
+		err := (&Task{ID: 3, Done: true}).Update(s, user1)
+		require.Error(t, err)
+		assert.True(t, IsErrTaskDoneRequiresReceipt(err), "got %v", err)
+		_ = s.Rollback()
+	})
+}
