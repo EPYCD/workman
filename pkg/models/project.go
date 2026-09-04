@@ -62,6 +62,16 @@ type Project struct {
 	// it, and the user who submitted a task for review may not close it.
 	ReceiptBotID int64 `xorm:"bigint null" json:"receipt_bot_id" doc:"The bot user whose token alone may post gate receipts. While set, a task cannot be marked done without a merged, passing receipt, and the user who moved it to review cannot close it. 0 disables both guards. Admins only."`
 
+	// How the Discord relay presents this project. The webhook URL itself is
+	// deliberately absent: it is a credential, it belongs in the relay's own
+	// environment (MARSHAL_DISCORD_WEBHOOK), and putting it here would place
+	// it in every database backup and in reach of anyone with read access to
+	// the row. What lives here is only the behaviour an admin wants to change
+	// without a redeploy.
+	DiscordUsername  string `xorm:"varchar(80) null" json:"discord_username" doc:"The name the Discord relay posts under. Empty uses the webhook's own name."`
+	DiscordAvatarURL string `xorm:"text null" json:"discord_avatar_url" doc:"The avatar the Discord relay posts with. Empty uses the webhook's own avatar."`
+	DiscordEvents    string `xorm:"text null" json:"discord_events" doc:"Comma-separated event names the relay posts, e.g. \"task.done,receipt.red\". Empty posts everything the relay knows."`
+
 	// The id of the file this project has set as background
 	BackgroundFileID int64 `xorm:"null" json:"-"`
 	// Holds extra information about the background set since some background providers require attribution or similar. If not null, the background can be accessed at /projects/{projectID}/background

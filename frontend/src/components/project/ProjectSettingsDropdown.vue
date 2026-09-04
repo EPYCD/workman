@@ -111,6 +111,12 @@
 				{{ $t('project.gates.title') }}
 			</DropdownItem>
 			<DropdownItem
+				:to="{ name: 'project.settings.discord', params: { projectId: project.id } }"
+				icon="comments"
+			>
+				{{ $t('project.discord.title') }}
+			</DropdownItem>
+			<DropdownItem
 				:to="{ name: 'project.createFromParent', params: { parentProjectId: project.id } }"
 				icon="layer-group"
 			>
