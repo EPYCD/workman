@@ -588,6 +588,16 @@
         "title": "Favorites"
       }
     },
+    "gates": {
+      "title": "CI gates",
+      "explanation": "When a receipt bot is set, a task can only be marked done after CI posts a merged, passing gate receipt for it, and whoever moved it into review cannot be the one to close it. Tasks with sub-tasks are exempt: they have no commit of their own, and they close once every sub-task is done.",
+      "receiptBot": "Receipt bot",
+      "noGate": "No gate \u2014 anyone can mark a task done",
+      "currentBot": "Bot #{id} (not owned by you)",
+      "noGateHelp": "Both guards are off: any task can be marked done without a receipt, and whoever moved it into review can close it.",
+      "gateOnHelp": "Only this bot's receipts end a task. Give its token to CI as the WORKMAN_TOKEN secret.",
+      "saveSuccess": "The gate settings were saved successfully."
+    },
     "webhooks": {
       "title": "Webhooks",
       "targetUrl": "Target URL",
