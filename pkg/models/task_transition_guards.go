@@ -146,7 +146,6 @@ func checkDoneAllowed(s *xorm.Session, a web.Auth, task *Task, current *TaskBuck
 	return nil
 }
 
-
 // isCompleteContainer reports whether the task has subtasks and every one of
 // them is done. A task with no subtasks is not a container, so the common case
 // costs one indexed lookup and stops there.
