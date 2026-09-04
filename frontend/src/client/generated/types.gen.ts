@@ -1627,6 +1627,18 @@ export type Project = {
      */
     description?: string;
     /**
+     * The avatar the Discord relay posts with. Empty uses the webhook's own avatar.
+     */
+    discord_avatar_url?: string;
+    /**
+     * Comma-separated event names the relay posts, e.g. "task.done,receipt.red". Empty posts everything the relay knows.
+     */
+    discord_events?: string;
+    /**
+     * The name the Discord relay posts under. Empty uses the webhook's own name.
+     */
+    discord_username?: string;
+    /**
      * The hex color of this project, without the leading #.
      */
     hex_color?: string;
@@ -1743,6 +1755,18 @@ export type ProjectReadBody = {
      * The description of the project.
      */
     description?: string;
+    /**
+     * The avatar the Discord relay posts with. Empty uses the webhook's own avatar.
+     */
+    discord_avatar_url?: string;
+    /**
+     * Comma-separated event names the relay posts, e.g. "task.done,receipt.red". Empty posts everything the relay knows.
+     */
+    discord_events?: string;
+    /**
+     * The name the Discord relay posts under. Empty uses the webhook's own name.
+     */
+    discord_username?: string;
     /**
      * The hex color of this project, without the leading #.
      */
@@ -4547,6 +4571,18 @@ export type ProjectWritable = {
      */
     description?: string;
     /**
+     * The avatar the Discord relay posts with. Empty uses the webhook's own avatar.
+     */
+    discord_avatar_url?: string;
+    /**
+     * Comma-separated event names the relay posts, e.g. "task.done,receipt.red". Empty posts everything the relay knows.
+     */
+    discord_events?: string;
+    /**
+     * The name the Discord relay posts under. Empty uses the webhook's own name.
+     */
+    discord_username?: string;
+    /**
      * The hex color of this project, without the leading #.
      */
     hex_color?: string;
@@ -4615,6 +4651,18 @@ export type ProjectReadBodyWritable = {
      * The description of the project.
      */
     description?: string;
+    /**
+     * The avatar the Discord relay posts with. Empty uses the webhook's own avatar.
+     */
+    discord_avatar_url?: string;
+    /**
+     * Comma-separated event names the relay posts, e.g. "task.done,receipt.red". Empty posts everything the relay knows.
+     */
+    discord_events?: string;
+    /**
+     * The name the Discord relay posts under. Empty uses the webhook's own name.
+     */
+    discord_username?: string;
     /**
      * The hex color of this project, without the leading #.
      */
