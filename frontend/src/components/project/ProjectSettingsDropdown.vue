@@ -105,6 +105,12 @@
 				{{ $t('project.webhooks.title') }}
 			</DropdownItem>
 			<DropdownItem
+				:to="{ name: 'project.settings.gates', params: { projectId: project.id } }"
+				icon="shield-alt"
+			>
+				{{ $t('project.gates.title') }}
+			</DropdownItem>
+			<DropdownItem
 				:to="{ name: 'project.createFromParent', params: { parentProjectId: project.id } }"
 				icon="layer-group"
 			>
