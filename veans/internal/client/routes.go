@@ -60,6 +60,11 @@ func PermissionsForBot(routes map[string]RouteGroup) map[string][]string {
 			"read", "update_bulk", "claim",
 			"scope", "scope_get", "scope_put", "scope_delete",
 			"leases", "leases_delete", "leases_heartbeat", "receipts",
+			// Branch lag: Marshal writes it, veans check/sync/update read it.
+			// All four spellings for the same reason as scope — which of the
+			// three methods takes the bare subkey depends on unspecified
+			// route-init order, and the runtime intersection drops the rest.
+			"lag", "lag_get", "lag_put", "lag_delete",
 		},
 		// Project access: read project metadata, manage buckets & move
 		// tasks between them. tasks_by-index resolves #NN / PROJ-NN.
@@ -99,7 +104,11 @@ func PermissionsForBot(routes map[string]RouteGroup) map[string][]string {
 // silently and green.
 func PermissionsForCI(routes map[string]RouteGroup) map[string][]string {
 	wanted := map[string][]string{
-		"tasks":          {"read_one", "update", "read", "receipts", "receipts_post"},
+		// lag is read-only for CI: the merge hook's check mode refuses a PR
+		// whose branch is behind in a file it owns, and needs to see the
+		// record to do it. It has no business writing one — that is Marshal's
+		// job, and Marshal has its own identity.
+		"tasks":          {"read_one", "update", "read", "receipts", "receipts_post", "lag", "lag_get"},
 		"tasks_comments": {"create", "read_all"},
 		"projects":       {"read_one", "tasks_by-index", "tasks_by_index", "views_buckets_tasks", "views_buckets_tasks_put", "leases", "scope_check", "webhooks", "webhooks_get"},
 		"projects_views": {"read_one", "read_all"},

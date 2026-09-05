@@ -171,6 +171,39 @@ in your own worktree. It changes nothing — no fetch, no rebase, no write to th
 working tree. An agent's worktree is frequently dirty mid-edit, and a
 half-finished rebase in one is materially worse than a stale branch.
 
+**The review gate.** `veans update -s in-review` and the merge hook's `check`
+mode refuse at severity `owned`, as a CONFLICT in the same shape as the
+gate-receipt refusal:
+
+```
+CONFLICT: #51 is behind origin/main in a file it owns.
+  captain-yard-web/src/server/db/schema.ts — landed by #43 (141e6cd)
+Rebase and re-run the gates: veans sync #51
+Override with --force (recorded on the task).
+```
+
+The reason to refuse is not tidiness: the conflict is certain, so the diff a
+reviewer reads is not the diff that will merge, and the gates that just passed
+did not run against what will land. `--force` posts the override as a comment
+on the task, so the next reader knows the branch went to review knowingly
+stale; Marshal picks that up from the board's webhook into its ledger.
+
+`affected` gates nothing, here or anywhere. It is a warning from `veans check`
+and a line on the board. Those collisions are common and usually harmless, and
+failing on them would train everyone to override by reflex — which would then
+defeat the gate on `owned` too.
+
+Both gates are advisory infrastructure: a board that has never had lag computed
+reports nothing and refuses nothing. A gate that cannot be evaluated is not a
+gate. Note that the enforcement is in the CLI and the PR check, not in the
+board — a direct API call can still move a task to review while behind.
+
+**The Discord card** fires only on the transition INTO `owned`, once. Not on
+`affected`, not on `elsewhere`, and not again while the severity is unchanged.
+A channel that fires on every poll is a channel everyone mutes, and the `owned`
+card is then lost along with it. A branch that catches up has its remembered
+severity forgotten too, so falling behind again is announced again.
+
 ### The service
 
 `marshal serve` listens on `serve.listen`:

@@ -17,6 +17,7 @@
 package engine
 
 import (
+	"path/filepath"
 	"testing"
 
 	"code.vikunja.io/veans/internal/client"
@@ -136,6 +137,61 @@ func TestScopeRevision(t *testing.T) {
 	}
 	if scopeRevision(&client.Task{}) != "" {
 		t.Error("no scope, no revision")
+	}
+}
+
+// TestLagCardFiresOnTransitionIntoOwnedOnly is the notification rule. A
+// channel that fires on every poll is a channel everyone mutes, and the owned
+// card is then lost along with it — so the only moment worth interrupting
+// someone for is the one where a conflict stopped being hypothetical.
+//
+// It exercises the flag store directly, which is what announceLag gates on:
+// Seen records the new severity and reports whether it was already that, so a
+// card fires exactly on a change into owned.
+func TestLagCardFiresOnTransitionIntoOwnedOnly(t *testing.T) {
+	dir := t.TempDir()
+	flags, err := openFlags(filepath.Join(dir, "flags.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// wouldCard mirrors announceLag's decision, without a Discord client.
+	wouldCard := func(severity string) bool {
+		changed := !flags.Seen(lagFlagKey(51), severity)
+		return changed && severity == client.LagSeverityOwned
+	}
+
+	if wouldCard(client.LagSeverityElsewhere) {
+		t.Error("elsewhere must never card")
+	}
+	if wouldCard(client.LagSeverityAffected) {
+		t.Error("affected must never card")
+	}
+	if !wouldCard(client.LagSeverityOwned) {
+		t.Error("crossing into owned must card")
+	}
+	// Still owned on the next poll, and the one after: nothing has changed,
+	// so nothing is said.
+	if wouldCard(client.LagSeverityOwned) {
+		t.Error("a card must not repeat while the severity is unchanged")
+	}
+	if wouldCard(client.LagSeverityOwned) {
+		t.Error("still no")
+	}
+	// Dropping to affected is not a card either.
+	if wouldCard(client.LagSeverityAffected) {
+		t.Error("falling back to affected must not card")
+	}
+	// Climbing back into owned is a new transition, and is.
+	if !wouldCard(client.LagSeverityOwned) {
+		t.Error("crossing into owned again must card again")
+	}
+
+	// A branch that catches up has its record cleared, and the remembered
+	// severity with it — otherwise falling behind again would be silent.
+	flags.Clear(lagFlagKey(51))
+	if !wouldCard(client.LagSeverityOwned) {
+		t.Error("after catching up, falling behind again must card")
 	}
 }
 

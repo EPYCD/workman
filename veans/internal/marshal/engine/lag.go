@@ -25,6 +25,9 @@ import (
 
 	"code.vikunja.io/veans/internal/client"
 	"code.vikunja.io/veans/internal/marshal/board"
+	"code.vikunja.io/veans/internal/marshal/discord"
+	"code.vikunja.io/veans/internal/marshal/ledger"
+	"code.vikunja.io/veans/internal/marshal/notify"
 	"code.vikunja.io/veans/internal/marshal/pathpattern"
 	"code.vikunja.io/veans/internal/marshal/worktree"
 )
@@ -277,7 +280,9 @@ func (e *Engine) PublishLag(ctx context.Context, snap *board.Snapshot, rep *LagR
 			continue
 		}
 		written++
-		e.applyLagLabel(ctx, snap.ByID[b.TaskID], b.Lag.Blocking())
+		t := snap.ByID[b.TaskID]
+		e.applyLagLabel(ctx, t, b.Lag.Blocking())
+		e.announceLag(ctx, t, b.Lag)
 	}
 
 	// A branch that has caught up must stop being reported as behind. This is
@@ -292,8 +297,67 @@ func (e *Engine) PublishLag(ctx context.Context, snap *board.Snapshot, rep *LagR
 			cleared++
 		}
 		e.applyLagLabel(ctx, t, false)
+		// Forget the severity so a branch that falls behind again is carded
+		// again. Without this, catching up would silently disarm the alarm.
+		e.flags.Clear(lagFlagKey(t.ID))
 	}
 	return written, cleared
+}
+
+// announceLag posts a Discord card when a task crosses INTO owned, and only
+// then. Not on affected, not on elsewhere, and not again while the severity is
+// unchanged.
+//
+// A channel that fires on every poll is a channel everyone mutes, and the
+// owned card is then lost along with it. The moment worth interrupting someone
+// for is the one where a conflict stopped being hypothetical.
+func (e *Engine) announceLag(ctx context.Context, t *client.Task, lag *client.TaskLag) {
+	if t == nil || lag == nil {
+		return
+	}
+	// Seen records the new severity and reports whether it was already that,
+	// so this is true exactly on a change.
+	changed := !e.flags.Seen(lagFlagKey(t.ID), lag.Severity)
+	if !changed || !lag.Blocking() {
+		return
+	}
+	owned := lag.OwnedCollisions()
+	files := make([]string, 0, len(owned))
+	for i, c := range owned {
+		if i == 6 {
+			files = append(files, fmt.Sprintf("…and %d more", len(owned)-6))
+			break
+		}
+		files = append(files, fmt.Sprintf("%s — landed by %s", c.Path, landedByLabel(c)))
+	}
+	summary := fmt.Sprintf("Marshal: %s is %d commit%s behind %s in %d file%s it owns. A conflict is certain; review will refuse it.",
+		t.Identifier, lag.CommitsBehind, plural(lag.CommitsBehind), lag.Base, len(owned), plural(len(owned)))
+	e.log(ledger.Entry{Action: "lag", TaskID: t.ID, Subject: lag.Branch, Outcome: "blocking", Reason: "the base moved inside a path this task owns"})
+	e.Notify(ctx, "lag", e.Format.FromFinding(notify.Finding{
+		Kind: "lag", TaskID: t.ID, Identifier: t.Identifier, Title: t.Title, Summary: summary,
+		Details: []discord.Field{{Name: "Files", Value: strings.Join(files, "\n")}},
+	}))
+}
+
+func lagFlagKey(taskID int64) string { return fmt.Sprintf("lag:%d", taskID) }
+
+// landedByLabel names who moved a file, keeping the sha when no Refs: trailer
+// attributed it to a task.
+func landedByLabel(c *client.LagCollision) string {
+	sha := c.LandedInSHA
+	if len(sha) > 7 {
+		sha = sha[:7]
+	}
+	switch {
+	case c.LandedByIdentifier != "" && sha != "":
+		return fmt.Sprintf("%s in %s", c.LandedByIdentifier, sha)
+	case c.LandedByIdentifier != "":
+		return c.LandedByIdentifier
+	case sha != "":
+		return sha
+	default:
+		return "an unknown commit"
+	}
 }
 
 func (e *Engine) applyLagLabel(ctx context.Context, t *client.Task, want bool) {

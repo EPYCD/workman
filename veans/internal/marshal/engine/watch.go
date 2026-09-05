@@ -273,7 +273,7 @@ func (e *Engine) announceReferences(ctx context.Context, snap *board.Snapshot, r
 		if ids := brokenBy[t.ID]; len(ids) > 0 {
 			if !e.flags.Seen(fmt.Sprintf("broken:%d", t.ID), strings.Join(ids, ",")) {
 				n++
-				msg := fmt.Sprintf("Marshal: %s no longer resolve%s in the spec (%s).", strings.Join(ids, ", "), plural(len(ids), "s", ""), rep.Rev)
+				msg := fmt.Sprintf("Marshal: %s no longer resolve%s in the spec (%s).", strings.Join(ids, ", "), plural(len(ids)), rep.Rev)
 				_ = e.Board.Comment(ctx, t.ID, "<p>"+html.EscapeString(msg)+"</p>")
 				_ = e.Board.EnsureLabel(ctx, t, board.LabelBroken, "ef4444")
 				e.log(ledger.Entry{Action: "broken_ref", TaskID: t.ID, Subject: strings.Join(ids, ","), Outcome: "flagged"})
@@ -345,7 +345,7 @@ func (e *Engine) announceBranches(ctx context.Context, snap *board.Snapshot, bas
 						break
 					}
 				}
-				msg := fmt.Sprintf("Marshal: branch %s touches %d file%s outside this task's claim and %d leased by another task.", c.Branch, c.Result.Strays, plural(c.Result.Strays, "s", ""), c.Result.Collisions)
+				msg := fmt.Sprintf("Marshal: branch %s touches %d file%s outside this task's claim and %d leased by another task.", c.Branch, c.Result.Strays, plural(c.Result.Strays), c.Result.Collisions)
 				_ = e.Board.Comment(ctx, t.ID, "<p>"+html.EscapeString(msg)+"</p><ul><li>"+html.EscapeString(strings.Join(files, "</li><li>"))+"</li></ul>")
 				_ = e.Board.EnsureLabel(ctx, t, board.LabelStray, "ef4444")
 				e.log(ledger.Entry{Action: "stray", TaskID: t.ID, Subject: c.Branch, Outcome: "flagged", Metadata: map[string]any{"strays": c.Result.Strays, "collisions": c.Result.Collisions}})
@@ -396,9 +396,11 @@ func (e *Engine) HandleDelivery(ctx context.Context, d notify.Delivery) {
 	e.Notify(ctx, d.EventName, e.Format.FromDelivery(d))
 }
 
-func plural(n int, many, one string) string {
+// plural is the "s" on a counted noun. Every caller wants the same two
+// strings, so it takes none.
+func plural(n int) string {
 	if n == 1 {
-		return one
+		return ""
 	}
-	return many
+	return "s"
 }

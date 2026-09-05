@@ -270,6 +270,11 @@ errors, decide on the warnings, then `veans plan plan.json`.
   to edit and a conflict is certain — rebase and re-run your gates first.
   AFFECTED means something you read changed: no conflict, but your assumptions
   may be stale. It prints commands and never runs them; your worktree is yours.
+- `veans update -s in-review` REFUSES while you are behind in a file you own,
+  and so does the PR check. That is not bureaucracy: the diff a reviewer would
+  read is not the diff that will merge. Rebase, re-run the gates, then move it.
+  `--force` exists for the case where you know the change is trivially
+  rebasable, and posts a comment on the task saying you used it.
 - Branch labels: `veans:branch:<branch-name>` — `veans claim` adds the current branch
   automatically, UNLESS you are on the repository default branch, where it adds
   nothing and warns. Branch first, or claim again after branching, or pass

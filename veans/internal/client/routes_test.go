@@ -37,7 +37,8 @@ func serverRoutes() map[string]RouteGroup {
 	return map[string]RouteGroup{
 		"tasks": group("read_one", "read_all", "create", "update", "position", "read",
 			"update_bulk", "claim", "scope", "scope_get", "scope_put", "scope_delete",
-			"leases", "leases_delete", "leases_heartbeat", "receipts", "receipts_post"),
+			"leases", "leases_delete", "leases_heartbeat", "receipts", "receipts_post",
+			"lag", "lag_put", "lag_delete"),
 		"projects": group("read_one", "read_all", "tasks_by-index", "views_buckets",
 			"views_buckets_put", "views_buckets_post", "views_buckets_delete",
 			"views_buckets_tasks", "leases", "views_readiness", "scope_check", "plan",
@@ -74,6 +75,29 @@ func TestPermissionsForBotGrantsScopeCheck(t *testing.T) {
 	perms := PermissionsForBot(serverRoutes())
 	if !slices.Contains(perms["projects"], "scope_check") {
 		t.Fatalf("projects grant = %v", perms["projects"])
+	}
+}
+
+// TestGrantsCoverBranchLag: the merge hook's check mode refuses a PR whose
+// branch is behind in a file it owns, which means reading the lag record. A
+// route added to the server without being added here is silently dropped by
+// pickPermissions and fails as a 401 that reads like an expired token — the
+// exact shape of the scope-check outage.
+func TestGrantsCoverBranchLag(t *testing.T) {
+	ci := PermissionsForCI(serverRoutes())
+	if !slices.Contains(ci["tasks"], "lag") {
+		t.Errorf("the CI token must be able to read lag: %v", ci["tasks"])
+	}
+	// It has no business writing one; that is Marshal's job.
+	if slices.Contains(ci["tasks"], "lag_put") || slices.Contains(ci["tasks"], "lag_delete") {
+		t.Errorf("the CI token must not write lag: %v", ci["tasks"])
+	}
+
+	bot := PermissionsForBot(serverRoutes())
+	for _, want := range []string{"lag", "lag_put", "lag_delete"} {
+		if !slices.Contains(bot["tasks"], want) {
+			t.Errorf("the worker token needs %q: %v", want, bot["tasks"])
+		}
 	}
 }
 

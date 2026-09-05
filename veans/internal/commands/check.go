@@ -18,6 +18,8 @@ package commands
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -97,6 +99,12 @@ task, or hand the file back. The PR check runs the same query.`,
 			if err := json.NewEncoder(cmd.OutOrStdout()).Encode(res); err != nil {
 				return err
 			}
+			// Lag is not part of the scope verdict and does not change the
+			// exit code here — `affected` gates nothing, anywhere, and the
+			// review gate is where `owned` stops the work. But a worker
+			// running check is about to open a PR, which is exactly the
+			// moment to know the base has moved underneath them.
+			warnLag(cmd.Context(), rt, ids, cmd.ErrOrStderr())
 			if !res.OK {
 				return output.New(output.CodeConflict, "%d file(s) outside your tasks' scope, %d leased by another task — see stdout for the verdicts", res.Strays, res.Collisions)
 			}
@@ -107,6 +115,32 @@ task, or hand the file back. The PR check runs the same query.`,
 	cmd.Flags().BoolVar(&staged, "staged", false, "check the index instead of commits (pre-commit use)")
 	cmd.Flags().StringSliceVar(&tasks, "task", nil, "task references to check against instead of the commits' Refs: trailers (repeatable)")
 	return cmd
+}
+
+// warnLag reports, on stderr, what the integration branch has moved under the
+// tasks being checked. It never changes the outcome: the scope check answers
+// "are you inside your claim", and lag answers "has your claim moved under
+// you" — two different questions that must not be conflated into one exit
+// code.
+func warnLag(ctx context.Context, rt *runtime, ids []int64, w io.Writer) {
+	for _, id := range ids {
+		lag, err := rt.client.GetTaskLag(ctx, id)
+		if err != nil || lag == nil || lag.CommitsBehind == 0 {
+			continue
+		}
+		if owned := lag.OwnedCollisions(); len(owned) > 0 {
+			fmt.Fprintf(w, "warning: #%d is behind %s in %d file(s) it owns — a conflict is certain, and review will refuse it:\n", id, lag.Base, len(owned))
+			for _, c := range owned {
+				fmt.Fprintf(w, "         %s — landed by %s\n", c.Path, landedBy(c))
+			}
+		}
+		if affected := lag.AffectedCollisions(); len(affected) > 0 {
+			fmt.Fprintf(w, "note: #%d is behind %s in %d file(s) it reads but does not edit — no conflict, but your gates have not seen the change:\n", id, lag.Base, len(affected))
+			for _, c := range affected {
+				fmt.Fprintf(w, "      %s — landed by %s\n", c.Path, landedBy(c))
+			}
+		}
+	}
 }
 
 // changedFiles lists paths changed relative to base, or the staged paths. The

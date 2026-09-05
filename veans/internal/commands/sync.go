@@ -150,6 +150,41 @@ func landedBy(c *client.LagCollision) string {
 	}
 }
 
+// lagRefusal is the review gate. A task whose branch is behind the integration
+// branch in a file it OWNS is not ready for review: the conflict is certain,
+// so the diff a reviewer reads is not the diff that will merge, and the gates
+// that just passed did not run against what will land.
+//
+// It returns nil for `affected` and `elsewhere`. Those are reported and gate
+// nothing, anywhere — gating on `affected` would make overriding routine, and
+// an override typed by reflex defeats the gate on `owned` too.
+func lagRefusal(t *client.Task, lag *client.TaskLag) error {
+	if !lag.Blocking() {
+		return nil
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "%s is behind %s in a file it owns.", taskRef(t), lag.Base)
+	for _, c := range lag.OwnedCollisions() {
+		fmt.Fprintf(&b, "\n  %s — landed by %s", c.Path, landedBy(c))
+	}
+	fmt.Fprintf(&b, "\nRebase and re-run the gates: veans sync %s", taskRefArg(t))
+	b.WriteString("\nOverride with --force (recorded on the task).")
+	return output.New(output.CodeConflict, "%s", b.String())
+}
+
+// taskRefArg is what to type back at veans: the identifier when there is one,
+// otherwise the id. A refusal that names a reference the CLI would reject is
+// a refusal nobody can act on.
+func taskRefArg(t *client.Task) string {
+	if t == nil {
+		return ""
+	}
+	if t.Identifier != "" {
+		return t.Identifier
+	}
+	return fmt.Sprintf("%d", t.ID)
+}
+
 func taskRef(t *client.Task) string {
 	if t == nil {
 		return "this task"
