@@ -156,9 +156,9 @@ type Allocation struct {
 // Conflict is a checkout whose registry entries are inconsistent with rule 1
 // or with the filesystem.
 type Conflict struct {
-	Checkout string
-	Workers  []string
-	Missing  bool
+	Checkout string   `json:"checkout"`
+	Workers  []string `json:"workers"`
+	Missing  bool     `json:"missing"`
 }
 
 // Store is the on-disk registry. Every mutating method takes the file lock,

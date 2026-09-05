@@ -50,21 +50,24 @@ type Naming struct {
 
 // Plan is what a worker must run to start on a story.
 type Plan struct {
-	Story, Slug, Branch, Dir string
+	Story  string `json:"story"`
+	Slug   string `json:"slug"`
+	Branch string `json:"branch"`
+	Dir    string `json:"dir"`
 	// Base is the integration branch the worktree is cut from, e.g.
 	// "origin/main". A worktree with no start point branches from whatever the
 	// invoking checkout's HEAD happens to be, which for a clone nobody has
 	// pulled in a week is a week-old base — so the command that exists to set
 	// a worker up correctly was seeding the staleness it is meant to prevent.
-	Base string
+	Base string `json:"base"`
 	// BaseSHA is what Base resolved to when the plan was made, recorded so a
 	// later staleness check knows what this branch actually started from
 	// rather than guessing. Empty when the base could not be resolved.
-	BaseSHA string
+	BaseSHA string `json:"base_sha"`
 	// Commands are the shell lines to run, in order, with all values substituted.
-	Commands []string
+	Commands []string `json:"commands"`
 	// EnvLines are the "KEY=value" lines the plan appends to .env.local.
-	EnvLines []string
+	EnvLines []string `json:"env_lines"`
 }
 
 // BuildOptions is what a plan is derived from. It is a struct rather than a

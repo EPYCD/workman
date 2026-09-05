@@ -29,8 +29,11 @@ import (
 
 // Worktree is one entry of `git worktree list`.
 type Worktree struct {
-	Path, Branch, Head string
-	Bare, Detached     bool
+	Path     string `json:"path"`
+	Branch   string `json:"branch"`
+	Head     string `json:"head"`
+	Bare     bool   `json:"bare"`
+	Detached bool   `json:"detached"`
 }
 
 // Existing lists the worktrees attached to the repository at repoRoot.

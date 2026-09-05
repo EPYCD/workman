@@ -84,8 +84,15 @@ func (e *Engine) Tick(ctx context.Context, base string) *TickResult {
 	// that cannot see each other. A failure is tolerated: the board keeps the
 	// shape it had, which is the previous truth rather than no truth.
 	if _, changed, err := e.PublishRepoRoots(ctx); err != nil {
-		res.Errors = append(res.Errors, "publish repository roots (the board keeps the shape it had; rerun `marshal setup` with an admin token if the repository's top-level entries have changed): "+err.Error())
+		// Once per distinct failure, not once per poll. Publishing is
+		// admin-gated on purpose, so a worker-token deployment fails here
+		// every single time — and an error that repeats every sixty seconds
+		// forever is one nobody reads, taking the next real error with it.
+		if !e.flags.Seen("roots-publish", err.Error()) {
+			res.Errors = append(res.Errors, "publish repository roots (the board keeps the shape it had; rerun `marshal setup` with an admin token): "+err.Error())
+		}
 	} else if changed {
+		e.flags.Clear("roots-publish")
 		res.RootsPushed = true
 		e.log(ledger.Entry{Action: "roots", Subject: "scope_repo_roots", Outcome: "ok", Reason: "the repository's top-level entries changed"})
 	}
