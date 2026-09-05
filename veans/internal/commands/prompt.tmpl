@@ -83,6 +83,9 @@ Server: {{ .Server }}
   veans update {{ .TaskIDExample }} -s in-review \
     --comment '<h3>Summary of Changes</h3><ul><li>first thing</li><li>second thing</li></ul>'
   ```
+- **Never approve or merge a pull request, yours or anyone else's.** Landing
+  work is a human's decision. Open it, enable auto-merge if you like — it
+  cannot land without a human's approval — and leave it.
 - **Then start the next ticket. Do not wait for CI, and do not wait for the
   merge.** Once the PR is open and the task is in review, the work is handed
   over: a human enables auto-merge and GitHub merges it when the checks go

@@ -1,0 +1,4 @@
+# Every pull request needs a human review before it can land. Agents open
+# them; they cannot approve them. Naming the reviewer here also auto-requests
+# the review, so a PR never sits waiting for someone to notice it.
+*       @subinsayzz

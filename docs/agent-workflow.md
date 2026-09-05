@@ -81,6 +81,78 @@ The claim is a single transaction. It is refused with `CONFLICT` when someone
 else holds the task, when a blocker is open, or when one of the task's owned
 paths overlaps a lease held by another in-progress task. Two agents racing
 for the same task get exactly one winner. `veans leases` shows who holds
+## Landing a pull request
+
+Agents raise pull requests. **A human lands them** — and once that human has
+said so, it lands by itself, without anyone watching the test run.
+
+That needs the agents to have their own GitHub identity, and this is the part
+worth understanding before configuring anything: agents currently push as
+`subinsayzz`, the same account that would review their work, and **GitHub does
+not let anyone approve their own pull request**. While author and reviewer are
+one account, nothing on GitHub's side can tell an agent apart from the person
+reviewing it — not a required review, not a label, not a comment trigger. A
+workflow asking "did subinsayzz approve this?" cannot tell either.
+
+So the identity comes first; the enforcement follows from it.
+
+Step by step, including onboarding people and new repositories, is in
+[team-setup.md](team-setup.md). The short version:
+
+### 1. A machine account for the agents
+
+Create a GitHub account for the fleet (`capyard-agent`, say), invite it to the
+repository with **write** access, and mint a fine-grained personal access token
+for it with `contents: write` and `pull requests: write`. Point the agents'
+git credentials at that token rather than the human's.
+
+This also fixes attribution. Every agent commit currently reads
+`Subin Raj <subinrajs18@gmail.com>`, so git history cannot say which work was
+an agent's and which was a person's — the board knows, and git does not.
+
+### 2. Branch protection on `main`
+
+*Settings → Branches → Add rule for `main`*
+
+- **Require a pull request before merging**, with **1 approving review**
+- **Require status checks to pass**: `api-lint`, `veans-lint`, `veans-test`,
+  `test-veans-e2e`, `test-api (postgres, web)`, `check-frontend-client`,
+  `hook-scripts`
+- **Require branches to be up to date before merging**
+
+The review requirement is what makes merging yours. The agent can open the PR
+and even enable auto-merge; it cannot approve, so nothing lands until you do.
+
+"Up to date" is not bureaucracy. Two PRs can each be green and still break
+`main` together: one renames a field, the other adds a caller of the old name,
+and neither branch ever saw the other. CI can only test what it can see, and a
+stale branch was tested against a `main` that no longer exists. With this on,
+GitHub updates the branch and re-runs the checks against what will actually
+land.
+
+### 3. Auto-merge
+
+*Settings → General → Pull Requests → **Allow auto-merge***
+
+Without required checks, auto-merge has no gate and lands a PR almost at
+once — automatic-looking and unsafe. Configure step 2 first.
+
+### What this gets you
+
+The agent opens the PR, enables auto-merge, moves to the next ticket. You press
+**Approve** when you are happy with it. GitHub then updates the branch if
+`main` has moved, waits for the checks, merges, and the merge hook closes the
+task from the `Refs:` trailer. One action from you, none of the waiting, and no
+agent can land its own work.
+
+### What is still deliberately manual
+
+**Deploying.** Merging updates GitHub; the running containers keep the old
+image until someone rebuilds. Nothing here deploys on merge, and the checkout
+the stack builds from (`~/srv/workman`) does not update itself — pull it before
+building, or you will ship the previous commit and wonder why the fix is not
+live.
+
 ## Handing over, not waiting
 
 An agent that opens a pull request is done with that ticket. It moves the task
