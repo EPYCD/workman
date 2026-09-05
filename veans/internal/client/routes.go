@@ -86,12 +86,22 @@ func PermissionsForBot(routes map[string]RouteGroup) map[string][]string {
 }
 
 // PermissionsForCI is the receipt bot's grant: post receipts, close and
-// comment on tasks, park them in review, and nothing a worker needs.
+// comment on tasks, park them in review, run the PR scope check, and nothing
+// a worker needs.
+//
+// scope_check is not optional. It is the endpoint the merge hook's `check`
+// mode exists to call, and this is the token that mode runs with — the CI
+// token `marshal setup` prints for the WORKMAN_TOKEN repository secret, not
+// the worker token `veans login` mints. Without it the hook got a 401 on
+// POST /projects/{id}/scope-check while succeeding on everything else in the
+// same job, which reads as an expired token rather than a missing grant. The
+// hook steps are deliberately continue-on-error, so the whole PR check failed
+// silently and green.
 func PermissionsForCI(routes map[string]RouteGroup) map[string][]string {
 	wanted := map[string][]string{
 		"tasks":          {"read_one", "update", "read", "receipts", "receipts_post"},
 		"tasks_comments": {"create", "read_all"},
-		"projects":       {"read_one", "tasks_by-index", "tasks_by_index", "views_buckets_tasks", "views_buckets_tasks_put", "leases", "webhooks", "webhooks_get"},
+		"projects":       {"read_one", "tasks_by-index", "tasks_by_index", "views_buckets_tasks", "views_buckets_tasks_put", "leases", "scope_check", "webhooks", "webhooks_get"},
 		"projects_views": {"read_one", "read_all"},
 	}
 	return pickPermissions(routes, wanted)
