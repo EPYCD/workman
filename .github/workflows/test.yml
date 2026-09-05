@@ -112,6 +112,36 @@ jobs:
         working-directory: veans
         run: mage test
 
+  hook-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Canonical scope-path rule
+        # The PR hooks carry a shell copy of the canonical path rule, because
+        # the check mode has no Go binary to shell out to. It must agree with
+        # CanonicalPath in pkg/models and Canonical in veans/internal/marshal/
+        # pathpattern; this runs that table against the shell copy.
+        run: ./.github/actions/workman-merge-hook/canonical-path_test.sh
+      - name: Scaffolded scripts match the action
+        # veans scaffolds these scripts into other repositories verbatim. A fix
+        # that lands in one copy and not the other is a fix that never reaches
+        # the repositories that need it — and the canonical rule is now one of
+        # the things they carry.
+        run: |
+          for f in .github/actions/workman-merge-hook/*.sh; do
+            n="$(basename "$f")"
+            [ "$n" = canonical-path_test.sh ] && continue
+            diff -u "$f" "veans/internal/scaffold/templates/action/$n"
+          done
+      - name: The action is loadable YAML
+        # An unquoted description containing a colon ends the scalar early and
+        # GitHub then cannot load the action at all — a failure that looks like
+        # a workflow that simply never ran.
+        run: |
+          python3 -c "import yaml,sys;[yaml.safe_load(open(p)) for p in sys.argv[1:]]" \
+            .github/actions/workman-merge-hook/action.yml \
+            veans/internal/scaffold/templates/action/action.yml
+
   check-translations:
     runs-on: ubuntu-latest
     needs: mage

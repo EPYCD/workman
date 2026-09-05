@@ -519,7 +519,12 @@ func requiredScopeForExpand(value string) (group, permission string, needsScope 
 	case TaskCollectionExpandTimeEntriesCount:
 		return "time_entries", "read_all", true
 	case TaskCollectionExpandSubtasks, TaskCollectionExpandBuckets, TaskCollectionExpandIsUnread,
-		TaskCollectionExpandScope, TaskCollectionExpandLeases:
+		TaskCollectionExpandScope, TaskCollectionExpandLeases, TaskCollectionExpandLag:
+		// Sub-resources of the task itself: reading them needs read on the
+		// task and nothing more, which the token already had to have to reach
+		// the task at all. Unlike comments, reactions and time entries, they
+		// unlock no other resource, which is what this switch exists to stop
+		// (GHSA-9rg3-v78m-26q8).
 		return "", "", false
 	}
 	return "", "", false

@@ -30,6 +30,11 @@ const (
 	ReadinessReasonAssigned      = "assigned"
 	ReadinessReasonBlocked       = "blocked"
 	ReadinessReasonLeaseConflict = "lease_conflict"
+	// ReadinessReasonLag: the integration branch has moved inside a path this
+	// task owns. Only severity `owned` raises it — `affected` is a warning and
+	// `elsewhere` is information, and gating on either would train everyone to
+	// override the gate that matters.
+	ReadinessReasonLag = "lag"
 )
 
 // TaskReadiness is one row of the ready queue: a task in the view's starting
@@ -39,9 +44,10 @@ const (
 type TaskReadiness struct {
 	Task           *Task                  `json:"task" doc:"The task, with assignees, labels and related tasks populated."`
 	Ready          bool                   `json:"ready" doc:"True when the task can be claimed right now: not done, unassigned, no unfinished blocker, and no path it owns is leased by another task."`
-	Reasons        []string               `json:"reasons" doc:"Why the task is not ready. Empty when ready. One or more of: done, assigned, blocked, lease_conflict. blocked covers an unfinished blocker, an unfinished predecessor (follows) and open subtasks."`
+	Reasons        []string               `json:"reasons" doc:"Why the task is not ready. Empty when ready. One or more of: done, assigned, blocked, lease_conflict, lag. blocked covers an unfinished blocker, an unfinished predecessor (follows) and open subtasks; lag means the integration branch moved inside a path this task owns."`
 	BlockedBy      []*Task                `json:"blocked_by" doc:"The unfinished tasks this one is blocked by."`
 	LeaseConflicts []ErrPathLeaseConflict `json:"lease_conflicts" doc:"Each owned path that overlaps another task's active lease, with the holder."`
+	Lag            *TaskLag               `json:"lag,omitempty" doc:"How far this task's branch is behind the integration branch, in the files it holds. Null when it has no branch yet or is not behind. Only severity \"owned\" makes the task not ready; \"affected\" and \"elsewhere\" are reported and gate nothing."`
 }
 
 // GetTaskReadiness computes readiness for every open task in one bucket of a
@@ -106,6 +112,10 @@ func GetTaskReadiness(s *xorm.Session, a web.Auth, view *ProjectView, bucketID i
 	if err != nil {
 		return nil, err
 	}
+	lags, err := getTaskLagsForTasks(s, openIDs)
+	if err != nil {
+		return nil, err
+	}
 
 	out := make([]*TaskReadiness, 0, len(tasks))
 	for _, t := range tasks {
@@ -138,6 +148,15 @@ func GetTaskReadiness(s *xorm.Session, a web.Auth, view *ProjectView, bucketID i
 			if len(conflicts) > 0 {
 				r.LeaseConflicts = conflicts
 				r.Reasons = append(r.Reasons, ReadinessReasonLeaseConflict)
+			}
+		}
+		// Lag is scoped to the claim, so it only means anything once the task
+		// has a branch — which is why it shows up on a claimed task rather
+		// than on one still waiting in the queue.
+		if lag := lags[t.ID]; lag != nil {
+			r.Lag = lag
+			if lag.Blocking() {
+				r.Reasons = append(r.Reasons, ReadinessReasonLag)
 			}
 		}
 		r.Ready = len(r.Reasons) == 0
