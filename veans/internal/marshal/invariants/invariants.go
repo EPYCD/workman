@@ -83,22 +83,25 @@ type Options struct {
 }
 
 // Finding is one violated or warned invariant.
+// The json tags here and on Report are load-bearing: both cross the wire to
+// the board's health panel, which reads snake_case. Without them Go emits its
+// own field names and the panel reads undefined off every field.
 type Finding struct {
-	Code    string // one of the Code* constants
-	Message string
-	TaskIDs []int64
-	Paths   []string
+	Code    string   `json:"code"` // one of the Code* constants
+	Message string   `json:"message"`
+	TaskIDs []int64  `json:"task_ids"`
+	Paths   []string `json:"paths"`
 }
 
 // Report is the outcome of one Check run.
 type Report struct {
-	Tasks          int // open, non-container tasks considered
-	Containers     int // tasks that have children
-	Collisions     int // unordered overlaps
-	Cycles         int
-	UnblockedRoots []int64 // open tasks with no open BlockedBy/Follows and no open subtasks (ids, ascending)
-	Findings       []Finding
-	OK             bool // no findings with code no_claim, unordered_overlap or blocked_cycle
+	Tasks          int       `json:"tasks"`      // open, non-container tasks considered
+	Containers     int       `json:"containers"` // tasks that have children
+	Collisions     int       `json:"collisions"` // unordered overlaps
+	Cycles         int       `json:"cycles"`
+	UnblockedRoots []int64   `json:"unblocked_roots"` // open tasks with no open BlockedBy/Follows and no open subtasks (ids, ascending)
+	Findings       []Finding `json:"findings"`
+	OK             bool      `json:"ok"` // no findings with code no_claim, unordered_overlap or blocked_cycle
 }
 
 type graph struct {

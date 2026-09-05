@@ -79,6 +79,13 @@ func (e *Engine) ComputeLag(ctx context.Context, snap *board.Snapshot, base stri
 	}
 	rep := &LagReport{Base: base, Branches: []*BranchLag{}}
 
+	// Fetch every branch, not just the base. A worker's branch lives on the
+	// remote; without this it is absent from Marshal's checkout and comes back
+	// "cannot be measured", which is honest but useless — the whole point is
+	// to measure it. Failure is tolerated: a stale checkout still measures
+	// what it already has.
+	_ = worktree.Fetch(ctx, e.RepoRoot, worktree.RemoteOf(base))
+
 	baseTip, err := worktree.ResolveSHA(ctx, e.RepoRoot, base)
 	if err != nil || baseTip == "" {
 		// Without a base there is nothing to be behind. Say so rather than
@@ -96,9 +103,17 @@ func (e *Engine) ComputeLag(ctx context.Context, snap *board.Snapshot, base stri
 			rep.Skipped = append(rep.Skipped, LagSkipped{TaskID: t.ID, Branch: branch, Reason: "the task claims no paths, so there is nothing for the base to move under"})
 			continue
 		}
+		// A branch the worker pushed lives on the remote, so look there too
+		// before giving up. Marshal never checks these out; it only reads them.
 		branchTip, err := worktree.ResolveSHA(ctx, e.RepoRoot, branch)
 		if err != nil || branchTip == "" {
-			rep.Skipped = append(rep.Skipped, LagSkipped{TaskID: t.ID, Branch: branch, Reason: "the branch does not exist in this checkout"})
+			remoteRef := worktree.RemoteOf(base) + "/" + branch
+			if tip, rerr := worktree.ResolveSHA(ctx, e.RepoRoot, remoteRef); rerr == nil && tip != "" {
+				branch, branchTip = remoteRef, tip
+			}
+		}
+		if branchTip == "" {
+			rep.Skipped = append(rep.Skipped, LagSkipped{TaskID: t.ID, Branch: branch, Reason: "no such branch here or on " + worktree.RemoteOf(base)})
 			continue
 		}
 
