@@ -177,8 +177,12 @@ func taskHasLabel(t *client.Task, title string) bool {
 	return false
 }
 
+// branchLabelPrefix namespaces the label claim attaches so unclaim can find
+// it again without matching anything a human wrote.
+const branchLabelPrefix = "veans:branch:"
+
 func branchLabel(branch string) string {
-	return "veans:branch:" + branch
+	return branchLabelPrefix + branch
 }
 
 // currentGitBranch returns the current git branch as reported by

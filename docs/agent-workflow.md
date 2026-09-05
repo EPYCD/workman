@@ -81,7 +81,11 @@ The claim is a single transaction. It is refused with `CONFLICT` when someone
 else holds the task, when a blocker is open, or when one of the task's owned
 paths overlaps a lease held by another in-progress task. Two agents racing
 for the same task get exactly one winner. `veans leases` shows who holds
-what; `veans release` gives paths back without changing status. The board
+what; `veans release` gives paths back without changing status, and
+`veans unclaim` hands the whole task back — assignee off, bucket back to Todo,
+leases dropped, branch label removed — for work you are not going to do. Doing
+only some of those leaves a ticket nobody can claim: readiness turns on the
+assignee, not on the bucket. The board
 shows the same answer: `READY`, `BLOCKED`, `PATH LEASED` badges on queued
 cards, a lock count on in-progress ones, a **Leases** panel and a
 **Ready only** toggle.

@@ -79,6 +79,12 @@ Server: {{ .Server }}
 - Leases are released when the task is done or scrapped. If you stop
   working on a task without finishing it, release its paths so others can
   proceed: `veans release {{ .TaskIDExample }}` (status and assignees stay).
+- If you are NOT going to do the task at all — claimed in error, blocked by
+  something you cannot move, handing off — use
+  `veans unclaim {{ .TaskIDExample }}` instead. Moving the bucket back and
+  releasing leases is NOT enough: a task with an assignee is never ready,
+  whatever bucket it sits in and whatever you wrote on the card, so a
+  half-handed-back ticket is one nobody can pick up.
 
 ## Commit messages
 Include the task identifier on a `Refs:` line so the merge hook can close
@@ -210,6 +216,7 @@ veans scope {{ .TaskIDExample }} --paths-owned pkg/models/** --paths-affected do
 veans scope {{ .TaskIDExample }} --clear         # drop the scope and its leases
 veans leases                       # who is editing what right now (stale: true = holder inactive)
 veans release {{ .TaskIDExample }}               # give up this task's leases without changing its status
+veans unclaim {{ .TaskIDExample }}               # hand the task back entirely: assignee off, back to Todo, leases dropped, branch label removed
 veans heartbeat {{ .TaskIDExample }}             # mark your leases active during long silent work
 veans check                        # changed files vs your tasks' scopes + others' leases; CONFLICT on strays
 veans check --staged               # same, for the index (pre-commit)

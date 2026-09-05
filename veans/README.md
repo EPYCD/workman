@@ -123,6 +123,7 @@ veans claim <id>               assign the bot, move to In Progress, tag with cur
 veans ready                    ready queue with reasons (assigned / blocked / lease_conflict)
 veans scope <id> [flags]       show or set the task's scope (paths owned/affected, endpoints, notes)
 veans leases                   list the paths in-progress tasks are editing right now
+veans unclaim <id>             hand a task back: drop the assignee, return to Todo, release leases, remove the branch label
 veans release <id>             drop a task's leases without changing its status
 veans heartbeat <id>           mark a task's leases active (long silent work)
 veans check [--staged]         changed files vs the referenced tasks' scopes and others' leases
