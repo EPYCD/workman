@@ -1706,6 +1706,10 @@ export type Project = {
      */
     receipt_bot_id?: number;
     /**
+     * Comma-separated top-level entries of the app root, e.g. "src,packages,docs". A scope path starting with one of these, when the repository root has no such entry, is the app-relative spelling and is refused. Without it nothing is enforced: a first segment unknown to both is a directory that does not exist yet, which a task is entitled to claim. Published by marshal setup; admins only.
+     */
+    scope_app_entries?: string;
+    /**
      * The sub-directory the application lives in, e.g. "captain-yard-web". Used only to suggest the spelling a caller probably meant when a path is refused — never to rewrite one. Admins only.
      */
     scope_app_root?: string;
@@ -1842,6 +1846,10 @@ export type ProjectReadBody = {
      * The bot user whose token alone may post gate receipts. While set, a task cannot be marked done without a merged, passing receipt, and the user who moved it to review cannot close it. 0 disables both guards. Admins only.
      */
     receipt_bot_id?: number;
+    /**
+     * Comma-separated top-level entries of the app root, e.g. "src,packages,docs". A scope path starting with one of these, when the repository root has no such entry, is the app-relative spelling and is refused. Without it nothing is enforced: a first segment unknown to both is a directory that does not exist yet, which a task is entitled to claim. Published by marshal setup; admins only.
+     */
+    scope_app_entries?: string;
     /**
      * The sub-directory the application lives in, e.g. "captain-yard-web". Used only to suggest the spelling a caller probably meant when a path is refused — never to rewrite one. Admins only.
      */
@@ -4715,6 +4723,10 @@ export type ProjectWritable = {
      */
     receipt_bot_id?: number;
     /**
+     * Comma-separated top-level entries of the app root, e.g. "src,packages,docs". A scope path starting with one of these, when the repository root has no such entry, is the app-relative spelling and is refused. Without it nothing is enforced: a first segment unknown to both is a directory that does not exist yet, which a task is entitled to claim. Published by marshal setup; admins only.
+     */
+    scope_app_entries?: string;
+    /**
      * The sub-directory the application lives in, e.g. "captain-yard-web". Used only to suggest the spelling a caller probably meant when a path is refused — never to rewrite one. Admins only.
      */
     scope_app_root?: string;
@@ -4803,6 +4815,10 @@ export type ProjectReadBodyWritable = {
      * The bot user whose token alone may post gate receipts. While set, a task cannot be marked done without a merged, passing receipt, and the user who moved it to review cannot close it. 0 disables both guards. Admins only.
      */
     receipt_bot_id?: number;
+    /**
+     * Comma-separated top-level entries of the app root, e.g. "src,packages,docs". A scope path starting with one of these, when the repository root has no such entry, is the app-relative spelling and is refused. Without it nothing is enforced: a first segment unknown to both is a directory that does not exist yet, which a task is entitled to claim. Published by marshal setup; admins only.
+     */
+    scope_app_entries?: string;
     /**
      * The sub-directory the application lives in, e.g. "captain-yard-web". Used only to suggest the spelling a caller probably meant when a path is refused — never to rewrite one. Admins only.
      */
