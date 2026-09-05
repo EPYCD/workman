@@ -22,6 +22,15 @@ Server: {{ .Server }}
   the scope first (`veans scope {{ .TaskIDExample }} --paths-owned ... --paths-owned <new>`);
   the server refuses with `CONFLICT` if another task holds it — then split
   the work into a new task instead of editing that file.
+- **Start from current code.** Before you claim anything, fetch and get on top
+  of the integration branch:
+  ```
+  git fetch origin && git rebase origin/main     # or: git pull --rebase
+  ```
+  A session that starts on a week-old checkout writes a week-old diff. You will
+  pass your own gates, open the pull request, and only then find that the file
+  you edited moved under you — and the further in you are, the more expensive
+  that is. Thirty seconds here saves an hour of rebasing later.
 - If a task already exists, claim it: `veans claim {{ .TaskIDExample }}`
   The claim is atomic and exclusive: if another agent already holds the
   task, it has left Todo since you listed it, it is blocked, or one of its
