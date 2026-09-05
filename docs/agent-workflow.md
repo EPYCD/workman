@@ -96,6 +96,9 @@ workflow asking "did subinsayzz approve this?" cannot tell either.
 
 So the identity comes first; the enforcement follows from it.
 
+Step by step, including onboarding people and new repositories, is in
+[team-setup.md](team-setup.md). The short version:
+
 ### 1. A machine account for the agents
 
 Create a GitHub account for the fleet (`capyard-agent`, say), invite it to the
