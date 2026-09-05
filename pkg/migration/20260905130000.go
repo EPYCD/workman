@@ -54,7 +54,7 @@ func init() {
 		ID:          "20260905130000",
 		Description: "Add task_lags: how far a claimed branch is behind the integration branch, in the files the task holds",
 		Migrate: func(tx *xorm.Engine) error {
-			return tx.Sync2(taskLags20260905130000{})
+			return tx.Sync(taskLags20260905130000{}) //nolint:forbidigo // brand-new table, nothing to drop
 		},
 		Rollback: func(tx *xorm.Engine) error {
 			return tx.DropTables(taskLags20260905130000{})
