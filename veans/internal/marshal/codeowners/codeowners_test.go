@@ -22,6 +22,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"code.vikunja.io/veans/internal/marshal/pathpattern"
 )
 
 func loadCaptainYard(t *testing.T) *File {
@@ -134,35 +136,46 @@ func TestMatchesCaptainYard(t *testing.T) {
 func TestChokepointsCaptainYard(t *testing.T) {
 	f := loadCaptainYard(t)
 
-	inside, outside := f.Chokepoints("captain-yard-web")
-	wantInside := []string{
-		"src/lib/contract.ts",
-		"src/lib/contract-routes.ts",
-		"src/server/db/schema.ts",
-		"src/server/db/repo.ts",
-		"src/server/db/indexes.ts",
-		"src/server/auth/**",
-		"packages/engine/**",
+	// Canonical form: repository-root-relative, exactly as the board holds a
+	// claim. app_root is not a base for a claim and never rebases these.
+	want := []string{
+		"captain-yard-web/src/lib/contract.ts",
+		"captain-yard-web/src/lib/contract-routes.ts",
+		"captain-yard-web/src/server/db/schema.ts",
+		"captain-yard-web/src/server/db/repo.ts",
+		"captain-yard-web/src/server/db/indexes.ts",
+		"captain-yard-web/src/server/auth/**",
+		"captain-yard-web/packages/engine/**",
+		".github/**",
 	}
-	if !reflect.DeepEqual(inside, wantInside) {
-		t.Errorf("inside = %v, want %v", inside, wantInside)
+	if got := f.Chokepoints(); !reflect.DeepEqual(got, want) {
+		t.Errorf("Chokepoints() = %v, want %v", got, want)
 	}
-	if !reflect.DeepEqual(outside, []string{".github/**"}) {
-		t.Errorf("outside = %v", outside)
-	}
+}
 
-	inside, outside = f.Chokepoints("")
-	if len(inside) != 8 || inside[0] != "captain-yard-web/src/lib/contract.ts" || inside[7] != ".github/**" {
-		t.Errorf("root-less inside = %v", inside)
+// TestChokepointsAreClaimable is the invariant whose absence let an
+// always-empty queue ship: every chokepoint must live in the same namespace as
+// a stored claim, so a lease on the file a chokepoint names can be seen from
+// the chokepoint. Before app_root stopped being stripped, every one of these
+// failed on a project that set one.
+func TestChokepointsAreClaimable(t *testing.T) {
+	f := loadCaptainYard(t)
+	// What the pre-commit hook accepts, because git prints it: a path from the
+	// repository root.
+	leased := "captain-yard-web/src/server/db/repo.ts"
+	for _, cp := range f.Chokepoints() {
+		if _, err := pathpattern.Normalize(cp); err != nil {
+			t.Errorf("chokepoint %q is not a valid scope path: %v", cp, err)
+		}
 	}
-	if outside != nil {
-		t.Errorf("root-less outside = %v", outside)
+	var reached bool
+	for _, cp := range f.Chokepoints() {
+		if pathpattern.Overlap(cp, leased) {
+			reached = true
+		}
 	}
-
-	// A trailing slash on the root is tolerated.
-	inside, _ = f.Chokepoints("captain-yard-web/")
-	if !reflect.DeepEqual(inside, wantInside) {
-		t.Errorf("inside with slashed root = %v", inside)
+	if !reached {
+		t.Fatalf("no chokepoint overlaps a live claim on %q — the queue for it can never be non-empty", leased)
 	}
 }
 
@@ -218,24 +231,9 @@ func TestMatchesGitHubSemantics(t *testing.T) {
 		}
 	}
 
-	inside, outside := f.Chokepoints("")
-	wantInside := []string{"**/*.md", "docs/*", "build/logs/**", "**/apps/**", "**/logs", "src/*/lib", "**/foo", "apps/github"}
-	if !reflect.DeepEqual(inside, wantInside) {
-		t.Errorf("inside = %v, want %v", inside, wantInside)
-	}
-	if outside != nil {
-		t.Errorf("outside = %v", outside)
-	}
-
-	// Unanchored patterns apply below any root; anchored ones under the root
-	// lose the prefix; anchored ones elsewhere fall outside.
-	inside, outside = f.Chokepoints("src")
-	wantInside = []string{"**/*.md", "**/apps/**", "**/logs", "*/lib", "**/foo"}
-	if !reflect.DeepEqual(inside, wantInside) {
-		t.Errorf("inside(src) = %v, want %v", inside, wantInside)
-	}
-	if !reflect.DeepEqual(outside, []string{"docs/*", "build/logs/**", "apps/github"}) {
-		t.Errorf("outside(src) = %v", outside)
+	want := []string{"**/*.md", "docs/*", "build/logs/**", "**/apps/**", "**/logs", "src/*/lib", "**/foo", "apps/github"}
+	if got := f.Chokepoints(); !reflect.DeepEqual(got, want) {
+		t.Errorf("Chokepoints() = %v, want %v", got, want)
 	}
 }
 
@@ -245,9 +243,8 @@ func TestChokepointsDistinct(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	inside, _ := f.Chokepoints("")
-	if want := []string{"a/b/**", "**/b/**", "**"}; !reflect.DeepEqual(inside, want) {
-		t.Errorf("inside = %v, want %v", inside, want)
+	if want := []string{"a/b/**", "**/b/**", "**"}; !reflect.DeepEqual(f.Chokepoints(), want) {
+		t.Errorf("Chokepoints() = %v, want %v", f.Chokepoints(), want)
 	}
 }
 

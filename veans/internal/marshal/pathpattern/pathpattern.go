@@ -22,6 +22,24 @@
 // `pkg/models/*.go`, `frontend/src/**`. Segments are matched with path.Match
 // and `**` matches any number of segments, which is the subset of glob syntax
 // agents actually write and the one whose overlap can be decided cheaply.
+//
+// # The canonical form
+//
+// One spelling per file, because a lease is exclusion and exclusion compares
+// strings. A scope path is canonical when it is:
+//
+//   - relative to the REPOSITORY root, never to a sub-directory of it — an app
+//     that lives in `captain-yard-web/` claims `captain-yard-web/src/x.ts`;
+//   - separated by forward slashes, with no leading `/`, no `./`, no repeated
+//     slashes and no `.` or `..` segment;
+//   - without a trailing slash: a directory claims its subtree either bare
+//     (`pkg/models`) or with an explicit glob (`pkg/models/**`);
+//   - prefixed with `repo:` in a project spanning several repositories.
+//
+// The repository root is the base because git already reports changed files
+// that way and cannot be argued with. Every ingress and every comparison in
+// veans and Marshal goes through Canonical; two spellings of one file are two
+// identities to a lease, an overlap check and a chokepoint queue alike.
 package pathpattern
 
 import (
@@ -33,11 +51,78 @@ import (
 
 const maxLength = 500
 
-// Normalize canonicalises a pattern so equal intents compare equal: trims,
+// Canonical is the single normalisation every scope path passes through, on
+// its way in and before any comparison. It applies repo as the `repo:`
+// namespace of a bare pattern (empty for a single-repository project, and
+// never applied twice), then canonicalises: trims, folds backslashes to `/`,
 // strips a leading `./` or `/`, collapses repeated slashes and drops a
 // trailing slash. It rejects anything that could escape the repository.
-func Normalize(raw string) (string, error) {
+//
+// It does not rebase a path. A path relative to the app sub-directory comes
+// back canonically spelled and still relative to the wrong base — an app_root
+// is where the application lives, never a base for a claim.
+func Canonical(raw, repo string) (string, error) {
 	p := strings.TrimSpace(raw)
+	if repo != "" && p != "" {
+		if existing, _ := SplitRepo(p); existing == "" {
+			p = repo + ":" + p
+		}
+	}
+	return normalize(p, raw)
+}
+
+// CanonicalAll canonicalises a list, dropping blanks and duplicates while
+// keeping the first occurrence's order. It fails on the first bad entry so a
+// caller never half-writes a scope.
+func CanonicalAll(raw []string, repo string) ([]string, error) {
+	out := make([]string, 0, len(raw))
+	seen := map[string]bool{}
+	for _, r := range raw {
+		if strings.TrimSpace(r) == "" {
+			continue
+		}
+		p, err := Canonical(r, repo)
+		if err != nil {
+			return nil, err
+		}
+		if seen[p] {
+			continue
+		}
+		seen[p] = true
+		out = append(out, p)
+	}
+	return out, nil
+}
+
+// CanonicalFiles canonicalises paths that came from git, which prints them
+// relative to the repository root — the canonical base by definition, so in
+// practice this only tidies separators. It is best-effort on purpose: a path
+// git printed cannot be invalid in a way that matters to a scope check, and
+// dropping a changed file to be strict about it would turn a cosmetic problem
+// into a missed collision. The point is that the git side and the claim side
+// of a check reach the comparison through the same function.
+func CanonicalFiles(files []string) []string {
+	out := make([]string, 0, len(files))
+	for _, f := range files {
+		c, err := Canonical(f, "")
+		if err != nil {
+			c = f
+		}
+		out = append(out, c)
+	}
+	return out
+}
+
+// Normalize canonicalises a pattern that already carries whatever `repo:`
+// prefix it should have. It is Canonical with no namespace to apply.
+func Normalize(raw string) (string, error) {
+	return Canonical(raw, "")
+}
+
+// normalize does the work. raw is the string the caller passed, echoed back in
+// errors so a prefixed rewrite never shows up in a message about a path the
+// caller never wrote.
+func normalize(p, raw string) (string, error) {
 	if p == "" {
 		return "", errors.New("invalid scope path: empty")
 	}

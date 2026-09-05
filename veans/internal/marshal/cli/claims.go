@@ -74,7 +74,7 @@ imported labels are removed after a successful write.`,
 					if strings.HasPrefix(l.Title, ownsPrefix) {
 						labels = append(labels, l)
 						row.Labels = append(row.Labels, l.Title)
-						p, err := pathpattern.Normalize(strings.TrimPrefix(l.Title, ownsPrefix))
+						p, err := pathpattern.Canonical(strings.TrimPrefix(l.Title, ownsPrefix), e.Board.Cfg.Repository)
 						if err != nil {
 							row.Invalid = append(row.Invalid, l.Title)
 							continue

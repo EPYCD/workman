@@ -32,7 +32,7 @@ const (
 // a change claims to implement and the files it actually touched.
 type ScopeCheckRequest struct {
 	TaskIDs []int64  `json:"task_ids" maxItems:"100" doc:"The tasks the change implements — typically the Refs: trailers of the commits. Files are judged against the union of their scopes."`
-	Files   []string `json:"files" required:"true" minItems:"1" maxItems:"5000" doc:"Repository-relative paths the change modifies, added or deleted, as git diff --name-only prints them."`
+	Files   []string `json:"files" required:"true" minItems:"1" maxItems:"5000" doc:"Paths the change modifies, adds or deletes, exactly as git diff --name-only prints them: relative to the repository root. That is the canonical base for a scope path too, so no rebasing is needed or wanted on either side."`
 	// Repository namespaces bare files the way scope paths are namespaced
 	// in a multi-repo project; empty for single-repo projects.
 	Repository string `json:"repository,omitempty" maxLength:"100" doc:"Repository name to prefix the files with when the project's scope paths use repo: prefixes. Leave empty for single-repository projects."`
@@ -102,15 +102,15 @@ func CheckScope(s *xorm.Session, projectID int64, req *ScopeCheckRequest) (*Scop
 	}
 
 	for _, raw := range req.Files {
-		file := raw
-		if req.Repository != "" && !hasRepoPrefixSegment(file) {
-			file = req.Repository + ":" + file
-		}
-		norm, err := NormalizeScopePath(file)
+		// One normalisation for the git side of the check, the same one the
+		// claim side went through on its way into the database. The two must
+		// not be normalised by different code or the comparison is between
+		// two dialects of the same path.
+		norm, err := CanonicalPath(raw, req.Repository)
 		if err != nil {
 			// A path git printed cannot be invalid in any way that matters
 			// here; keep it verbatim rather than failing the whole check.
-			norm = file
+			norm = raw
 		}
 		f := ScopeCheckFile{Path: norm, TaskIDs: []int64{}, Verdict: ScopeVerdictUnscoped}
 		for _, l := range others {
@@ -153,9 +153,4 @@ func coveredByAny(patterns []string, file string) bool {
 		}
 	}
 	return false
-}
-
-func hasRepoPrefixSegment(p string) bool {
-	repo, _ := splitRepoPrefix(p)
-	return repo != ""
 }

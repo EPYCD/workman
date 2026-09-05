@@ -38,7 +38,12 @@ references:                                  # anchors resolve from these
   - {prefix: D-,   file: _bmad-output/epics.md}
 paste_min_words: 12
 codeowners: .github/CODEOWNERS
-app_root: captain-yard-web                   # board paths are relative to this
+app_root: captain-yard-web                   # where the app lives: the gates'
+                                             # working directory. NOT a base
+                                             # for a scope path — claims and
+                                             # chokepoints are relative to the
+                                             # repository root, which is what
+                                             # git prints.
 docs_api_paths: [src/lib/contract.ts, src/lib/contract/**, src/lib/contract-routes.ts]
 docs_api_output: docs/API.md
 pool:

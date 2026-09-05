@@ -23,6 +23,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"code.vikunja.io/veans/internal/client"
+	"code.vikunja.io/veans/internal/marshal/pathpattern"
 	"code.vikunja.io/veans/internal/output"
 )
 
@@ -87,7 +88,7 @@ task, or hand the file back. The PR check runs the same query.`,
 			}
 			res, err := rt.client.CheckScope(cmd.Context(), rt.cfg.ProjectID, &client.ScopeCheckRequest{
 				TaskIDs:    ids,
-				Files:      files,
+				Files:      pathpattern.CanonicalFiles(files),
 				Repository: rt.cfg.Repository,
 			})
 			if err != nil {
@@ -108,7 +109,10 @@ task, or hand the file back. The PR check runs the same query.`,
 	return cmd
 }
 
-// changedFiles lists paths changed relative to base, or the staged paths.
+// changedFiles lists paths changed relative to base, or the staged paths. The
+// caller hands them to pathpattern.CanonicalFiles before the check, so the git
+// side and the claim side are normalised by one function; the `repo:`
+// namespace is applied by the server, which knows whether the project uses one.
 func changedFiles(ctx context.Context, base string, staged bool) ([]string, error) {
 	var out string
 	var err error

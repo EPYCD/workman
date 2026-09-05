@@ -297,10 +297,11 @@ func (e *Engine) Health(snap *board.Snapshot) *HealthReport {
 	return h
 }
 
-// ChokepointReport is the CODEOWNERS queue.
+// ChokepointReport is the CODEOWNERS queue. Every rule in the file is a
+// chokepoint: they and the claims queued on them share one namespace, the
+// repository root, so there is no longer an inside and an outside.
 type ChokepointReport struct {
 	Source     string             `json:"source"`
-	Outside    []string           `json:"outside_app_root"`
 	Queues     []codeowners.Queue `json:"queues"`
 	Unreadable string             `json:"unreadable,omitempty"`
 }
@@ -317,9 +318,8 @@ func (e *Engine) Chokepoints(snap *board.Snapshot) (*ChokepointReport, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse %s: %w", e.Cfg.Codeowners, err)
 	}
-	inside, outside := f.Chokepoints(e.Cfg.AppRoot)
 	claims := e.claims(snap)
-	return &ChokepointReport{Source: e.Cfg.Codeowners, Outside: outside, Queues: codeowners.Queues(inside, claims)}, nil
+	return &ChokepointReport{Source: e.Cfg.Codeowners, Queues: codeowners.Queues(f.Chokepoints(), claims)}, nil
 }
 
 func (e *Engine) claims(snap *board.Snapshot) []codeowners.Claim {
@@ -383,11 +383,23 @@ type PathHolder struct {
 	Branch   string `json:"branch,omitempty"`
 }
 
+// CanonicalPath puts a path the caller typed into the form claims are stored
+// in, applying the project's repository namespace. Callers that report which
+// path they answered about should report this one, not the raw argument: the
+// two differ exactly when the answer would otherwise be hard to trust.
+func (e *Engine) CanonicalPath(path string) (string, error) {
+	norm, err := pathpattern.Canonical(path, e.Board.Cfg.Repository)
+	if err != nil {
+		return "", output.Wrap(output.CodeValidation, err, "invalid path %q", path)
+	}
+	return norm, nil
+}
+
 // OpenOnPath lists the open tasks whose scope or lease covers path.
 func (e *Engine) OpenOnPath(snap *board.Snapshot, path string) ([]PathHolder, error) {
-	norm, err := pathpattern.Normalize(path)
+	norm, err := e.CanonicalPath(path)
 	if err != nil {
-		return nil, output.Wrap(output.CodeValidation, err, "invalid path %q", path)
+		return nil, err
 	}
 	leased := map[int64]map[string]bool{}
 	for _, l := range snap.Leases {
@@ -455,7 +467,7 @@ func (e *Engine) Reconcile(ctx context.Context, snap *board.Snapshot, base, bran
 		bc.Changed = len(files)
 		if len(files) > 0 {
 			res, err := e.Board.Client.CheckScope(ctx, e.Board.Cfg.ProjectID, &client.ScopeCheckRequest{
-				TaskIDs: []int64{t.ID}, Files: e.repoRelative(files), Repository: e.Board.Cfg.Repository,
+				TaskIDs: []int64{t.ID}, Files: pathpattern.CanonicalFiles(files), Repository: e.Board.Cfg.Repository,
 			})
 			if err != nil {
 				bc.Error = err.Error()
@@ -468,19 +480,12 @@ func (e *Engine) Reconcile(ctx context.Context, snap *board.Snapshot, base, bran
 	return out, nil
 }
 
-// repoRelative strips the app root so git paths compare with board paths
-// declared relative to the app directory.
-func (e *Engine) repoRelative(files []string) []string {
-	if e.Cfg.AppRoot == "" {
-		return files
-	}
-	prefix := strings.Trim(e.Cfg.AppRoot, "/") + "/"
-	out := make([]string, 0, len(files))
-	for _, f := range files {
-		out = append(out, strings.TrimPrefix(f, prefix))
-	}
-	return out
-}
+// Reconcile used to strip app_root off git's output before checking it, on the
+// theory that board paths were relative to the app directory. They are not:
+// the pre-commit hook feeds the same check straight from git, so a claim had
+// to be spelled from the repository root to satisfy it — and was then
+// unrecognisable here. A whole commit could read "unscoped" for that reason
+// alone. Both sides now go through pathpattern.CanonicalFiles.
 
 // WorktreePlan is M4: the commands for a story plus its allocated resources.
 type WorktreePlan struct {

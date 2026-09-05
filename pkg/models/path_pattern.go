@@ -25,14 +25,63 @@ import (
 // `pkg/models/*.go`, `frontend/src/**`. Segments are matched with path.Match
 // and `**` matches any number of segments, which is the subset of glob syntax
 // agents actually write and the one whose overlap can be decided cheaply.
+//
+// # The canonical form
+//
+// One spelling per file, because a lease is exclusion and exclusion compares
+// strings. A scope path is canonical when it is:
+//
+//   - relative to the REPOSITORY root, never to a sub-directory of it — an app
+//     that lives in `captain-yard-web/` claims `captain-yard-web/src/x.ts`;
+//   - separated by forward slashes, with no leading `/`, no `./`, no repeated
+//     slashes and no `.` or `..` segment;
+//   - without a trailing slash: a directory claims its subtree either bare
+//     (`pkg/models`) or with an explicit glob (`pkg/models/**`);
+//   - prefixed with `repo:` in a project spanning several repositories.
+//
+// The repository root is the base because git already reports changed files
+// that way and cannot be argued with: `git diff --name-only` is the one
+// producer of a path with no choice about its format, so it defines correct.
+//
+// Everything that stores or compares a scope path goes through CanonicalPath.
+// Two spellings of one file are two identities to a lease, an overlap check
+// and a chokepoint queue alike, so the rule lives in one function rather than
+// in each caller's head.
 
 const maxScopePathLength = 500
 
-// NormalizeScopePath canonicalises a pattern so equal intents compare equal:
-// trims, strips a leading `./` or `/`, collapses repeated slashes and drops a
+// CanonicalPath is the single normalisation every scope path passes through,
+// on its way in and before any comparison. It applies repo as the `repo:`
+// namespace of a bare pattern (empty for a single-repository project, and
+// never applied twice), then canonicalises: trims, folds backslashes to `/`,
+// strips a leading `./` or `/`, collapses repeated slashes and drops a
 // trailing slash. It rejects anything that could escape the repository.
-func NormalizeScopePath(raw string) (string, error) {
+//
+// It does not rebase a path: a caller that hands it a path relative to a
+// sub-directory gets that path back, canonically spelled and still wrong.
+// Deciding which base a human meant needs the repository on disk, which the
+// board does not have.
+func CanonicalPath(raw, repo string) (string, error) {
 	p := strings.TrimSpace(raw)
+	if repo != "" && p != "" {
+		if existing, _ := splitRepoPrefix(p); existing == "" {
+			p = repo + ":" + p
+		}
+	}
+	return normalizeScopePath(p, raw)
+}
+
+// NormalizeScopePath canonicalises a pattern that already carries whatever
+// `repo:` prefix it should have. It is CanonicalPath with no namespace to
+// apply.
+func NormalizeScopePath(raw string) (string, error) {
+	return CanonicalPath(raw, "")
+}
+
+// normalizeScopePath does the work. raw is the string the caller passed,
+// echoed back in errors so a prefixed rewrite never shows up in a message
+// about a path the caller never wrote.
+func normalizeScopePath(p, raw string) (string, error) {
 	if p == "" {
 		return "", ErrInvalidScopePath{Pattern: raw, Reason: "empty"}
 	}

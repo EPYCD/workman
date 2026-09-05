@@ -42,8 +42,8 @@ type TaskScope struct {
 	ID     int64 `xorm:"bigint autoincr not null unique pk" json:"id" readOnly:"true" doc:"The unique, numeric id of this scope."`
 	TaskID int64 `xorm:"bigint not null unique index" json:"task_id" param:"projecttask" readOnly:"true" doc:"The task this scope belongs to. Taken from the URL."`
 
-	PathsOwned    []string `xorm:"json null" json:"paths_owned" maxItems:"100" doc:"Repository-relative globs the task will EDIT, e.g. \"pkg/models/tasks.go\" or \"frontend/src/components/**\". Leased on claim: a claim overlapping another task's active lease is refused with 409."`
-	PathsAffected []string `xorm:"json null" json:"paths_affected" maxItems:"100" doc:"Repository-relative globs the task reads or depends on but does not edit. Advisory; shown to agents and never enforced."`
+	PathsOwned    []string `xorm:"json null" json:"paths_owned" maxItems:"100" doc:"Globs the task will EDIT, relative to the REPOSITORY root — \"pkg/models/tasks.go\", \"frontend/src/components/**\", or \"captain-yard-web/src/db/schema.ts\" for an app in a sub-directory. Not relative to that sub-directory: git prints repository-relative paths and a lease is enforced by comparing strings, so a second spelling is a second claim that cannot see the first. Leased on claim: a claim overlapping another task's active lease is refused with 409."`
+	PathsAffected []string `xorm:"json null" json:"paths_affected" maxItems:"100" doc:"Globs the task reads or depends on but does not edit, in the same repository-root-relative form as paths_owned. Advisory; shown to agents and never enforced."`
 	Endpoints     []string `xorm:"json null" json:"endpoints" maxItems:"100" doc:"API surface the task adds or changes, as free text such as \"POST /api/v2/tasks/{id}/claim\". Advisory."`
 	Notes         string   `xorm:"longtext null" json:"notes" doc:"Free-form scope notes — typically what is explicitly out of scope. May contain HTML like a task description."`
 

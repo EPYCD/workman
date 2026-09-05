@@ -82,7 +82,8 @@ inputs:
     required: false
     default: "true"
   github-token:
-    description: A GitHub token (usually `secrets.GITHUB_TOKEN` with `pull-requests: write`) so check mode can post its verdict as a PR comment. Optional.
+    description: >-
+      A GitHub token (usually `secrets.GITHUB_TOKEN` with `pull-requests: write`) so check mode can post its verdict as a PR comment. Optional.
     required: false
     default: ""
   run-url:

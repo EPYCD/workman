@@ -54,8 +54,14 @@ type Config struct {
 	// Codeowners is the path of the CODEOWNERS file; the chokepoint list is
 	// read from it and never hand-maintained.
 	Codeowners string `yaml:"codeowners,omitempty"`
-	// AppRoot is the sub-directory the board's paths are relative to when the
-	// app is not at the repository root (CapYard: captain-yard-web).
+	// AppRoot is where the application lives when it is not at the repository
+	// root (CapYard: captain-yard-web). It is the working directory the gate
+	// workflows run in and the base docs_api_paths are written against.
+	//
+	// It is NOT a base for a scope path. Claims are repository-root-relative,
+	// because that is what git prints and what the pre-commit hook therefore
+	// compares against; rebasing a claim or a chokepoint onto AppRoot gives
+	// one file two identities, which is exactly what a lease cannot survive.
 	AppRoot string `yaml:"app_root,omitempty"`
 	// DocsAPIPaths are the files whose change makes docs:api mandatory; the
 	// receipt derives docs_api_required from the diff against them.

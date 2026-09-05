@@ -14,7 +14,9 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 FAIL_ON_VIOLATION="${FAIL_ON_VIOLATION:-true}"
 
 require_commits
-mapfile -t files < <(git diff --name-only --diff-filter=ACMRD "$BASE_SHA"..."$HEAD_SHA")
+# The same normalisation the claim side went through, so the comparison the
+# board makes is between two spellings of one dialect rather than two dialects.
+mapfile -t files < <(git diff --name-only --diff-filter=ACMRD "$BASE_SHA"..."$HEAD_SHA" | canonical_paths)
 if [[ ${#files[@]} -eq 0 ]]; then
 	log "No files changed between $BASE_SHA and $HEAD_SHA — nothing to check."
 	echo "ok=true" >> "${GITHUB_OUTPUT:-/dev/null}"
