@@ -49,6 +49,7 @@ func Root(version string) *cobra.Command {
 	root.AddCommand(newScopeCmd())
 	root.AddCommand(newLeasesCmd())
 	root.AddCommand(newReleaseCmd())
+	root.AddCommand(newSyncCmd())
 	root.AddCommand(newReadyCmd())
 	root.AddCommand(newCheckCmd())
 	root.AddCommand(newPlanCmd())

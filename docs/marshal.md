@@ -77,6 +77,7 @@ Secrets never live in the file: `MARSHAL_TOKEN`, `MARSHAL_WEBHOOK_SECRET`
 | `marshal chokepoints` | the CODEOWNERS chokepoints and the queue on each |
 | `marshal open <path>` | is anything open on this path |
 | `marshal reconcile [--branch b]` | each claimed task's branch diffed against its claim (strays, collisions) and its last commit (stale) |
+| `marshal lag` (alias `rebase-plan`) | how far each claimed branch is behind the integration branch, in the files it holds; exit `CONFLICT` when any is behind in a file it owns |
 | `marshal worktree <task>` | the `git worktree add` command, branch name from the story id, a database and port from the pool, the checkout recorded |
 | `marshal pool list|release` | allocations, worktrees, agents, checkout conflicts |
 | `marshal claims import [--apply] [--drop-labels]` | `owns:` labels → `paths_owned`; non-path labels are reported, never guessed |
@@ -128,6 +129,47 @@ reports and writes nothing until `--apply`, and it never merges two open tasks
 that turn out to be on one file. That is a real collision that was invisible
 until now, and it goes on both tasks as a comment and into the ledger for a
 human to settle.
+
+### Lag is scoped to the claim
+
+"Commits behind main" is the wrong unit. Forty commits behind in files you
+never touch is noise; one commit behind in the file you are editing is certain
+rework. So a claimed branch has **lag** when the integration branch contains
+commits, unreachable from that branch, that touch paths the task holds:
+
+| Severity | The base moved inside | Consequence |
+|---|---|---|
+| `owned` | `paths_owned` | **Blocking.** A textual conflict is certain, not likely. |
+| `affected` | `paths_affected` | **Warning.** No conflict, but the code you depend on changed and your gates will not see it until you rebase. |
+| `elsewhere` | nothing the task holds | Counted in `commits_behind`. Gates nothing, anywhere. |
+
+The ladder is what makes this worth obeying. A tool that says "you are behind"
+is ignored within a week; one that says "#43 landed schema.ts, you are editing
+schema.ts, you will conflict" is obeyed, because that is specific and
+checkable. `affected` deliberately does not gate: those collisions are common
+and usually harmless, and gating on them would train everyone to override by
+reflex, which would then defeat the gate on `owned` too.
+
+Marshal computes it — it is the only component with the repository — on the
+same poll pass that already fetched for `reconcile`, and writes a record per
+claimed task to the board, where `veans ready`, `veans show` and the panels
+read it. A branch that catches up has its record **deleted**, so an absent
+record means "current" rather than "never looked".
+
+`landed_by_task_id` comes from the `Refs:` trailer on the landing commit. A
+hand-pushed commit carrying no trailer keeps its sha and names no task: still
+lag, just not attributable.
+
+It is a pure function of the branch tip, the base tip and the task's scope, and
+is cached on exactly those three — so the common poll, where none has moved,
+does no git work at all. The walk is bounded: `git rev-list --left-right
+--count` for the counter and one two-commit `git diff --name-only` for the
+paths, never a per-file history walk.
+
+`veans sync <task>` prints what you are behind on and the commands to fix it,
+in your own worktree. It changes nothing — no fetch, no rebase, no write to the
+working tree. An agent's worktree is frequently dirty mid-edit, and a
+half-finished rebase in one is materially worse than a stale branch.
 
 ### The service
 

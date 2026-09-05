@@ -1571,6 +1571,34 @@ func (err ErrNonCanonicalScopePath) HTTPError() web.HTTPError {
 	}
 }
 
+// ErrInvalidLagSeverity represents an error where a lag collision carries a
+// severity that is not one of the three the ladder defines.
+type ErrInvalidLagSeverity struct {
+	Severity string
+}
+
+// IsErrInvalidLagSeverity checks if an error is ErrInvalidLagSeverity.
+func IsErrInvalidLagSeverity(err error) bool {
+	_, ok := err.(ErrInvalidLagSeverity)
+	return ok
+}
+
+func (err ErrInvalidLagSeverity) Error() string {
+	return fmt.Sprintf("Invalid lag severity %q: expected owned, affected or elsewhere", err.Severity)
+}
+
+// ErrCodeInvalidLagSeverity holds the unique world-error code of this error
+const ErrCodeInvalidLagSeverity = 4044
+
+// HTTPError holds the http error description
+func (err ErrInvalidLagSeverity) HTTPError() web.HTTPError {
+	return web.HTTPError{
+		HTTPCode: http.StatusBadRequest,
+		Code:     ErrCodeInvalidLagSeverity,
+		Message:  err.Error(),
+	}
+}
+
 // ErrInvalidReactionEntityKind represents an error where the reaction kind is invalid
 type ErrInvalidReactionEntityKind struct {
 	Kind string

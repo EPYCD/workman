@@ -66,6 +66,10 @@ type Engine struct {
 	corpus   *refs.SpecCorpus
 	health   *invariants.Report
 	healthAt time.Time
+	// lagCache keys each task's measured lag on the branch tip, the base tip
+	// and the scope. Lag is a pure function of those three, so a poll where
+	// none has moved does no git work at all.
+	lagCache map[int64]lagCacheEntry
 }
 
 // Load finds .marshal.yml from dir upward, opens the board and the state.

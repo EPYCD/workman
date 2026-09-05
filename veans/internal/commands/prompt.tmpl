@@ -217,6 +217,7 @@ veans scope {{ .TaskIDExample }} --clear         # drop the scope and its leases
 veans leases                       # who is editing what right now (stale: true = holder inactive)
 veans release {{ .TaskIDExample }}               # give up this task's leases without changing its status
 veans unclaim {{ .TaskIDExample }}               # hand the task back entirely: assignee off, back to Todo, leases dropped, branch label removed
+veans sync {{ .TaskIDExample }}                  # what main has moved under you, by severity, and the commands to catch up
 veans heartbeat {{ .TaskIDExample }}             # mark your leases active during long silent work
 veans check                        # changed files vs your tasks' scopes + others' leases; CONFLICT on strays
 veans check --staged               # same, for the index (pre-commit)
@@ -264,6 +265,11 @@ errors, decide on the warnings, then `veans plan plan.json`.
 - Kanban view: `{{ .ViewID }}`
 - Buckets: Todo=`{{ .Buckets.Todo }}`, In Progress=`{{ .Buckets.InProgress }}`, In Review=`{{ .Buckets.InReview }}`, Done=`{{ .Buckets.Done }}`, Scrapped=`{{ .Buckets.Scrapped }}`
 - Label namespace: `veans:` (auto-prepended; e.g. `--label bug` becomes `veans:bug`)
+- Before opening a PR, run `veans sync {{ .TaskIDExample }}`. If it reports
+  OWNED collisions, the integration branch has moved inside a file you claimed
+  to edit and a conflict is certain — rebase and re-run your gates first.
+  AFFECTED means something you read changed: no conflict, but your assumptions
+  may be stale. It prints commands and never runs them; your worktree is yours.
 - Branch labels: `veans:branch:<branch-name>` — `veans claim` adds the current branch
   automatically, UNLESS you are on the repository default branch, where it adds
   nothing and warns. Branch first, or claim again after branching, or pass

@@ -79,6 +79,7 @@ const TaskCollectionExpandTimeEntriesCount TaskCollectionExpandable = `time_entr
 const TaskCollectionExpandIsUnread TaskCollectionExpandable = `is_unread`
 const TaskCollectionExpandScope TaskCollectionExpandable = `scope`
 const TaskCollectionExpandLeases TaskCollectionExpandable = `leases`
+const TaskCollectionExpandLag TaskCollectionExpandable = `lag`
 
 // Validate validates if the TaskCollectionExpandable value is valid.
 func (t TaskCollectionExpandable) Validate() error {
@@ -101,9 +102,11 @@ func (t TaskCollectionExpandable) Validate() error {
 		return nil
 	case TaskCollectionExpandLeases:
 		return nil
+	case TaskCollectionExpandLag:
+		return nil
 	}
 
-	return InvalidFieldErrorWithMessage([]string{"expand"}, "Expand must be one of the following values: subtasks, buckets, reactions, comments, comment_count, time_entries_count, is_unread")
+	return InvalidFieldErrorWithMessage([]string{"expand"}, "Expand must be one of the following values: subtasks, buckets, reactions, comments, comment_count, time_entries_count, is_unread, scope, leases, lag")
 }
 
 func validateTaskField(fieldName string) error {

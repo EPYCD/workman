@@ -46,6 +46,9 @@ type TickResult struct {
 	Collisions  int       `json:"collisions"`
 	HealthOK    bool      `json:"health_ok"`
 	RootsPushed bool      `json:"roots_published,omitempty"`
+	LagBehind   int       `json:"lag_behind"`
+	LagBlocking int       `json:"lag_blocking"`
+	LagCleared  int       `json:"lag_cleared"`
 	Notified    int       `json:"notified"`
 	Errors      []string  `json:"errors,omitempty"`
 	FetchedSpec bool      `json:"fetched_spec"`
@@ -114,8 +117,38 @@ func (e *Engine) Tick(ctx context.Context, base string) *TickResult {
 	}
 	res.Notified += e.announceReferences(ctx, snap, res)
 	res.Notified += e.announceBranches(ctx, snap, base, res)
+	e.recordLag(ctx, snap, base, res)
 	res.Notified += e.announceHealth(ctx, snap, res)
 	return res
+}
+
+// recordLag measures every claimed branch against the integration branch and
+// writes the answer to the board.
+//
+// It runs after the branch checks, which have already fetched, so the marginal
+// cost is a merge-base and a two-commit diff per branch whose tip or base has
+// moved — and nothing at all for the ones where neither has.
+func (e *Engine) recordLag(ctx context.Context, snap *board.Snapshot, base string, res *TickResult) {
+	rep, err := e.ComputeLag(ctx, snap, base)
+	if err != nil {
+		res.Errors = append(res.Errors, "lag: "+err.Error())
+		return
+	}
+	res.Errors = append(res.Errors, rep.Errors...)
+	res.LagBehind = len(rep.Branches)
+	for _, b := range rep.Branches {
+		if b.Lag.Blocking() {
+			res.LagBlocking++
+		}
+	}
+	written, cleared := e.PublishLag(ctx, snap, rep)
+	res.LagCleared = cleared
+	if written > 0 || cleared > 0 {
+		e.log(ledger.Entry{
+			Action: "lag", Subject: rep.Base, Outcome: "ok",
+			Metadata: map[string]any{"behind": res.LagBehind, "blocking": res.LagBlocking, "cleared": cleared, "cached": rep.Cached},
+		})
+	}
 }
 
 func (e *Engine) fetchSpec(ctx context.Context) error {

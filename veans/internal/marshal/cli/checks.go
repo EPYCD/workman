@@ -237,6 +237,59 @@ concluding it is free.`,
 	}
 }
 
+func newLagCmd() *cobra.Command {
+	var base string
+	cmd := &cobra.Command{
+		Use:     "lag",
+		Aliases: []string{"rebase-plan"},
+		Short:   "How far each claimed branch is behind the integration branch, in the files it holds",
+		Long: `Measures every claimed branch against the integration branch and reports
+the paths it holds that have moved since it diverged, with which task landed
+each one.
+
+Severity is scoped to the claim: owned means the base moved inside a file the
+task said it would edit, so a conflict is certain; affected means it moved in
+something the task reads but does not edit. Commits behind is context for that
+list, not a number to drive to zero.
+
+Read-only. It computes the answer rather than reading back what the last poll
+stored, so it is current even between polls, and it touches no worktree.`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			e, err := load()
+			if err != nil {
+				return err
+			}
+			snap, err := e.Board.Snapshot(cmd.Context())
+			if err != nil {
+				return err
+			}
+			if base == "" {
+				base = e.Cfg.IntegrationBranch
+			}
+			rep, err := e.ComputeLag(cmd.Context(), snap, base)
+			if err != nil {
+				return err
+			}
+			if err := emit(cmd.OutOrStdout(), rep); err != nil {
+				return err
+			}
+			blocking := 0
+			for _, b := range rep.Branches {
+				if b.Lag.Blocking() {
+					blocking++
+				}
+			}
+			if blocking > 0 {
+				return output.New(output.CodeConflict, "%d branch(es) are behind %s in a file they own", blocking, rep.Base)
+			}
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&base, "base", "", "integration branch to measure against (default: .marshal.yml's integration_branch)")
+	return cmd
+}
+
 func newReconcileCmd() *cobra.Command {
 	var base, branch string
 	cmd := &cobra.Command{
