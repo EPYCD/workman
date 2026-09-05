@@ -245,7 +245,10 @@ func TestMarshal_EndToEnd(t *testing.T) {
 
 	// --- chokepoints ---
 	out, errOut, code = runMarshal(t, ws, nil, "chokepoints")
-	if code != 0 || !strings.Contains(out, "src/lib/contract/**") || !strings.Contains(out, fmt.Sprintf(`"TaskID": %d`, clean.ID)) {
+	// task_id, not TaskID: the queue structs carry json tags now, because the
+	// board panel reads snake_case and was rendering every row blank without
+	// them.
+	if code != 0 || !strings.Contains(out, "src/lib/contract/**") || !strings.Contains(out, fmt.Sprintf(`"task_id": %d`, clean.ID)) {
 		t.Fatalf("the contract chokepoint must queue the clean task; exit %d\n%s\n%s", code, out, errOut)
 	}
 
