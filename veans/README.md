@@ -120,6 +120,7 @@ veans update <id>              --status, --title, --priority, --label-add/remove
                                --description, --description-replace-old/new, --description-append,
                                --comment, --reason, --if-unchanged-since
 veans claim <id>               assign the bot, move to In Progress, tag with current branch label, lease paths_owned
+                               (no label when on the default branch; --branch names one explicitly)
 veans ready                    ready queue with reasons (assigned / blocked / lease_conflict)
 veans scope <id> [flags]       show or set the task's scope (paths owned/affected, endpoints, notes)
 veans leases                   list the paths in-progress tasks are editing right now

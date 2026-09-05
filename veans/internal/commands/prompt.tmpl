@@ -264,7 +264,10 @@ errors, decide on the warnings, then `veans plan plan.json`.
 - Kanban view: `{{ .ViewID }}`
 - Buckets: Todo=`{{ .Buckets.Todo }}`, In Progress=`{{ .Buckets.InProgress }}`, In Review=`{{ .Buckets.InReview }}`, Done=`{{ .Buckets.Done }}`, Scrapped=`{{ .Buckets.Scrapped }}`
 - Label namespace: `veans:` (auto-prepended; e.g. `--label bug` becomes `veans:bug`)
-- Branch labels: `veans:branch:<branch-name>` — `veans claim` adds the current branch automatically
+- Branch labels: `veans:branch:<branch-name>` — `veans claim` adds the current branch
+  automatically, UNLESS you are on the repository default branch, where it adds
+  nothing and warns. Branch first, or claim again after branching, or pass
+  `--branch`. A label saying `veans:branch:main` tells the next reader nothing.
 
 The agent prompt above overrides TodoWrite. Anything you would have tracked
 there should live in Vikunja instead, where it stays visible across sessions
