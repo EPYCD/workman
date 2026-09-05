@@ -42,8 +42,8 @@ type TaskScope struct {
 	ID     int64 `xorm:"bigint autoincr not null unique pk" json:"id" readOnly:"true" doc:"The unique, numeric id of this scope."`
 	TaskID int64 `xorm:"bigint not null unique index" json:"task_id" param:"projecttask" readOnly:"true" doc:"The task this scope belongs to. Taken from the URL."`
 
-	PathsOwned    []string `xorm:"json null" json:"paths_owned" maxItems:"100" doc:"Repository-relative globs the task will EDIT, e.g. \"pkg/models/tasks.go\" or \"frontend/src/components/**\". Leased on claim: a claim overlapping another task's active lease is refused with 409."`
-	PathsAffected []string `xorm:"json null" json:"paths_affected" maxItems:"100" doc:"Repository-relative globs the task reads or depends on but does not edit. Advisory; shown to agents and never enforced."`
+	PathsOwned    []string `xorm:"json null" json:"paths_owned" maxItems:"100" doc:"Globs the task will EDIT, relative to the REPOSITORY root — \"pkg/models/tasks.go\", \"frontend/src/components/**\", or \"captain-yard-web/src/db/schema.ts\" for an app in a sub-directory. Not relative to that sub-directory: git prints repository-relative paths and a lease is enforced by comparing strings, so a second spelling is a second claim that cannot see the first. Leased on claim: a claim overlapping another task's active lease is refused with 409."`
+	PathsAffected []string `xorm:"json null" json:"paths_affected" maxItems:"100" doc:"Globs the task reads or depends on but does not edit, in the same repository-root-relative form as paths_owned. Advisory; shown to agents and never enforced."`
 	Endpoints     []string `xorm:"json null" json:"endpoints" maxItems:"100" doc:"API surface the task adds or changes, as free text such as \"POST /api/v2/tasks/{id}/claim\". Advisory."`
 	Notes         string   `xorm:"longtext null" json:"notes" doc:"Free-form scope notes — typically what is explicitly out of scope. May contain HTML like a task description."`
 
@@ -107,8 +107,16 @@ func getTaskScopesForTasks(s *xorm.Session, taskIDs []int64) (map[int64]*TaskSco
 }
 
 // normalizeScopeList canonicalises every pattern, drops duplicates and empty
-// entries, and rejects anything that could escape the repository.
-func normalizeScopeList(raw []string, limit int) ([]string, error) {
+// entries, rejects anything that could escape the repository, and — when the
+// project has declared its repository's top-level entries — refuses a path
+// relative to the wrong base.
+//
+// That last check is the one that makes a lease mean anything. Canonicalising
+// the spelling makes equal intents compare equal; refusing a wrong base is
+// what stops one file acquiring a second identity in the first place, and
+// every downstream consumer gets correctness from it for free, including the
+// ones not yet written.
+func normalizeScopeList(raw []string, limit int, roots ScopeRoots) ([]string, error) {
 	out := make([]string, 0, len(raw))
 	seen := map[string]bool{}
 	for _, r := range raw {
@@ -117,6 +125,9 @@ func normalizeScopeList(raw []string, limit int) ([]string, error) {
 		}
 		p, err := NormalizeScopePath(r)
 		if err != nil {
+			return nil, err
+		}
+		if err := roots.Check(p); err != nil {
 			return nil, err
 		}
 		if seen[p] {
@@ -129,6 +140,21 @@ func normalizeScopeList(raw []string, limit int) ([]string, error) {
 		return nil, ErrInvalidScopePath{Pattern: out[limit], Reason: "too many entries"}
 	}
 	return out, nil
+}
+
+// getProjectScopeRoots reads a project's declaration of what a
+// repository-relative path looks like. A project that has published none
+// enforces nothing, which is what every project did before this existed.
+func getProjectScopeRoots(s *xorm.Session, projectID int64) (ScopeRoots, error) {
+	if projectID == 0 {
+		return ScopeRoots{}, nil
+	}
+	p := &Project{}
+	has, err := s.Where("id = ?", projectID).Cols("scope_repo_roots", "scope_app_root", "scope_app_entries").Get(p)
+	if err != nil || !has {
+		return ScopeRoots{}, err
+	}
+	return ParseScopeRoots(p.ScopeRepoRoots, p.ScopeAppRoot, p.ScopeAppEntries), nil
 }
 
 func normalizeEndpoints(raw []string) ([]string, error) {
@@ -187,11 +213,15 @@ func (ts *TaskScope) ensureLists() {
 // are normalised before saving so equal intents always compare equal when
 // leases are checked.
 func (ts *TaskScope) Update(s *xorm.Session, _ web.Auth) error {
-	owned, err := normalizeScopeList(ts.PathsOwned, maxScopePaths)
+	roots, err := getProjectScopeRoots(s, taskProjectID(s, ts.TaskID))
 	if err != nil {
 		return err
 	}
-	affected, err := normalizeScopeList(ts.PathsAffected, maxScopePaths)
+	owned, err := normalizeScopeList(ts.PathsOwned, maxScopePaths, roots)
+	if err != nil {
+		return err
+	}
+	affected, err := normalizeScopeList(ts.PathsAffected, maxScopePaths, roots)
 	if err != nil {
 		return err
 	}

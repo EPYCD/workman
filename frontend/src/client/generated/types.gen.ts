@@ -877,6 +877,33 @@ export type LabelWithTaskId = {
     readonly updated?: string;
 };
 
+export type LagCollision = {
+    /**
+     * When that commit was authored.
+     */
+    landed_at?: string;
+    /**
+     * That task's identifier, e.g. "#43".
+     */
+    landed_by_identifier?: string;
+    /**
+     * The task whose merge landed this change, resolved from the landing commit's Refs: trailer. Absent for a hand-pushed commit that carries no trailer — the sha is still authoritative.
+     */
+    landed_by_task_id?: number;
+    /**
+     * The commit on the integration branch that last touched this path.
+     */
+    landed_in_sha?: string;
+    /**
+     * The canonical path, as the task claims it.
+     */
+    path?: string;
+    /**
+     * owned when the path is in paths_owned, affected when only in paths_affected, elsewhere otherwise.
+     */
+    severity?: string;
+};
+
 export type LdapAuthInfo = {
     enabled?: boolean;
 };
@@ -1679,6 +1706,18 @@ export type Project = {
      */
     receipt_bot_id?: number;
     /**
+     * Comma-separated top-level entries of the app root, e.g. "src,packages,docs". A scope path starting with one of these, when the repository root has no such entry, is the app-relative spelling and is refused. Without it nothing is enforced: a first segment unknown to both is a directory that does not exist yet, which a task is entitled to claim. Published by marshal setup; admins only.
+     */
+    scope_app_entries?: string;
+    /**
+     * The sub-directory the application lives in, e.g. "captain-yard-web". Used only to suggest the spelling a caller probably meant when a path is refused — never to rewrite one. Admins only.
+     */
+    scope_app_root?: string;
+    /**
+     * Comma-separated top-level entries of the repository, e.g. "captain-yard-web,.github,docs". A scope path whose first segment is not one of these is refused as not canonical. Empty disables the check. Published by marshal setup and kept current by marshal serve; admins only.
+     */
+    scope_repo_roots?: string;
+    /**
      * The requesting user's subscription status for this project. Read-only here; use the subscription endpoints to change it. Only returned when retrieving a single project.
      */
     readonly subscription?: Subscription;
@@ -1807,6 +1846,18 @@ export type ProjectReadBody = {
      * The bot user whose token alone may post gate receipts. While set, a task cannot be marked done without a merged, passing receipt, and the user who moved it to review cannot close it. 0 disables both guards. Admins only.
      */
     receipt_bot_id?: number;
+    /**
+     * Comma-separated top-level entries of the app root, e.g. "src,packages,docs". A scope path starting with one of these, when the repository root has no such entry, is the app-relative spelling and is refused. Without it nothing is enforced: a first segment unknown to both is a directory that does not exist yet, which a task is entitled to claim. Published by marshal setup; admins only.
+     */
+    scope_app_entries?: string;
+    /**
+     * The sub-directory the application lives in, e.g. "captain-yard-web". Used only to suggest the spelling a caller probably meant when a path is refused — never to rewrite one. Admins only.
+     */
+    scope_app_root?: string;
+    /**
+     * Comma-separated top-level entries of the repository, e.g. "captain-yard-web,.github,docs". A scope path whose first segment is not one of these is refused as not canonical. Empty disables the check. Published by marshal setup and kept current by marshal serve; admins only.
+     */
+    scope_repo_roots?: string;
     /**
      * The requesting user's subscription status for this project. Read-only here; use the subscription endpoints to change it. Only returned when retrieving a single project.
      */
@@ -2150,7 +2201,7 @@ export type ScopeCheckRequest = {
      */
     readonly $schema?: string;
     /**
-     * Repository-relative paths the change modifies, added or deleted, as git diff --name-only prints them.
+     * Paths the change modifies, adds or deletes, exactly as git diff --name-only prints them: relative to the repository root. That is the canonical base for a scope path too, so no rebasing is needed or wanted on either side.
      */
     files: Array<string> | null;
     /**
@@ -2382,6 +2433,10 @@ export type Task = {
      * The labels on this task. Read-only here; use the label-task endpoints to add or remove labels.
      */
     readonly labels?: Array<Label> | null;
+    /**
+     * How far this task's branch is behind the integration branch, in the files it holds. Written by Marshal. Only present when requested via the lag expand option; null when the branch is current or has never been measured.
+     */
+    readonly lag?: TaskLag;
     /**
      * The path leases this task currently holds, i.e. the files it is exclusively editing. Only present when requested via the leases expand option.
      */
@@ -2639,6 +2694,55 @@ export type TaskDuplicate = {
     readonly duplicated_task?: Task;
 };
 
+export type TaskLag = {
+    /**
+     * A URL to the JSON Schema for this object.
+     */
+    readonly $schema?: string;
+    /**
+     * The integration branch it is measured against, e.g. "origin/main".
+     */
+    base?: string;
+    /**
+     * What the integration branch pointed at when this was computed.
+     */
+    base_sha?: string;
+    /**
+     * The task's branch, as the veans:branch: label names it.
+     */
+    branch?: string;
+    /**
+     * Each path the integration branch moved that this task holds, with which task landed it.
+     */
+    collisions?: Array<LagCollision> | null;
+    /**
+     * How many commits the integration branch has that this branch does not. Context for the collision list, not a number to drive to zero.
+     */
+    commits_behind?: number;
+    /**
+     * When Marshal last recomputed this.
+     */
+    computed_at?: string;
+    readonly created?: string;
+    /**
+     * The unique, numeric id of this lag record.
+     */
+    readonly id?: number;
+    /**
+     * Where the branch diverged from the integration branch.
+     */
+    merge_base_sha?: string;
+    /**
+     * The worst severity across collisions: owned (a conflict is certain), affected (your assumptions may be stale), or elsewhere (informational). Only owned gates anything.
+     */
+    severity?: string;
+    /**
+     * The task this lag belongs to. Taken from the URL.
+     */
+    readonly task_id?: number;
+    readonly updated?: string;
+};
+
 export type TaskPathLease = {
     /**
      * When the lease was taken.
@@ -2813,6 +2917,10 @@ export type TaskReadOneBody = {
      */
     readonly labels?: Array<Label> | null;
     /**
+     * How far this task's branch is behind the integration branch, in the files it holds. Written by Marshal. Only present when requested via the lag expand option; null when the branch is current or has never been measured.
+     */
+    readonly lag?: TaskLag;
+    /**
      * The path leases this task currently holds, i.e. the files it is exclusively editing. Only present when requested via the leases expand option.
      */
     readonly leases?: Array<TaskPathLease> | null;
@@ -2883,6 +2991,10 @@ export type TaskReadiness = {
      */
     blocked_by?: Array<Task> | null;
     /**
+     * How far this task's branch is behind the integration branch, in the files it holds. Null when it has no branch yet or is not behind. Only severity "owned" makes the task not ready; "affected" and "elsewhere" are reported and gate nothing.
+     */
+    lag?: TaskLag;
+    /**
      * Each owned path that overlaps another task's active lease, with the holder.
      */
     lease_conflicts?: Array<ErrPathLeaseConflict> | null;
@@ -2891,7 +3003,7 @@ export type TaskReadiness = {
      */
     ready?: boolean;
     /**
-     * Why the task is not ready. Empty when ready. One or more of: done, assigned, blocked, lease_conflict. blocked covers an unfinished blocker, an unfinished predecessor (follows) and open subtasks.
+     * Why the task is not ready. Empty when ready. One or more of: done, assigned, blocked, lease_conflict, lag. blocked covers an unfinished blocker, an unfinished predecessor (follows) and open subtasks; lag means the integration branch moved inside a path this task owns.
      */
     reasons?: Array<string> | null;
     /**
@@ -3018,11 +3130,11 @@ export type TaskScope = {
      */
     notes?: string;
     /**
-     * Repository-relative globs the task reads or depends on but does not edit. Advisory; shown to agents and never enforced.
+     * Globs the task reads or depends on but does not edit, in the same repository-root-relative form as paths_owned. Advisory; shown to agents and never enforced.
      */
     paths_affected?: Array<string> | null;
     /**
-     * Repository-relative globs the task will EDIT, e.g. "pkg/models/tasks.go" or "frontend/src/components**". Leased on claim: a claim overlapping another task's active lease is refused with 409.
+     * Globs the task will EDIT, relative to the REPOSITORY root — "pkg/models/tasks.go", "frontend/src/components**", or "captain-yard-web/src/db/schema.ts" for an app in a sub-directory. Not relative to that sub-directory: git prints repository-relative paths and a lease is enforced by comparing strings, so a second spelling is a second claim that cannot see the first. Leased on claim: a claim overlapping another task's active lease is refused with 409.
      */
     paths_owned?: Array<string> | null;
     /**
@@ -4611,6 +4723,18 @@ export type ProjectWritable = {
      */
     receipt_bot_id?: number;
     /**
+     * Comma-separated top-level entries of the app root, e.g. "src,packages,docs". A scope path starting with one of these, when the repository root has no such entry, is the app-relative spelling and is refused. Without it nothing is enforced: a first segment unknown to both is a directory that does not exist yet, which a task is entitled to claim. Published by marshal setup; admins only.
+     */
+    scope_app_entries?: string;
+    /**
+     * The sub-directory the application lives in, e.g. "captain-yard-web". Used only to suggest the spelling a caller probably meant when a path is refused — never to rewrite one. Admins only.
+     */
+    scope_app_root?: string;
+    /**
+     * Comma-separated top-level entries of the repository, e.g. "captain-yard-web,.github,docs". A scope path whose first segment is not one of these is refused as not canonical. Empty disables the check. Published by marshal setup and kept current by marshal serve; admins only.
+     */
+    scope_repo_roots?: string;
+    /**
      * The title of the project. You'll see this in the overview.
      */
     title?: string;
@@ -4691,6 +4815,18 @@ export type ProjectReadBodyWritable = {
      * The bot user whose token alone may post gate receipts. While set, a task cannot be marked done without a merged, passing receipt, and the user who moved it to review cannot close it. 0 disables both guards. Admins only.
      */
     receipt_bot_id?: number;
+    /**
+     * Comma-separated top-level entries of the app root, e.g. "src,packages,docs". A scope path starting with one of these, when the repository root has no such entry, is the app-relative spelling and is refused. Without it nothing is enforced: a first segment unknown to both is a directory that does not exist yet, which a task is entitled to claim. Published by marshal setup; admins only.
+     */
+    scope_app_entries?: string;
+    /**
+     * The sub-directory the application lives in, e.g. "captain-yard-web". Used only to suggest the spelling a caller probably meant when a path is refused — never to rewrite one. Admins only.
+     */
+    scope_app_root?: string;
+    /**
+     * Comma-separated top-level entries of the repository, e.g. "captain-yard-web,.github,docs". A scope path whose first segment is not one of these is refused as not canonical. Empty disables the check. Published by marshal setup and kept current by marshal serve; admins only.
+     */
+    scope_repo_roots?: string;
     /**
      * The title of the project. You'll see this in the overview.
      */
@@ -4833,7 +4969,7 @@ export type SavedFilterReadBodyWritable = {
 
 export type ScopeCheckRequestWritable = {
     /**
-     * Repository-relative paths the change modifies, added or deleted, as git diff --name-only prints them.
+     * Paths the change modifies, adds or deletes, exactly as git diff --name-only prints them: relative to the repository root. That is the canonical base for a scope path too, so no rebasing is needed or wanted on either side.
      */
     files: Array<string> | null;
     /**
@@ -4978,6 +5114,41 @@ export type TaskDuplicateWritable = {
     [key: string]: never;
 };
 
+export type TaskLagWritable = {
+    /**
+     * The integration branch it is measured against, e.g. "origin/main".
+     */
+    base?: string;
+    /**
+     * What the integration branch pointed at when this was computed.
+     */
+    base_sha?: string;
+    /**
+     * The task's branch, as the veans:branch: label names it.
+     */
+    branch?: string;
+    /**
+     * Each path the integration branch moved that this task holds, with which task landed it.
+     */
+    collisions?: Array<LagCollision> | null;
+    /**
+     * How many commits the integration branch has that this branch does not. Context for the collision list, not a number to drive to zero.
+     */
+    commits_behind?: number;
+    /**
+     * When Marshal last recomputed this.
+     */
+    computed_at?: string;
+    /**
+     * Where the branch diverged from the integration branch.
+     */
+    merge_base_sha?: string;
+    /**
+     * The worst severity across collisions: owned (a conflict is certain), affected (your assumptions may be stale), or elsewhere (informational). Only owned gates anything.
+     */
+    severity?: string;
+};
+
 export type TaskPathLeaseWritable = {
     [key: string]: never;
 };
@@ -5056,6 +5227,10 @@ export type TaskReadinessWritable = {
      */
     blocked_by?: Array<TaskWritable> | null;
     /**
+     * How far this task's branch is behind the integration branch, in the files it holds. Null when it has no branch yet or is not behind. Only severity "owned" makes the task not ready; "affected" and "elsewhere" are reported and gate nothing.
+     */
+    lag?: TaskLagWritable;
+    /**
      * Each owned path that overlaps another task's active lease, with the holder.
      */
     lease_conflicts?: Array<ErrPathLeaseConflict> | null;
@@ -5064,7 +5239,7 @@ export type TaskReadinessWritable = {
      */
     ready?: boolean;
     /**
-     * Why the task is not ready. Empty when ready. One or more of: done, assigned, blocked, lease_conflict. blocked covers an unfinished blocker, an unfinished predecessor (follows) and open subtasks.
+     * Why the task is not ready. Empty when ready. One or more of: done, assigned, blocked, lease_conflict, lag. blocked covers an unfinished blocker, an unfinished predecessor (follows) and open subtasks; lag means the integration branch moved inside a path this task owns.
      */
     reasons?: Array<string> | null;
     /**
@@ -5133,11 +5308,11 @@ export type TaskScopeWritable = {
      */
     notes?: string;
     /**
-     * Repository-relative globs the task reads or depends on but does not edit. Advisory; shown to agents and never enforced.
+     * Globs the task reads or depends on but does not edit, in the same repository-root-relative form as paths_owned. Advisory; shown to agents and never enforced.
      */
     paths_affected?: Array<string> | null;
     /**
-     * Repository-relative globs the task will EDIT, e.g. "pkg/models/tasks.go" or "frontend/src/components**". Leased on claim: a claim overlapping another task's active lease is refused with 409.
+     * Globs the task will EDIT, relative to the REPOSITORY root — "pkg/models/tasks.go", "frontend/src/components**", or "captain-yard-web/src/db/schema.ts" for an app in a sub-directory. Not relative to that sub-directory: git prints repository-relative paths and a lease is enforced by comparing strings, so a second spelling is a second claim that cannot see the first. Leased on claim: a claim overlapping another task's active lease is refused with 409.
      */
     paths_owned?: Array<string> | null;
 };
@@ -8142,7 +8317,7 @@ export type TasksReadByIndexData = {
         /**
          * Embed extra data per task. Repeatable.
          */
-        expand?: Array<'subtasks' | 'buckets' | 'reactions' | 'comments' | 'comment_count' | 'time_entries_count' | 'is_unread' | 'scope' | 'leases'> | null;
+        expand?: Array<'subtasks' | 'buckets' | 'reactions' | 'comments' | 'comment_count' | 'time_entries_count' | 'is_unread' | 'scope' | 'leases' | 'lag'> | null;
         /**
          * How rich-text fields are exchanged. See the API description.
          */
@@ -9417,7 +9592,7 @@ export type TasksReadData = {
         /**
          * Embed extra data per task. Repeatable.
          */
-        expand?: Array<'subtasks' | 'buckets' | 'reactions' | 'comments' | 'comment_count' | 'time_entries_count' | 'is_unread' | 'scope' | 'leases'> | null;
+        expand?: Array<'subtasks' | 'buckets' | 'reactions' | 'comments' | 'comment_count' | 'time_entries_count' | 'is_unread' | 'scope' | 'leases' | 'lag'> | null;
         /**
          * How rich-text fields are exchanged. See the API description.
          */
@@ -9809,6 +9984,126 @@ export type TaskLabelsDeleteResponses = {
 };
 
 export type TaskLabelsDeleteResponse = TaskLabelsDeleteResponses[keyof TaskLabelsDeleteResponses];
+
+export type TasksLagDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * The numeric id of the task.
+         */
+        projecttask: number;
+    };
+    query?: never;
+    url: '/tasks/{projecttask}/lag';
+};
+
+export type TasksLagDeleteErrors = {
+    /**
+     * Error
+     */
+    default: VikunjaErrorModel;
+};
+
+export type TasksLagDeleteError = TasksLagDeleteErrors[keyof TasksLagDeleteErrors];
+
+export type TasksLagDeleteResponses = {
+    /**
+     * No Content
+     */
+    204: void;
+};
+
+export type TasksLagDeleteResponse = TasksLagDeleteResponses[keyof TasksLagDeleteResponses];
+
+export type TasksLagReadData = {
+    body?: never;
+    path: {
+        /**
+         * The numeric id of the task.
+         */
+        projecttask: number;
+    };
+    query?: never;
+    url: '/tasks/{projecttask}/lag';
+};
+
+export type TasksLagReadErrors = {
+    /**
+     * Error
+     */
+    default: VikunjaErrorModel;
+};
+
+export type TasksLagReadError = TasksLagReadErrors[keyof TasksLagReadErrors];
+
+export type TasksLagReadResponses = {
+    /**
+     * OK
+     */
+    200: TaskLag;
+};
+
+export type TasksLagReadResponse = TasksLagReadResponses[keyof TasksLagReadResponses];
+
+export type PatchTasksLagReadData = {
+    body: Array<JsonPatchOp> | null;
+    path: {
+        /**
+         * The numeric id of the task.
+         */
+        projecttask: number;
+    };
+    query?: never;
+    url: '/tasks/{projecttask}/lag';
+};
+
+export type PatchTasksLagReadErrors = {
+    /**
+     * Error
+     */
+    default: VikunjaErrorModel;
+};
+
+export type PatchTasksLagReadError = PatchTasksLagReadErrors[keyof PatchTasksLagReadErrors];
+
+export type PatchTasksLagReadResponses = {
+    /**
+     * OK
+     */
+    200: TaskLag;
+};
+
+export type PatchTasksLagReadResponse = PatchTasksLagReadResponses[keyof PatchTasksLagReadResponses];
+
+export type TasksLagUpdateData = {
+    body: TaskLagWritable;
+    path: {
+        /**
+         * The numeric id of the task.
+         */
+        projecttask: number;
+    };
+    query?: never;
+    url: '/tasks/{projecttask}/lag';
+};
+
+export type TasksLagUpdateErrors = {
+    /**
+     * Error
+     */
+    default: VikunjaErrorModel;
+};
+
+export type TasksLagUpdateError = TasksLagUpdateErrors[keyof TasksLagUpdateErrors];
+
+export type TasksLagUpdateResponses = {
+    /**
+     * OK
+     */
+    200: TaskLag;
+};
+
+export type TasksLagUpdateResponse = TasksLagUpdateResponses[keyof TasksLagUpdateResponses];
 
 export type TasksLeasesReleaseData = {
     body?: never;

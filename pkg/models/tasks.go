@@ -160,6 +160,9 @@ type Task struct {
 	Scope *TaskScope `xorm:"-" json:"scope,omitempty" readOnly:"true" doc:"The task's scope — the files it will edit, the files it affects and the endpoints it changes. Only present when requested via the scope expand option; null when the task has none."`
 	// The path leases the task currently holds. Only present when requested via the leases expand option.
 	Leases []*TaskPathLease `xorm:"-" json:"leases,omitempty" readOnly:"true" doc:"The path leases this task currently holds, i.e. the files it is exclusively editing. Only present when requested via the leases expand option."`
+	// How far the task's branch has fallen behind the integration branch, in
+	// the files it holds. Only present when requested via the lag expand option.
+	Lag *TaskLag `xorm:"-" json:"lag,omitempty" readOnly:"true" doc:"How far this task's branch is behind the integration branch, in the files it holds. Written by Marshal. Only present when requested via the lag expand option; null when the branch is current or has never been measured."`
 
 	// Behaves exactly the same as with the TaskCollection.Expand parameter
 	Expand []TaskCollectionExpandable `xorm:"-" json:"-" query:"expand"`
@@ -798,6 +801,14 @@ func addMoreInfoToTasks(s *xorm.Session, taskMap map[int64]*Task, a web.Auth, vi
 				for id, sc := range scopes {
 					sc.ensureLists()
 					taskMap[id].Scope = sc
+				}
+			case TaskCollectionExpandLag:
+				lags, err := getTaskLagsForTasks(s, taskIDs)
+				if err != nil {
+					return err
+				}
+				for id, l := range lags {
+					taskMap[id].Lag = l
 				}
 			case TaskCollectionExpandLeases:
 				leases, err := getLeasesForTasks(s, taskIDs)

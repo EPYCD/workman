@@ -53,6 +53,75 @@ func TestNormalizeScopePath(t *testing.T) {
 	}
 }
 
+// TestCanonicalPath is the contract every scope path is held to, everywhere it
+// is written or compared. It is the port of TestCanonical in
+// veans/internal/marshal/pathpattern; keep the two tables in lockstep.
+func TestCanonicalPath(t *testing.T) {
+	// One table, three implementations. The shell copy of this rule lives in
+	// .github/actions/workman-merge-hook/common.sh and is tested against the
+	// same cases by canonical-path_test.sh; when one changes, all three do.
+	cases := []struct {
+		raw, repo, want string
+	}{
+		// Already canonical — git's own output must survive untouched.
+		{"pkg/models/tasks.go", "", "pkg/models/tasks.go"},
+		{"captain-yard-web/src/server/db/repo.ts", "", "captain-yard-web/src/server/db/repo.ts"},
+		{".github/workflows/test.yml", "", ".github/workflows/test.yml"},
+		{"frontend/src/**", "", "frontend/src/**"},
+
+		// Spellings that must collapse onto one identity.
+		{"./pkg/models/tasks.go", "", "pkg/models/tasks.go"},
+		{"/pkg/models/tasks.go", "", "pkg/models/tasks.go"},
+		{".//pkg//models/tasks.go", "", "pkg/models/tasks.go"},
+		{"pkg/models/", "", "pkg/models"},
+		{"pkg\\models\\tasks.go", "", "pkg/models/tasks.go"},
+		{"  frontend/src/**  ", "", "frontend/src/**"},
+
+		// The repository namespace: applied to a bare path, never twice, and
+		// never to a path that already names a repository.
+		{"pkg/models/**", "api", "api:pkg/models/**"},
+		{" docs/x.md ", "api", "api:docs/x.md"},
+		{"web:src/App.vue", "api", "web:src/App.vue"},
+		{"api:pkg/models/**", "api", "api:pkg/models/**"},
+		{"./src//App.vue", "web", "web:src/App.vue"},
+
+		// NOT rebased. "src/server/db/repo.ts" is a different file from
+		// "captain-yard-web/src/server/db/repo.ts" and stays one: an app_root
+		// is where the application lives, not a base for a claim, and guessing
+		// which the caller meant is how a claim lands on a file nobody meant
+		// to claim.
+		{"src/server/db/repo.ts", "", "src/server/db/repo.ts"},
+	}
+	for _, c := range cases {
+		got, err := CanonicalPath(c.raw, c.repo)
+		if err != nil {
+			t.Errorf("CanonicalPath(%q, %q): unexpected error %v", c.raw, c.repo, err)
+			continue
+		}
+		if got != c.want {
+			t.Errorf("CanonicalPath(%q, %q) = %q, want %q", c.raw, c.repo, got, c.want)
+		}
+		again, err := CanonicalPath(got, c.repo)
+		if err != nil || again != got {
+			t.Errorf("CanonicalPath(%q, %q) is not idempotent: %q, %v", got, c.repo, again, err)
+		}
+	}
+
+	// A path that could escape the repository, name nothing, or carry a
+	// namespace that is not a name is refused rather than repaired.
+	bad := []struct{ raw, repo string }{
+		{"", ""}, {"   ", ""}, {"/", ""}, {".", ""}, {"./", ""},
+		{"../etc/passwd", ""}, {"pkg/../secrets", ""}, {"pkg/./x", ""},
+		{"a\nb", ""}, {"api:", ""}, {"bad repo:pkg/x", ""}, {"api:../x", ""},
+		{"../escape", "api"}, {"", "api"},
+	}
+	for _, c := range bad {
+		if got, err := CanonicalPath(c.raw, c.repo); err == nil {
+			t.Errorf("CanonicalPath(%q, %q) = %q, must be rejected", c.raw, c.repo, got)
+		}
+	}
+}
+
 func TestPathPatternsOverlap(t *testing.T) {
 	overlap := [][2]string{
 		{"api:pkg/models/**", "api:pkg/models/tasks.go"},

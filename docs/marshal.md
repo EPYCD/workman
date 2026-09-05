@@ -38,7 +38,12 @@ references:                                  # anchors resolve from these
   - {prefix: D-,   file: _bmad-output/epics.md}
 paste_min_words: 12
 codeowners: .github/CODEOWNERS
-app_root: captain-yard-web                   # board paths are relative to this
+app_root: captain-yard-web                   # where the app lives: the gates'
+                                             # working directory. NOT a base
+                                             # for a scope path — claims and
+                                             # chokepoints are relative to the
+                                             # repository root, which is what
+                                             # git prints.
 docs_api_paths: [src/lib/contract.ts, src/lib/contract/**, src/lib/contract-routes.ts]
 docs_api_output: docs/API.md
 pool:
@@ -64,22 +69,140 @@ Secrets never live in the file: `MARSHAL_TOKEN`, `MARSHAL_WEBHOOK_SECRET`
 | Command | Does |
 |---|---|
 | `marshal init` | write `.marshal.yml`, ignore `.marshal/` |
-| `marshal setup --token …` | create the Marshal and CI bots, share, mint tokens, set the receipt bot and the claim bucket, register the signed webhook |
+| `marshal setup --token …` | create the Marshal and CI bots, share, mint tokens, set the receipt bot and the claim bucket, publish the repository's scope roots, register the signed webhook |
 | `marshal refs resolve FR-161 AD-14` | the anchor text with `file@sha` provenance; `NOT_FOUND` when an anchor vanished |
 | `marshal refs check [task]` | broken references, verbatim pastes and unlinked tasks, board-wide or for one task; exit `CONFLICT` when any |
 | `marshal refs index` | every anchor the sources define |
-| `marshal health` | the invariants: every story claims files, no unordered overlap, no blocked cycle, unblocked roots; exit `CONFLICT` when violated |
+| `marshal health` | the invariants: every story claims files, no unordered overlap, no blocked cycle, every stored path canonical, every chokepoint reachable from a claim, unblocked roots; exit `CONFLICT` when violated |
 | `marshal chokepoints` | the CODEOWNERS chokepoints and the queue on each |
 | `marshal open <path>` | is anything open on this path |
 | `marshal reconcile [--branch b]` | each claimed task's branch diffed against its claim (strays, collisions) and its last commit (stale) |
+| `marshal lag` (alias `rebase-plan`) | how far each claimed branch is behind the integration branch, in the files it holds; exit `CONFLICT` when any is behind in a file it owns |
 | `marshal worktree <task>` | the `git worktree add` command, branch name from the story id, a database and port from the pool, the checkout recorded |
 | `marshal pool list|release` | allocations, worktrees, agents, checkout conflicts |
 | `marshal claims import [--apply] [--drop-labels]` | `owns:` labels → `paths_owned`; non-path labels are reported, never guessed |
+| `marshal claims canonicalize [--apply]` | rewrite stored scope paths into the canonical form; rebases onto `app_root` only when the repository settles which file was meant, and reports a collision on both tasks rather than merging it |
 | `marshal receipt <task> --commit … --gate name=status:ms …` | post a receipt as CI from any CI system |
 | `marshal ledger tail|verify` | the hash-chained record |
 | `marshal notify test|replay` | Discord |
 | `marshal serve [--once]` | the service |
 | `marshal mcp` | the agent tools over stdio |
+
+### Scope paths have one spelling
+
+A scope path is canonical: relative to the **repository** root, forward
+slashes, no leading `/`, no `./`, no `..`, no trailing slash, with a `repo:`
+prefix first in a multi-repository project. An app in `captain-yard-web/`
+claims `captain-yard-web/src/db/schema.ts`, never `src/db/schema.ts`.
+
+The repository root is the base because that is what `git diff --name-only`
+prints, and git is the one producer with no choice about its format.
+
+`app_root` is **not** a base for a claim. It is where the application lives:
+the gates' working directory, and what `docs_api_paths` are written against.
+Using it as a base for a claim gave one file two identities, and a lease is
+exclusion enforced by comparing strings — so the two claims could not see each
+other, and both were granted.
+
+The board cannot enforce this alone: it has no checkout, so it cannot tell
+`src/db/schema.ts` (relative to the app, and a second identity for a file
+already claimed) from `src/db/schema.ts` (relative to the repository root, and
+perfectly good). Marshal has the checkout, so Marshal tells it — `marshal
+setup` publishes the repository's top-level entries and `app_root` onto the
+project, and `marshal serve` keeps them current. From then on the board
+refuses a path that starts with something that is not one of them:
+
+```
+CONFLICT: scope path "src/server/db/schema.ts" is not canonical.
+Did you mean "captain-yard-web/src/server/db/schema.ts"?
+Paths are relative to the repository root, whose entries here are:
+.github, _bmad-output, captain-yard-web, deploy, docs. See `veans scope --help`.
+```
+
+It suggests; it never rewrites. Silently moving a claim onto a path nobody
+typed is how a lease lands on a file nobody meant to claim. A project that has
+published no roots enforces nothing, so nothing breaks before Marshal has had
+a chance to say what the repository looks like.
+
+To migrate a board that predates this, run `marshal claims canonicalize` — it
+reports and writes nothing until `--apply`, and it never merges two open tasks
+that turn out to be on one file. That is a real collision that was invisible
+until now, and it goes on both tasks as a comment and into the ledger for a
+human to settle.
+
+### Lag is scoped to the claim
+
+"Commits behind main" is the wrong unit. Forty commits behind in files you
+never touch is noise; one commit behind in the file you are editing is certain
+rework. So a claimed branch has **lag** when the integration branch contains
+commits, unreachable from that branch, that touch paths the task holds:
+
+| Severity | The base moved inside | Consequence |
+|---|---|---|
+| `owned` | `paths_owned` | **Blocking.** A textual conflict is certain, not likely. |
+| `affected` | `paths_affected` | **Warning.** No conflict, but the code you depend on changed and your gates will not see it until you rebase. |
+| `elsewhere` | nothing the task holds | Counted in `commits_behind`. Gates nothing, anywhere. |
+
+The ladder is what makes this worth obeying. A tool that says "you are behind"
+is ignored within a week; one that says "#43 landed schema.ts, you are editing
+schema.ts, you will conflict" is obeyed, because that is specific and
+checkable. `affected` deliberately does not gate: those collisions are common
+and usually harmless, and gating on them would train everyone to override by
+reflex, which would then defeat the gate on `owned` too.
+
+Marshal computes it — it is the only component with the repository — on the
+same poll pass that already fetched for `reconcile`, and writes a record per
+claimed task to the board, where `veans ready`, `veans show` and the panels
+read it. A branch that catches up has its record **deleted**, so an absent
+record means "current" rather than "never looked".
+
+`landed_by_task_id` comes from the `Refs:` trailer on the landing commit. A
+hand-pushed commit carrying no trailer keeps its sha and names no task: still
+lag, just not attributable.
+
+It is a pure function of the branch tip, the base tip and the task's scope, and
+is cached on exactly those three — so the common poll, where none has moved,
+does no git work at all. The walk is bounded: `git rev-list --left-right
+--count` for the counter and one two-commit `git diff --name-only` for the
+paths, never a per-file history walk.
+
+`veans sync <task>` prints what you are behind on and the commands to fix it,
+in your own worktree. It changes nothing — no fetch, no rebase, no write to the
+working tree. An agent's worktree is frequently dirty mid-edit, and a
+half-finished rebase in one is materially worse than a stale branch.
+
+**The review gate.** `veans update -s in-review` and the merge hook's `check`
+mode refuse at severity `owned`, as a CONFLICT in the same shape as the
+gate-receipt refusal:
+
+```
+CONFLICT: #51 is behind origin/main in a file it owns.
+  captain-yard-web/src/server/db/schema.ts — landed by #43 (141e6cd)
+Rebase and re-run the gates: veans sync #51
+Override with --force (recorded on the task).
+```
+
+The reason to refuse is not tidiness: the conflict is certain, so the diff a
+reviewer reads is not the diff that will merge, and the gates that just passed
+did not run against what will land. `--force` posts the override as a comment
+on the task, so the next reader knows the branch went to review knowingly
+stale; Marshal picks that up from the board's webhook into its ledger.
+
+`affected` gates nothing, here or anywhere. It is a warning from `veans check`
+and a line on the board. Those collisions are common and usually harmless, and
+failing on them would train everyone to override by reflex — which would then
+defeat the gate on `owned` too.
+
+Both gates are advisory infrastructure: a board that has never had lag computed
+reports nothing and refuses nothing. A gate that cannot be evaluated is not a
+gate. Note that the enforcement is in the CLI and the PR check, not in the
+board — a direct API call can still move a task to review while behind.
+
+**The Discord card** fires only on the transition INTO `owned`, once. Not on
+`affected`, not on `elsewhere`, and not again while the severity is unchanged.
+A channel that fires on every poll is a channel everyone mutes, and the `owned`
+card is then lost along with it. A branch that catches up has its remembered
+severity forgotten too, so falling behind again is announced again.
 
 ### The service
 

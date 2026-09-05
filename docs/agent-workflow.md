@@ -81,7 +81,36 @@ The claim is a single transaction. It is refused with `CONFLICT` when someone
 else holds the task, when a blocker is open, or when one of the task's owned
 paths overlaps a lease held by another in-progress task. Two agents racing
 for the same task get exactly one winner. `veans leases` shows who holds
-what; `veans release` gives paths back without changing status. The board
+## Handing over, not waiting
+
+An agent that opens a pull request is done with that ticket. It moves the task
+to `in-review`, posts a summary, and takes the next one. It does not watch the
+test run, and it does not wait for the merge.
+
+The merge is a human decision, and GitHub makes it a one-click one: open the
+PR, press **Enable auto-merge**, and it lands by itself when the checks go
+green. The merge hook then reads the `Refs:` trailer and closes the task. The
+`auto-merge` label is kept in sync with that state by
+`.github/workflows/automerge-label.yml`, so the board and the PR list agree
+about what is waiting on CI.
+
+**Prerequisite:** *Settings → General → Pull Requests → Allow auto-merge* must
+be ticked on the repository. It is off by default, and the button does not
+appear until it is on.
+
+Two things this does not remove:
+
+- `in-review` does not release leases. An agent that moves on must pick a
+  ticket whose files do not overlap the ones it just claimed, or it will be
+  refused — correctly.
+- A red PR comes back. An agent stacking four tickets behind four failing
+  pull requests has not saved anyone time.
+
+what; `veans release` gives paths back without changing status, and
+`veans unclaim` hands the whole task back — assignee off, bucket back to Todo,
+leases dropped, branch label removed — for work you are not going to do. Doing
+only some of those leaves a ticket nobody can claim: readiness turns on the
+assignee, not on the bucket. The board
 shows the same answer: `READY`, `BLOCKED`, `PATH LEASED` badges on queued
 cards, a lock count on in-progress ones, a **Leases** panel and a
 **Ready only** toggle.

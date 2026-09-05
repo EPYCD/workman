@@ -245,7 +245,10 @@ func TestMarshal_EndToEnd(t *testing.T) {
 
 	// --- chokepoints ---
 	out, errOut, code = runMarshal(t, ws, nil, "chokepoints")
-	if code != 0 || !strings.Contains(out, "src/lib/contract/**") || !strings.Contains(out, fmt.Sprintf(`"TaskID": %d`, clean.ID)) {
+	// task_id, not TaskID: the queue structs carry json tags now, because the
+	// board panel reads snake_case and was rendering every row blank without
+	// them.
+	if code != 0 || !strings.Contains(out, "src/lib/contract/**") || !strings.Contains(out, fmt.Sprintf(`"task_id": %d`, clean.ID)) {
 		t.Fatalf("the contract chokepoint must queue the clean task; exit %d\n%s\n%s", code, out, errOut)
 	}
 
@@ -257,6 +260,7 @@ func TestMarshal_EndToEnd(t *testing.T) {
 	var plan struct {
 		Plan struct {
 			Branch   string   `json:"Branch"`
+			Base     string   `json:"Base"`
 			Commands []string `json:"Commands"`
 		} `json:"plan"`
 		Allocation struct {
@@ -270,8 +274,17 @@ func TestMarshal_EndToEnd(t *testing.T) {
 	if !strings.HasPrefix(plan.Plan.Branch, "e1.1-") || plan.Allocation.Port != 3100 || plan.Allocation.Database != "mongodb://127.0.0.1:27101/one" {
 		t.Fatalf("unexpected plan: %s", out)
 	}
-	if len(plan.Plan.Commands) == 0 || !strings.HasPrefix(plan.Plan.Commands[0], "git worktree add ") {
-		t.Fatalf("expected a git worktree command first: %s", out)
+	// The fetch comes first, then the add with an explicit start point. Without
+	// a start point git branches from the invoking checkout's current HEAD,
+	// which for a clone nobody has pulled in a week is a week-old base in the
+	// files the worker is about to edit.
+	if len(plan.Plan.Commands) < 2 ||
+		!strings.HasPrefix(plan.Plan.Commands[0], "git fetch ") ||
+		!strings.HasPrefix(plan.Plan.Commands[1], "git worktree add ") {
+		t.Fatalf("expected a fetch then a worktree add: %s", out)
+	}
+	if !strings.Contains(plan.Plan.Commands[1], plan.Plan.Base) || plan.Plan.Base == "" {
+		t.Fatalf("the worktree must be cut from the integration branch: %s", out)
 	}
 
 	// --- the receipt gate on done ---
