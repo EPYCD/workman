@@ -103,6 +103,27 @@ func TopLevelEntries(ctx context.Context, repoRoot string) ([]string, error) {
 	return entries, nil
 }
 
+// Fetch updates a remote. A failure is the caller's to judge: a repository
+// with no network is still a repository, and refusing to plan a worktree
+// because a fetch timed out helps nobody.
+func Fetch(ctx context.Context, repoRoot, remote string) error {
+	_, err := git(ctx, repoRoot, "fetch", remote)
+	return err
+}
+
+// ResolveSHA returns the commit a ref names, or "" when it names nothing.
+func ResolveSHA(ctx context.Context, repoRoot, ref string) (string, error) {
+	out, err := git(ctx, repoRoot, "rev-parse", "--verify", "--quiet", ref+"^{commit}")
+	if err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
+			return "", nil
+		}
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
+}
+
 // LastActivity returns the author date of the newest commit on branch, or
 // the zero time when the branch does not resolve to a commit.
 func LastActivity(ctx context.Context, repoRoot, branch string) (time.Time, error) {

@@ -72,6 +72,10 @@ type Config struct {
 
 	Pool     pool.Config     `yaml:"pool"`
 	Worktree worktree.Naming `yaml:"worktree"`
+	// IntegrationBranch is what work is cut from and merged back into,
+	// default origin/main. A worktree is branched from it explicitly so a
+	// worker never starts from whatever their clone last happened to see.
+	IntegrationBranch string `yaml:"integration_branch,omitempty"`
 	// StaleAfter is how long a branch may go without a commit before its
 	// claim is flagged.
 	StaleAfter time.Duration `yaml:"stale_after,omitempty"`
@@ -197,6 +201,9 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Codeowners == "" {
 		c.Codeowners = ".github/CODEOWNERS"
+	}
+	if c.IntegrationBranch == "" {
+		c.IntegrationBranch = worktree.DefaultIntegrationBranch
 	}
 	if c.Worktree.Branch == "" {
 		c.Worktree.Branch = worktree.DefaultBranch

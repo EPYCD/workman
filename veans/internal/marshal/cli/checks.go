@@ -252,6 +252,9 @@ func newReconcileCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if base == "" {
+				base = e.Cfg.IntegrationBranch
+			}
 			checks, err := e.Reconcile(cmd.Context(), snap, base, branch)
 			if err != nil {
 				return err
@@ -271,7 +274,7 @@ func newReconcileCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&base, "base", "origin/main", "integration branch to diff against")
+	cmd.Flags().StringVar(&base, "base", "", "integration branch to diff against (default: .marshal.yml's integration_branch)")
 	cmd.Flags().StringVar(&branch, "branch", "", "only this branch")
 	return cmd
 }

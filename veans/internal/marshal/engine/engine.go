@@ -505,11 +505,30 @@ type WorktreePlan struct {
 	TaskRef
 	Plan       worktree.Plan   `json:"plan"`
 	Allocation pool.Allocation `json:"allocation"`
+	// Forced records that the plan was cut over a refusal, so the JSON says so
+	// as plainly as the ledger does.
+	Forced bool `json:"forced,omitempty"`
+	// Blockers are the open tasks holding a lease on a path this one claims.
+	// Present only on a forced plan; a refused one raises them as the error.
+	Blockers []PathHolder `json:"blockers,omitempty"`
 }
 
 // PlanWorktree derives the branch and directory from the story, allocates a
 // database and port to the worker and records the checkout.
-func (e *Engine) PlanWorktree(t *client.Task, worker string) (*WorktreePlan, error) {
+//
+// The worktree is cut from the integration branch explicitly. Without a start
+// point `git worktree add` branches from the invoking checkout's current HEAD,
+// so a worker whose clone is a week old starts a week behind in the files they
+// are about to edit — the command meant to set them up correctly was the thing
+// seeding the staleness.
+//
+// It refuses when another open task holds a lease on a path this one claims.
+// That worker's base is guaranteed to move under exactly these files the
+// moment the holder merges, so the queue would be manufacturing the stale
+// bases it exists to prevent. This is stronger than the readiness check:
+// `veans ready` refuses the claim, but nothing stopped a worker cutting a
+// worktree by hand for a task that would become claimable soon.
+func (e *Engine) PlanWorktree(ctx context.Context, snap *board.Snapshot, t *client.Task, worker string, force bool) (*WorktreePlan, error) {
 	story := worktree.StoryID(t.Title)
 	if story == "" {
 		story = worktree.StoryID(t.Identifier)
@@ -520,7 +539,19 @@ func (e *Engine) PlanWorktree(t *client.Task, worker string) (*WorktreePlan, err
 			story = fmt.Sprintf("t%d", t.ID)
 		}
 	}
-	dry, err := worktree.Build(e.Cfg.Worktree, e.RepoRoot, story, t.Title, t.Identifier, t.ID, "", 0)
+
+	blockers := leaseBlockers(snap, t)
+	if len(blockers) > 0 && !force {
+		e.log(ledger.Entry{Action: "allocate", Actor: worker, TaskID: t.ID, Subject: story, Outcome: "refused", Reason: "a claimed path is leased by an open task", Metadata: blockerMetadata(blockers)})
+		return nil, output.New(output.CodeConflict, "%s", refusalMessage(t, blockers))
+	}
+
+	opts := worktree.BuildOptions{
+		Naming: e.Cfg.Worktree, RepoRoot: e.RepoRoot, Story: story,
+		Title: t.Title, Identifier: t.Identifier, TaskID: t.ID,
+		Base: e.Cfg.IntegrationBranch,
+	}
+	dry, err := worktree.Build(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -532,12 +563,170 @@ func (e *Engine) PlanWorktree(t *client.Task, worker string) (*WorktreePlan, err
 			return nil, output.Wrap(output.CodeConflict, err, "%v", err)
 		}
 	}
-	plan, err := worktree.Build(e.Cfg.Worktree, e.RepoRoot, story, t.Title, t.Identifier, t.ID, alloc.Database, alloc.Port)
+	opts.Database, opts.Port = alloc.Database, alloc.Port
+	plan, err := worktree.Build(opts)
 	if err != nil {
 		return nil, err
 	}
-	e.log(ledger.Entry{Action: "allocate", Actor: worker, TaskID: t.ID, Subject: plan.Dir, Outcome: "ok", Metadata: map[string]any{"branch": plan.Branch, "database": alloc.Database, "port": alloc.Port}})
-	return &WorktreePlan{TaskRef: TaskRef{TaskID: t.ID, Identifier: t.Identifier, Title: t.Title}, Plan: plan, Allocation: alloc}, nil
+	plan.BaseSHA = e.resolveBase(ctx, plan.Base)
+	alloc.Base, alloc.BaseSHA = plan.Base, plan.BaseSHA
+
+	outcome, reason := "ok", ""
+	if len(blockers) > 0 {
+		outcome, reason = "forced", "cut over a lease held by an open task"
+	}
+	meta := map[string]any{"branch": plan.Branch, "database": alloc.Database, "port": alloc.Port, "base": plan.Base, "base_sha": plan.BaseSHA}
+	if len(blockers) > 0 {
+		for k, v := range blockerMetadata(blockers) {
+			meta[k] = v
+		}
+	}
+	e.log(ledger.Entry{Action: "allocate", Actor: worker, TaskID: t.ID, Subject: plan.Dir, Outcome: outcome, Reason: reason, Metadata: meta})
+
+	out := &WorktreePlan{TaskRef: TaskRef{TaskID: t.ID, Identifier: t.Identifier, Title: t.Title}, Plan: plan, Allocation: alloc}
+	if len(blockers) > 0 {
+		out.Forced, out.Blockers = true, blockers
+	}
+	return out, nil
+}
+
+// resolveBase fetches and reads what the integration branch points at now, so
+// the recorded sha is the one the worker will actually get rather than the one
+// this checkout last saw. Neither step is fatal: a repository with no network
+// is still a repository, and refusing to plan a worktree because a fetch timed
+// out helps nobody. An unresolved base is recorded as empty rather than wrong.
+func (e *Engine) resolveBase(ctx context.Context, base string) string {
+	if base == "" {
+		return ""
+	}
+	_ = worktree.Fetch(ctx, e.RepoRoot, worktree.RemoteOf(base))
+	sha, err := worktree.ResolveSHA(ctx, e.RepoRoot, base)
+	if err != nil {
+		return ""
+	}
+	return sha
+}
+
+// leaseBlockers lists the open tasks holding a live lease on a path this task
+// claims. A declared-but-unleased claim is not a blocker: nobody is editing
+// those files yet, so nothing is about to move under this worker.
+func leaseBlockers(snap *board.Snapshot, t *client.Task) []PathHolder {
+	if t.Scope == nil || len(t.Scope.PathsOwned) == 0 {
+		return nil
+	}
+	open := map[int64]*client.Task{}
+	for _, o := range snap.Tasks {
+		open[o.ID] = o
+	}
+	seen := map[string]bool{}
+	out := []PathHolder{}
+	for _, l := range snap.Leases {
+		if l.TaskID == t.ID {
+			continue
+		}
+		holder := open[l.TaskID]
+		if holder == nil {
+			// A lease outliving its task is a health finding, not a reason to
+			// hold up a worker.
+			continue
+		}
+		for _, mine := range t.Scope.PathsOwned {
+			if !pathpattern.Overlap(l.Pattern, mine) {
+				continue
+			}
+			key := fmt.Sprintf("%d|%s", l.TaskID, l.Pattern)
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
+			h := PathHolder{TaskRef: TaskRef{TaskID: holder.ID, Identifier: holder.Identifier, Title: holder.Title}, Pattern: l.Pattern, Leased: true, Branch: board.BranchOf(holder)}
+			if len(holder.Assignees) > 0 {
+				h.Assignee = board.DisplayName(holder.Assignees[0])
+			}
+			out = append(out, h)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].TaskID != out[j].TaskID {
+			return out[i].TaskID < out[j].TaskID
+		}
+		return out[i].Pattern < out[j].Pattern
+	})
+	return out
+}
+
+// maxListedBlockers is how many overlapping paths a refusal spells out. Past a
+// handful the list stops being evidence and starts being wallpaper; the count
+// carries the rest.
+const maxListedBlockers = 4
+
+// refusalMessage names what is held, who holds it, and what unblocks it. A
+// refusal that does not say who to wait for is a refusal that gets forced.
+func refusalMessage(t *client.Task, blockers []PathHolder) string {
+	var b strings.Builder
+	me := ref(t.Identifier, t.ID)
+	first := blockers[0]
+
+	if len(blockers) == 1 {
+		fmt.Fprintf(&b, "%s claims %s, held by %s (in progress). ", me, first.Pattern, ref(first.Identifier, first.TaskID))
+		fmt.Fprintf(&b, "A worktree cut now will be stale in that file the moment %s merges. ", ref(first.Identifier, first.TaskID))
+	} else {
+		fmt.Fprintf(&b, "%s claims %d paths held by open tasks: ", me, len(blockers))
+		listed := blockers
+		if len(listed) > maxListedBlockers {
+			listed = listed[:maxListedBlockers]
+		}
+		parts := make([]string, 0, len(listed))
+		for _, h := range listed {
+			parts = append(parts, fmt.Sprintf("%s (%s)", h.Pattern, ref(h.Identifier, h.TaskID)))
+		}
+		b.WriteString(strings.Join(parts, ", "))
+		if rest := len(blockers) - len(listed); rest > 0 {
+			fmt.Fprintf(&b, " and %d more", rest)
+		}
+		b.WriteString(". A worktree cut now will be stale in those files the moment their holders merge. ")
+	}
+
+	fmt.Fprintf(&b, "Wait for %s, or re-scope. Override with --force (recorded in the ledger).", holderList(blockers))
+	return b.String()
+}
+
+// holderList names the distinct tasks to wait for, in the order first seen.
+func holderList(blockers []PathHolder) string {
+	seen := map[int64]bool{}
+	var names []string
+	for _, h := range blockers {
+		if seen[h.TaskID] {
+			continue
+		}
+		seen[h.TaskID] = true
+		names = append(names, ref(h.Identifier, h.TaskID))
+	}
+	switch len(names) {
+	case 1:
+		return names[0]
+	case 2:
+		return names[0] + " and " + names[1]
+	default:
+		return strings.Join(names[:len(names)-1], ", ") + " and " + names[len(names)-1]
+	}
+}
+
+func ref(identifier string, id int64) string {
+	if identifier != "" {
+		return identifier
+	}
+	return fmt.Sprintf("#%d", id)
+}
+
+func blockerMetadata(blockers []PathHolder) map[string]any {
+	ids := make([]int64, 0, len(blockers))
+	paths := make([]string, 0, len(blockers))
+	for _, b := range blockers {
+		ids = append(ids, b.TaskID)
+		paths = append(paths, b.Pattern)
+	}
+	return map[string]any{"blocked_by": ids, "paths": paths}
 }
 
 // Workers is M4.3: who is on which checkout, branch and database, live.
