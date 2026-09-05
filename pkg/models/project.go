@@ -62,6 +62,13 @@ type Project struct {
 	// it, and the user who submitted a task for review may not close it.
 	ReceiptBotID int64 `xorm:"bigint null" json:"receipt_bot_id" doc:"The bot user whose token alone may post gate receipts. While set, a task cannot be marked done without a merged, passing receipt, and the user who moved it to review cannot close it. 0 disables both guards. Admins only."`
 
+	// The board cannot tell a repository-root-relative path from an
+	// app-relative one by looking at it, so the repository tells it. Marshal
+	// publishes both from the checkout it has; while scope_repo_roots is empty
+	// nothing is enforced and every path is accepted as before.
+	ScopeRepoRoots string `xorm:"text null" json:"scope_repo_roots" doc:"Comma-separated top-level entries of the repository, e.g. \"captain-yard-web,.github,docs\". A scope path whose first segment is not one of these is refused as not canonical. Empty disables the check. Published by marshal setup and kept current by marshal serve; admins only."`
+	ScopeAppRoot   string `xorm:"varchar(250) null" json:"scope_app_root" doc:"The sub-directory the application lives in, e.g. \"captain-yard-web\". Used only to suggest the spelling a caller probably meant when a path is refused — never to rewrite one. Admins only."`
+
 	// How the Discord relay presents this project. The webhook URL itself is
 	// deliberately absent: it is a credential, it belongs in the relay's own
 	// environment (MARSHAL_DISCORD_WEBHOOK), and putting it here would place
@@ -1154,6 +1161,72 @@ func checkReceiptBotChange(s *xorm.Session, project *Project, auth web.Auth) err
 	return nil
 }
 
+// checkScopeRootsChange gates the repository declaration to admins. It is the
+// oracle every scope path on the project is judged against, so anyone who
+// could edit it could also widen it until a path relative to the app root
+// passed — which is precisely the identity split the check exists to stop.
+func checkScopeRootsChange(s *xorm.Session, project *Project, auth web.Auth) error {
+	isAdmin, err := project.IsAdmin(s, auth)
+	if err != nil {
+		return err
+	}
+	if !isAdmin {
+		return ErrGenericForbidden{}
+	}
+	// A root is one path segment. Anything with a slash in it is a caller
+	// confusing "the repository's top-level entries" with "the paths I care
+	// about", and silently accepting it would make the check pass for paths it
+	// should refuse.
+	for _, root := range ParseScopeRoots(project.ScopeRepoRoots, project.ScopeAppRoot).Roots {
+		if strings.ContainsAny(root, "/\\") {
+			return ErrInvalidScopePath{Pattern: root, Reason: "a repository root is a single top-level entry, not a path"}
+		}
+	}
+	return nil
+}
+
+// projectUpdateColumns names what an update writes. The columns are chosen
+// rather than taken wholesale so that un-archiving works, and so a partial
+// update does not silently blank a field it never mentioned.
+func projectUpdateColumns(project, stored *Project, updateBackground, receiptBotChanged, scopeRootsChanged bool) []string {
+	cols := []string{
+		"title",
+		"is_archived",
+		"identifier",
+		"hex_color",
+		"position",
+	}
+	// Only touch parent_project_id when it was actually sent, otherwise a
+	// partial update (nil) would silently detach the project to the top level.
+	if project.ParentProjectID != nil {
+		cols = append(cols, "parent_project_id")
+	}
+	if project.Description != "" {
+		cols = append(cols, "description")
+	}
+	if receiptBotChanged {
+		cols = append(cols, "receipt_bot_id")
+	}
+	if scopeRootsChanged {
+		cols = append(cols, "scope_repo_roots", "scope_app_root")
+	}
+	// The Discord relay's presentation. These columns exist, are exposed on
+	// the model, are edited by the project settings page and are read by
+	// Marshal on every poll — but were never in this list, so the save was
+	// accepted, reported as a success, and written nowhere. Listed on a change
+	// rather than unconditionally so that clearing a field to "" still clears
+	// it while an update that never mentions them leaves them alone.
+	if project.DiscordUsername != stored.DiscordUsername ||
+		project.DiscordAvatarURL != stored.DiscordAvatarURL ||
+		project.DiscordEvents != stored.DiscordEvents {
+		cols = append(cols, "discord_username", "discord_avatar_url", "discord_events")
+	}
+	if updateBackground {
+		cols = append(cols, "background_file_id", "background_blur_hash")
+	}
+	return cols
+}
+
 func UpdateProject(s *xorm.Session, project *Project, auth web.Auth, updateProjectBackground bool) (err error) {
 	err = checkProjectBeforeUpdateOrDelete(s, project)
 	if err != nil {
@@ -1173,6 +1246,14 @@ func UpdateProject(s *xorm.Session, project *Project, auth web.Auth, updateProje
 	receiptBotChanged := project.ReceiptBotID != storedProject.ReceiptBotID
 	if receiptBotChanged {
 		if err := checkReceiptBotChange(s, project, auth); err != nil {
+			return err
+		}
+	}
+
+	scopeRootsChanged := project.ScopeRepoRoots != storedProject.ScopeRepoRoots ||
+		project.ScopeAppRoot != storedProject.ScopeAppRoot
+	if scopeRootsChanged {
+		if err := checkScopeRootsChange(s, project, auth); err != nil {
 			return err
 		}
 	}
@@ -1197,29 +1278,7 @@ func UpdateProject(s *xorm.Session, project *Project, auth web.Auth, updateProje
 		}
 	}
 
-	// We need to specify the cols we want to update here to be able to un-archive projects
-	colsToUpdate := []string{
-		"title",
-		"is_archived",
-		"identifier",
-		"hex_color",
-		"position",
-	}
-	// Only touch parent_project_id when it was actually sent, otherwise a
-	// partial update (nil) would silently detach the project to the top level.
-	if project.ParentProjectID != nil {
-		colsToUpdate = append(colsToUpdate, "parent_project_id")
-	}
-	if project.Description != "" {
-		colsToUpdate = append(colsToUpdate, "description")
-	}
-	if receiptBotChanged {
-		colsToUpdate = append(colsToUpdate, "receipt_bot_id")
-	}
-
-	if updateProjectBackground {
-		colsToUpdate = append(colsToUpdate, "background_file_id", "background_blur_hash")
-	}
+	colsToUpdate := projectUpdateColumns(project, storedProject, updateProjectBackground, receiptBotChanged, scopeRootsChanged)
 
 	wasFavorite, err := isFavorite(s, project.ID, auth, FavoriteKindProject)
 	if err != nil {

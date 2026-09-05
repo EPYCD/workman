@@ -124,6 +124,7 @@ imported labels are removed after a successful write.`,
 	imp.Flags().BoolVar(&apply, "apply", false, "write the scopes (default: report only)")
 	imp.Flags().BoolVar(&dropLabels, "drop-labels", false, "remove imported owns: labels after writing")
 	cmd.AddCommand(imp)
+	cmd.AddCommand(newCanonicalizeCmd())
 	return cmd
 }
 

@@ -163,6 +163,91 @@ func normalize(p, raw string) (string, error) {
 	return p, nil
 }
 
+// Roots is a repository's statement of what a repository-root-relative path
+// looks like: its top-level entries, plus where the application lives. It is
+// the port of models.ScopeRoots — the board enforces the same rule from the
+// copy Marshal publishes onto the project, and Marshal checks it locally so a
+// bad path is caught before it is written rather than after.
+//
+// Empty Roots means "not declared" and checks nothing.
+type Roots struct {
+	Roots   []string
+	AppRoot string
+}
+
+// ParseRoots reads the comma-separated form stored on a project.
+func ParseRoots(roots, appRoot string) Roots {
+	out := Roots{AppRoot: strings.Trim(strings.TrimSpace(appRoot), "/")}
+	for _, r := range strings.Split(roots, ",") {
+		if r = strings.Trim(strings.TrimSpace(r), "/"); r != "" {
+			out.Roots = append(out.Roots, r)
+		}
+	}
+	return out
+}
+
+// String renders the comma-separated form the board stores.
+func (r Roots) String() string { return strings.Join(r.Roots, ",") }
+
+// Declared reports whether there is enough here to check anything.
+func (r Roots) Declared() bool { return len(r.Roots) > 0 }
+
+// Check rejects a canonical pattern whose first segment is not a top-level
+// entry of the repository — that is, one written against the wrong base. The
+// pattern must already have been through Canonical: this decides which base it
+// is relative to, not how it is spelled.
+//
+// A first segment carrying a wildcard is accepted whatever it is: "**/logs"
+// and "*.md" are anchored nowhere by construction, so there is no base to be
+// wrong about.
+func (r Roots) Check(pattern string) error {
+	if !r.Declared() {
+		return nil
+	}
+	_, rest := SplitRepo(pattern)
+	first, _, _ := strings.Cut(rest, "/")
+	if first == "" || segmentHasWildcard(first) {
+		return nil
+	}
+	for _, root := range r.Roots {
+		if first == root {
+			return nil
+		}
+	}
+	if s := r.Suggest(pattern); s != "" {
+		return fmt.Errorf("scope path %q is not canonical: did you mean %q? paths are relative to the repository root (%s)",
+			pattern, s, strings.Join(r.Roots, ", "))
+	}
+	return fmt.Errorf("scope path %q is not canonical: paths are relative to the repository root (%s)",
+		pattern, strings.Join(r.Roots, ", "))
+}
+
+// Suggest offers the app-root-prefixed spelling when the project has an app
+// root that is itself a valid root — the overwhelmingly common way to get this
+// wrong is to write a path as the application sees it. It is a question, never
+// a rewrite.
+func (r Roots) Suggest(pattern string) string {
+	if r.AppRoot == "" {
+		return ""
+	}
+	var appRootIsARoot bool
+	for _, root := range r.Roots {
+		if root == r.AppRoot {
+			appRootIsARoot = true
+			break
+		}
+	}
+	if !appRootIsARoot {
+		return ""
+	}
+	repo, rest := SplitRepo(pattern)
+	candidate := r.AppRoot + "/" + rest
+	if repo != "" {
+		candidate = repo + ":" + candidate
+	}
+	return candidate
+}
+
 // SplitRepo separates an optional `repo:` namespace from a pattern.
 // Projects spanning several repositories prefix their paths so `src/index.ts`
 // in one repo never collides with the same path in another; patterns without

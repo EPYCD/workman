@@ -1679,6 +1679,14 @@ export type Project = {
      */
     receipt_bot_id?: number;
     /**
+     * The sub-directory the application lives in, e.g. "captain-yard-web". Used only to suggest the spelling a caller probably meant when a path is refused — never to rewrite one. Admins only.
+     */
+    scope_app_root?: string;
+    /**
+     * Comma-separated top-level entries of the repository, e.g. "captain-yard-web,.github,docs". A scope path whose first segment is not one of these is refused as not canonical. Empty disables the check. Published by marshal setup and kept current by marshal serve; admins only.
+     */
+    scope_repo_roots?: string;
+    /**
      * The requesting user's subscription status for this project. Read-only here; use the subscription endpoints to change it. Only returned when retrieving a single project.
      */
     readonly subscription?: Subscription;
@@ -1807,6 +1815,14 @@ export type ProjectReadBody = {
      * The bot user whose token alone may post gate receipts. While set, a task cannot be marked done without a merged, passing receipt, and the user who moved it to review cannot close it. 0 disables both guards. Admins only.
      */
     receipt_bot_id?: number;
+    /**
+     * The sub-directory the application lives in, e.g. "captain-yard-web". Used only to suggest the spelling a caller probably meant when a path is refused — never to rewrite one. Admins only.
+     */
+    scope_app_root?: string;
+    /**
+     * Comma-separated top-level entries of the repository, e.g. "captain-yard-web,.github,docs". A scope path whose first segment is not one of these is refused as not canonical. Empty disables the check. Published by marshal setup and kept current by marshal serve; admins only.
+     */
+    scope_repo_roots?: string;
     /**
      * The requesting user's subscription status for this project. Read-only here; use the subscription endpoints to change it. Only returned when retrieving a single project.
      */
@@ -2150,7 +2166,7 @@ export type ScopeCheckRequest = {
      */
     readonly $schema?: string;
     /**
-     * Repository-relative paths the change modifies, added or deleted, as git diff --name-only prints them.
+     * Paths the change modifies, adds or deletes, exactly as git diff --name-only prints them: relative to the repository root. That is the canonical base for a scope path too, so no rebasing is needed or wanted on either side.
      */
     files: Array<string> | null;
     /**
@@ -3018,11 +3034,11 @@ export type TaskScope = {
      */
     notes?: string;
     /**
-     * Repository-relative globs the task reads or depends on but does not edit. Advisory; shown to agents and never enforced.
+     * Globs the task reads or depends on but does not edit, in the same repository-root-relative form as paths_owned. Advisory; shown to agents and never enforced.
      */
     paths_affected?: Array<string> | null;
     /**
-     * Repository-relative globs the task will EDIT, e.g. "pkg/models/tasks.go" or "frontend/src/components**". Leased on claim: a claim overlapping another task's active lease is refused with 409.
+     * Globs the task will EDIT, relative to the REPOSITORY root — "pkg/models/tasks.go", "frontend/src/components**", or "captain-yard-web/src/db/schema.ts" for an app in a sub-directory. Not relative to that sub-directory: git prints repository-relative paths and a lease is enforced by comparing strings, so a second spelling is a second claim that cannot see the first. Leased on claim: a claim overlapping another task's active lease is refused with 409.
      */
     paths_owned?: Array<string> | null;
     /**
@@ -4611,6 +4627,14 @@ export type ProjectWritable = {
      */
     receipt_bot_id?: number;
     /**
+     * The sub-directory the application lives in, e.g. "captain-yard-web". Used only to suggest the spelling a caller probably meant when a path is refused — never to rewrite one. Admins only.
+     */
+    scope_app_root?: string;
+    /**
+     * Comma-separated top-level entries of the repository, e.g. "captain-yard-web,.github,docs". A scope path whose first segment is not one of these is refused as not canonical. Empty disables the check. Published by marshal setup and kept current by marshal serve; admins only.
+     */
+    scope_repo_roots?: string;
+    /**
      * The title of the project. You'll see this in the overview.
      */
     title?: string;
@@ -4691,6 +4715,14 @@ export type ProjectReadBodyWritable = {
      * The bot user whose token alone may post gate receipts. While set, a task cannot be marked done without a merged, passing receipt, and the user who moved it to review cannot close it. 0 disables both guards. Admins only.
      */
     receipt_bot_id?: number;
+    /**
+     * The sub-directory the application lives in, e.g. "captain-yard-web". Used only to suggest the spelling a caller probably meant when a path is refused — never to rewrite one. Admins only.
+     */
+    scope_app_root?: string;
+    /**
+     * Comma-separated top-level entries of the repository, e.g. "captain-yard-web,.github,docs". A scope path whose first segment is not one of these is refused as not canonical. Empty disables the check. Published by marshal setup and kept current by marshal serve; admins only.
+     */
+    scope_repo_roots?: string;
     /**
      * The title of the project. You'll see this in the overview.
      */
@@ -4833,7 +4865,7 @@ export type SavedFilterReadBodyWritable = {
 
 export type ScopeCheckRequestWritable = {
     /**
-     * Repository-relative paths the change modifies, added or deleted, as git diff --name-only prints them.
+     * Paths the change modifies, adds or deletes, exactly as git diff --name-only prints them: relative to the repository root. That is the canonical base for a scope path too, so no rebasing is needed or wanted on either side.
      */
     files: Array<string> | null;
     /**
@@ -5133,11 +5165,11 @@ export type TaskScopeWritable = {
      */
     notes?: string;
     /**
-     * Repository-relative globs the task reads or depends on but does not edit. Advisory; shown to agents and never enforced.
+     * Globs the task reads or depends on but does not edit, in the same repository-root-relative form as paths_owned. Advisory; shown to agents and never enforced.
      */
     paths_affected?: Array<string> | null;
     /**
-     * Repository-relative globs the task will EDIT, e.g. "pkg/models/tasks.go" or "frontend/src/components**". Leased on claim: a claim overlapping another task's active lease is refused with 409.
+     * Globs the task will EDIT, relative to the REPOSITORY root — "pkg/models/tasks.go", "frontend/src/components**", or "captain-yard-web/src/db/schema.ts" for an app in a sub-directory. Not relative to that sub-directory: git prints repository-relative paths and a lease is enforced by comparing strings, so a second spelling is a second claim that cannot see the first. Leased on claim: a claim overlapping another task's active lease is refused with 409.
      */
     paths_owned?: Array<string> | null;
 };

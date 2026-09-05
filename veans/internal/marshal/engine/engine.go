@@ -286,9 +286,22 @@ type HealthReport struct {
 }
 
 // Health runs the continuous invariants over a snapshot.
-func (e *Engine) Health(snap *board.Snapshot) *HealthReport {
+//
+// The path checks read the repository rather than the board: the repository is
+// the authority on its own shape, and health that agreed with a stale
+// published shape would be health agreeing with the bug. A repository whose
+// roots cannot be read (no commits yet) simply runs the graph checks, since a
+// check that cannot be decided must not be failed.
+func (e *Engine) Health(ctx context.Context, snap *board.Snapshot) *HealthReport {
 	tasks, leases := snap.InvariantTasks()
-	rep := invariants.Check(tasks, leases)
+	opts := invariants.Options{
+		Repository:  e.Board.Cfg.Repository,
+		Chokepoints: e.chokepointPatterns(),
+	}
+	if roots, err := e.RepoRoots(ctx); err == nil {
+		opts.Roots = roots
+	}
+	rep := invariants.Check(tasks, leases, opts)
 	h := &HealthReport{Report: rep, OpenTasks: len(snap.Tasks), Leases: len(snap.Leases), CheckedAt: time.Now().UTC()}
 	e.mu.Lock()
 	e.health = &rep

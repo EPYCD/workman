@@ -416,5 +416,5 @@ func (t *tools) health(ctx context.Context, _ json.RawMessage) (mcp.Result, erro
 	if err != nil {
 		return refusal(err)
 	}
-	return result(t.e.Health(snap))
+	return result(t.e.Health(ctx, snap))
 }

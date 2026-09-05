@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"sort"
 	"strings"
 	"time"
 )
@@ -80,6 +81,26 @@ func parseWorktrees(out string) []Worktree {
 	}
 	flush()
 	return list
+}
+
+// TopLevelEntries lists the repository's tracked entries at its root, which is
+// what a repository-root-relative path can begin with. It reads the tree
+// rather than the directory on purpose: an untracked or ignored entry is not
+// something a claim can be about, and letting node_modules widen the set would
+// defeat the check it feeds.
+func TopLevelEntries(ctx context.Context, repoRoot string) ([]string, error) {
+	out, err := git(ctx, repoRoot, "ls-tree", "--name-only", "HEAD")
+	if err != nil {
+		return nil, fmt.Errorf("list the repository's top-level entries: %w", err)
+	}
+	var entries []string
+	for _, line := range strings.Split(out, "\n") {
+		if name := strings.TrimSpace(line); name != "" {
+			entries = append(entries, name)
+		}
+	}
+	sort.Strings(entries)
+	return entries, nil
 }
 
 // LastActivity returns the author date of the newest commit on branch, or

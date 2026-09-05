@@ -69,22 +69,65 @@ Secrets never live in the file: `MARSHAL_TOKEN`, `MARSHAL_WEBHOOK_SECRET`
 | Command | Does |
 |---|---|
 | `marshal init` | write `.marshal.yml`, ignore `.marshal/` |
-| `marshal setup --token …` | create the Marshal and CI bots, share, mint tokens, set the receipt bot and the claim bucket, register the signed webhook |
+| `marshal setup --token …` | create the Marshal and CI bots, share, mint tokens, set the receipt bot and the claim bucket, publish the repository's scope roots, register the signed webhook |
 | `marshal refs resolve FR-161 AD-14` | the anchor text with `file@sha` provenance; `NOT_FOUND` when an anchor vanished |
 | `marshal refs check [task]` | broken references, verbatim pastes and unlinked tasks, board-wide or for one task; exit `CONFLICT` when any |
 | `marshal refs index` | every anchor the sources define |
-| `marshal health` | the invariants: every story claims files, no unordered overlap, no blocked cycle, unblocked roots; exit `CONFLICT` when violated |
+| `marshal health` | the invariants: every story claims files, no unordered overlap, no blocked cycle, every stored path canonical, every chokepoint reachable from a claim, unblocked roots; exit `CONFLICT` when violated |
 | `marshal chokepoints` | the CODEOWNERS chokepoints and the queue on each |
 | `marshal open <path>` | is anything open on this path |
 | `marshal reconcile [--branch b]` | each claimed task's branch diffed against its claim (strays, collisions) and its last commit (stale) |
 | `marshal worktree <task>` | the `git worktree add` command, branch name from the story id, a database and port from the pool, the checkout recorded |
 | `marshal pool list|release` | allocations, worktrees, agents, checkout conflicts |
 | `marshal claims import [--apply] [--drop-labels]` | `owns:` labels → `paths_owned`; non-path labels are reported, never guessed |
+| `marshal claims canonicalize [--apply]` | rewrite stored scope paths into the canonical form; rebases onto `app_root` only when the repository settles which file was meant, and reports a collision on both tasks rather than merging it |
 | `marshal receipt <task> --commit … --gate name=status:ms …` | post a receipt as CI from any CI system |
 | `marshal ledger tail|verify` | the hash-chained record |
 | `marshal notify test|replay` | Discord |
 | `marshal serve [--once]` | the service |
 | `marshal mcp` | the agent tools over stdio |
+
+### Scope paths have one spelling
+
+A scope path is canonical: relative to the **repository** root, forward
+slashes, no leading `/`, no `./`, no `..`, no trailing slash, with a `repo:`
+prefix first in a multi-repository project. An app in `captain-yard-web/`
+claims `captain-yard-web/src/db/schema.ts`, never `src/db/schema.ts`.
+
+The repository root is the base because that is what `git diff --name-only`
+prints, and git is the one producer with no choice about its format.
+
+`app_root` is **not** a base for a claim. It is where the application lives:
+the gates' working directory, and what `docs_api_paths` are written against.
+Using it as a base for a claim gave one file two identities, and a lease is
+exclusion enforced by comparing strings — so the two claims could not see each
+other, and both were granted.
+
+The board cannot enforce this alone: it has no checkout, so it cannot tell
+`src/db/schema.ts` (relative to the app, and a second identity for a file
+already claimed) from `src/db/schema.ts` (relative to the repository root, and
+perfectly good). Marshal has the checkout, so Marshal tells it — `marshal
+setup` publishes the repository's top-level entries and `app_root` onto the
+project, and `marshal serve` keeps them current. From then on the board
+refuses a path that starts with something that is not one of them:
+
+```
+CONFLICT: scope path "src/server/db/schema.ts" is not canonical.
+Did you mean "captain-yard-web/src/server/db/schema.ts"?
+Paths are relative to the repository root, whose entries here are:
+.github, _bmad-output, captain-yard-web, deploy, docs. See `veans scope --help`.
+```
+
+It suggests; it never rewrites. Silently moving a claim onto a path nobody
+typed is how a lease lands on a file nobody meant to claim. A project that has
+published no roots enforces nothing, so nothing breaks before Marshal has had
+a chance to say what the repository looks like.
+
+To migrate a board that predates this, run `marshal claims canonicalize` — it
+reports and writes nothing until `--apply`, and it never merges two open tasks
+that turn out to be on one file. That is a real collision that was invisible
+until now, and it goes on both tasks as a comment and into the ledger for a
+human to settle.
 
 ### The service
 

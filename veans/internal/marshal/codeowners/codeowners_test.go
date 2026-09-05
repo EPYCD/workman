@@ -260,6 +260,50 @@ func TestParseErrors(t *testing.T) {
 	}
 }
 
+// TestChokepointQueueContainsTheLeaseHolder is regression test 3 of the brief,
+// end to end: a CODEOWNERS entry "/app/src/x.ts" and a live lease on
+// "app/src/x.ts" must put that task on the chokepoint's queue.
+//
+// It would have failed from the day the feature shipped until the day
+// app_root stopped being stripped, on every project that sets one. Nothing
+// noticed, because a queue with no rows in it and a queue with nothing to
+// report render identically — which is the whole reason the reachability
+// invariant now exists rather than being left as a follow-up.
+func TestChokepointQueueContainsTheLeaseHolder(t *testing.T) {
+	f, err := Parse([]byte("/app/src/x.ts @owner\n/app/src/lib/ @owner\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	since := time.Date(2026, 9, 5, 11, 0, 0, 0, time.UTC)
+	claims := []Claim{
+		// Spelled the only way the pre-commit hook accepts: from the
+		// repository root, exactly as git prints it.
+		{TaskID: 46, Identifier: "#46", Title: "The write door", Pattern: "app/src/x.ts", Since: since, Active: true},
+		{TaskID: 51, Identifier: "#51", Title: "The depot-pinned login", Pattern: "app/src/lib/contract.ts", Since: since},
+	}
+
+	queues := Queues(f.Chokepoints(), claims)
+	if len(queues) != 2 {
+		t.Fatalf("got %d queues, want 2", len(queues))
+	}
+
+	if queues[0].Chokepoint != "app/src/x.ts" {
+		t.Errorf("chokepoint = %q, want the repository-root-relative form", queues[0].Chokepoint)
+	}
+	if len(queues[0].Entries) != 1 {
+		t.Fatalf("the queue for a file with a live lease on it must not be empty: %+v", queues[0])
+	}
+	got := queues[0].Entries[0]
+	if got.Claim.TaskID != 46 || !got.Claim.Active || got.Position != 1 {
+		t.Errorf("entry = %+v, want #46 holding position 1", got)
+	}
+
+	// The directory rule reaches the file below it, in the same namespace.
+	if len(queues[1].Entries) != 1 || queues[1].Entries[0].Claim.TaskID != 51 {
+		t.Errorf("queue for %q = %+v", queues[1].Chokepoint, queues[1].Entries)
+	}
+}
+
 func TestQueues(t *testing.T) {
 	t0 := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
 	claims := []Claim{

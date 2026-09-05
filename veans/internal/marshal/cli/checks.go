@@ -152,7 +152,7 @@ func newHealthCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			h := e.Health(snap)
+			h := e.Health(cmd.Context(), snap)
 			if err := emit(cmd.OutOrStdout(), h); err != nil {
 				return err
 			}

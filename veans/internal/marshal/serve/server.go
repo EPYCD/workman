@@ -280,7 +280,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request, _ *client.
 		writeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, s.Engine.Health(snap))
+	writeJSON(w, http.StatusOK, s.Engine.Health(r.Context(), snap))
 }
 
 func (s *Server) handleChokepoints(w http.ResponseWriter, r *http.Request, _ *client.User) {

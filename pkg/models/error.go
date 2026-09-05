@@ -1524,6 +1524,53 @@ func (err ErrInvalidScopePath) HTTPError() web.HTTPError {
 	}
 }
 
+// ErrNonCanonicalScopePath represents an error where a scope path is
+// well-formed but relative to the wrong base: the project has declared its
+// repository's top-level entries and the path does not start with one.
+type ErrNonCanonicalScopePath struct {
+	Pattern    string
+	Suggestion string
+	Roots      []string
+}
+
+// IsErrNonCanonicalScopePath checks if an error is ErrNonCanonicalScopePath.
+func IsErrNonCanonicalScopePath(err error) bool {
+	_, ok := err.(ErrNonCanonicalScopePath)
+	return ok
+}
+
+func (err ErrNonCanonicalScopePath) Error() string {
+	return err.message()
+}
+
+// message names the canonical form that was expected and, where the project
+// declares an app root, the spelling the caller most likely meant. It does not
+// rewrite: a claim silently moved onto a path nobody typed is worse than one
+// refused.
+func (err ErrNonCanonicalScopePath) message() string {
+	msg := fmt.Sprintf("Scope path %q is not canonical.", err.Pattern)
+	if err.Suggestion != "" {
+		msg += fmt.Sprintf(" Did you mean %q?", err.Suggestion)
+	}
+	msg += " Paths are relative to the repository root"
+	if len(err.Roots) > 0 {
+		msg += fmt.Sprintf(", whose entries here are: %s", strings.Join(err.Roots, ", "))
+	}
+	return msg + ". See `veans scope --help`."
+}
+
+// ErrCodeNonCanonicalScopePath holds the unique world-error code of this error
+const ErrCodeNonCanonicalScopePath = 4043
+
+// HTTPError holds the http error description
+func (err ErrNonCanonicalScopePath) HTTPError() web.HTTPError {
+	return web.HTTPError{
+		HTTPCode: http.StatusBadRequest,
+		Code:     ErrCodeNonCanonicalScopePath,
+		Message:  err.message(),
+	}
+}
+
 // ErrInvalidReactionEntityKind represents an error where the reaction kind is invalid
 type ErrInvalidReactionEntityKind struct {
 	Kind string

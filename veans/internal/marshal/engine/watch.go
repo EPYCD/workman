@@ -45,6 +45,7 @@ type TickResult struct {
 	Strays      int       `json:"strays"`
 	Collisions  int       `json:"collisions"`
 	HealthOK    bool      `json:"health_ok"`
+	RootsPushed bool      `json:"roots_published,omitempty"`
 	Notified    int       `json:"notified"`
 	Errors      []string  `json:"errors,omitempty"`
 	FetchedSpec bool      `json:"fetched_spec"`
@@ -71,6 +72,19 @@ func (e *Engine) Tick(ctx context.Context, base string) *TickResult {
 		res.Errors = append(res.Errors, "relay settings: "+err.Error())
 	} else {
 		e.ApplyRelaySettings(rs)
+	}
+
+	// Publish the repository's shape before anything reads or writes a scope
+	// path. The board has no checkout and cannot otherwise tell a
+	// repository-root-relative path from an app-relative one, so until this
+	// lands it accepts both — and two spellings of one file are two claims
+	// that cannot see each other. A failure is tolerated: the board keeps the
+	// shape it had, which is the previous truth rather than no truth.
+	if _, changed, err := e.PublishRepoRoots(ctx); err != nil {
+		res.Errors = append(res.Errors, "publish repository roots (the board keeps the shape it had; rerun `marshal setup` with an admin token if the repository's top-level entries have changed): "+err.Error())
+	} else if changed {
+		res.RootsPushed = true
+		e.log(ledger.Entry{Action: "roots", Subject: "scope_repo_roots", Outcome: "ok", Reason: "the repository's top-level entries changed"})
 	}
 
 	e.mu.Lock()
@@ -314,7 +328,7 @@ func (e *Engine) announceBranches(ctx context.Context, snap *board.Snapshot, bas
 
 // announceHealth is M1.10: the invariants, announced when they change.
 func (e *Engine) announceHealth(ctx context.Context, snap *board.Snapshot, res *TickResult) int {
-	h := e.Health(snap)
+	h := e.Health(ctx, snap)
 	res.HealthOK = h.OK
 	sig := fmt.Sprintf("ok=%t collisions=%d cycles=%d tasks=%d", h.OK, h.Collisions, h.Cycles, h.Tasks)
 	if e.flags.Seen("health", sig) {

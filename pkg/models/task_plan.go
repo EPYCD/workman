@@ -200,6 +200,11 @@ func taskIdentifier(project *Project, t *Task) string {
 // agents can diff two runs.
 func lintTaskPlan(s *xorm.Session, projectID int64, plan *TaskPlan) (*planLinter, []PlanFinding, error) {
 	l := &planLinter{byKey: map[string]*PlannedTask{}, deps: map[string][]string{}, parents: map[string][]string{}, owned: map[string][]string{}, existing: map[string]int64{}}
+	roots, err := getProjectScopeRoots(s, projectID)
+	if err != nil {
+		return nil, nil, err
+	}
+	l.roots = roots
 	l.indexKeys(plan)
 	if err := l.checkReferences(s, projectID); err != nil {
 		return nil, nil, err
@@ -220,6 +225,10 @@ type planLinter struct {
 	deps     map[string][]string
 	parents  map[string][]string
 	owned    map[string][]string
+	// roots is the project's declaration of what a repository-relative path
+	// looks like, so a whole decomposition written against the wrong base is
+	// one finding per path here rather than a 400 on the first write.
+	roots ScopeRoots
 	// existing maps a referenced key that is not in the plan onto the id of
 	// the board task it names.
 	existing map[string]int64
@@ -326,11 +335,18 @@ func (l *planLinter) checkScopes() {
 			continue
 		}
 		for _, raw := range append(append([]string{}, p.Scope.PathsOwned...), p.Scope.PathsAffected...) {
-			if _, err := NormalizeScopePath(raw); err != nil {
+			norm, err := NormalizeScopePath(raw)
+			if err != nil {
+				l.add(PlanSeverityError, PlanFindingInvalidPath, fmt.Sprintf("%q: %v", key, err), key)
+				continue
+			}
+			// A plan is written in one go, so a wrong base is wrong in every
+			// path at once. Reporting all of them beats failing on the first.
+			if err := l.roots.Check(norm); err != nil {
 				l.add(PlanSeverityError, PlanFindingInvalidPath, fmt.Sprintf("%q: %v", key, err), key)
 			}
 		}
-		if norm, err := normalizeScopeList(p.Scope.PathsOwned, maxScopePaths); err == nil {
+		if norm, err := normalizeScopeList(p.Scope.PathsOwned, maxScopePaths, l.roots); err == nil {
 			l.owned[key] = norm
 		}
 	}

@@ -122,6 +122,103 @@ func normalizeScopePath(p, raw string) (string, error) {
 	return p, nil
 }
 
+// ScopeRoots is a project's statement of what a repository-root-relative path
+// looks like in its repository, so the board can refuse a path that is not one.
+//
+// The board has no checkout. It cannot tell "src/db/schema.ts" (relative to an
+// app sub-directory, and therefore a second identity for a file already
+// claimed) from "src/db/schema.ts" (relative to the repository root, and
+// perfectly good) by looking at the string. Something with the repository on
+// disk has to say which. Marshal does: it publishes Roots — the repository's
+// top-level entries — and AppRoot onto the project, and the board enforces
+// against them.
+//
+// Empty Roots means "not declared", and nothing is enforced. Every project
+// that has not published roots keeps working exactly as before; enforcement
+// arrives with the knowledge that makes it decidable, and not before.
+type ScopeRoots struct {
+	// Roots are the repository's top-level entries: "captain-yard-web",
+	// ".github", "docs".
+	Roots []string
+	// AppRoot is the sub-directory the application lives in, when it is not
+	// the repository root. It is used ONLY to offer a suggestion for a path
+	// that looks like it was written relative to the app — never to rewrite
+	// one. Silently rebasing a path a human typed is how a claim lands on a
+	// file nobody meant to claim.
+	AppRoot string
+}
+
+// ParseScopeRoots reads the comma-separated form stored on a project.
+func ParseScopeRoots(roots, appRoot string) ScopeRoots {
+	out := ScopeRoots{AppRoot: strings.Trim(strings.TrimSpace(appRoot), "/")}
+	for _, r := range strings.Split(roots, ",") {
+		if r = strings.Trim(strings.TrimSpace(r), "/"); r != "" {
+			out.Roots = append(out.Roots, r)
+		}
+	}
+	return out
+}
+
+// Declared reports whether this project has published enough to enforce.
+func (sr ScopeRoots) Declared() bool { return len(sr.Roots) > 0 }
+
+// Check rejects a canonical pattern whose first segment is not a top-level
+// entry of the repository. The pattern must already have been through
+// CanonicalPath: this decides which base it is relative to, not how it is
+// spelled.
+//
+// A first segment carrying a wildcard is accepted whatever it is. "**/logs"
+// and "*.md" are anchored nowhere by construction, so there is no base to be
+// wrong about, and a project is entitled to claim by shape rather than by
+// location.
+func (sr ScopeRoots) Check(pattern string) error {
+	if !sr.Declared() {
+		return nil
+	}
+	_, rest := splitRepoPrefix(pattern)
+	first, _, _ := strings.Cut(rest, "/")
+	if first == "" || segmentHasWildcard(first) {
+		return nil
+	}
+	for _, root := range sr.Roots {
+		if first == root {
+			return nil
+		}
+	}
+	return ErrNonCanonicalScopePath{
+		Pattern:    pattern,
+		Suggestion: sr.suggest(pattern),
+		Roots:      sr.Roots,
+	}
+}
+
+// suggest offers the app-root-prefixed spelling when the project has an app
+// root that is itself a valid root — the overwhelmingly common way to get this
+// wrong is to write a path as the application sees it. It is a question, not a
+// rewrite: a caller that meant a genuinely new top-level directory answers by
+// publishing roots that include it.
+func (sr ScopeRoots) suggest(pattern string) string {
+	if sr.AppRoot == "" {
+		return ""
+	}
+	var appRootIsARoot bool
+	for _, root := range sr.Roots {
+		if root == sr.AppRoot {
+			appRootIsARoot = true
+			break
+		}
+	}
+	if !appRootIsARoot {
+		return ""
+	}
+	repo, rest := splitRepoPrefix(pattern)
+	candidate := sr.AppRoot + "/" + rest
+	if repo != "" {
+		candidate = repo + ":" + candidate
+	}
+	return candidate
+}
+
 // splitRepoPrefix separates an optional `repo:` namespace from a pattern.
 // Projects spanning several repositories prefix their paths so `src/index.ts`
 // in one repo never collides with the same path in another; patterns without
