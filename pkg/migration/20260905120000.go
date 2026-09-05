@@ -30,8 +30,9 @@ import (
 // Both columns are null: a project that has published nothing enforces
 // nothing, so this migration changes no existing project's behaviour.
 type projectsScopeRoots20260905120000 struct {
-	ScopeRepoRoots string `xorm:"text null"`
-	ScopeAppRoot   string `xorm:"varchar(250) null"`
+	ScopeRepoRoots  string `xorm:"text null"`
+	ScopeAppRoot    string `xorm:"varchar(250) null"`
+	ScopeAppEntries string `xorm:"text null"`
 }
 
 func (projectsScopeRoots20260905120000) TableName() string {
@@ -46,7 +47,7 @@ func init() {
 			return partialSync(tx, projectsScopeRoots20260905120000{})
 		},
 		Rollback: func(tx *xorm.Engine) error {
-			for _, col := range []string{"scope_repo_roots", "scope_app_root"} {
+			for _, col := range []string{"scope_repo_roots", "scope_app_root", "scope_app_entries"} {
 				if err := dropTableColum(tx, "projects", col); err != nil {
 					return err
 				}

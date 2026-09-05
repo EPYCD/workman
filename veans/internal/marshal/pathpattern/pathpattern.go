@@ -173,14 +173,26 @@ func normalize(p, raw string) (string, error) {
 type Roots struct {
 	Roots   []string
 	AppRoot string
+	// AppEntries are the app root's own top-level entries. A path starting
+	// with one of these, when the repository root has no such entry, is the
+	// app-relative spelling — the one ambiguity worth refusing.
+	AppEntries []string
 }
 
-// ParseRoots reads the comma-separated form stored on a project.
-func ParseRoots(roots, appRoot string) Roots {
-	out := Roots{AppRoot: strings.Trim(strings.TrimSpace(appRoot), "/")}
-	for _, r := range strings.Split(roots, ",") {
+// ParseRoots reads the comma-separated forms stored on a project.
+func ParseRoots(roots, appRoot, appEntries string) Roots {
+	return Roots{
+		Roots:      splitList(roots),
+		AppRoot:    strings.Trim(strings.TrimSpace(appRoot), "/"),
+		AppEntries: splitList(appEntries),
+	}
+}
+
+func splitList(raw string) []string {
+	var out []string
+	for _, r := range strings.Split(raw, ",") {
 		if r = strings.Trim(strings.TrimSpace(r), "/"); r != "" {
-			out.Roots = append(out.Roots, r)
+			out = append(out, r)
 		}
 	}
 	return out
@@ -189,8 +201,12 @@ func ParseRoots(roots, appRoot string) Roots {
 // String renders the comma-separated form the board stores.
 func (r Roots) String() string { return strings.Join(r.Roots, ",") }
 
-// Declared reports whether there is enough here to check anything.
-func (r Roots) Declared() bool { return len(r.Roots) > 0 }
+// AppEntriesString renders the app root's entries the same way.
+func (r Roots) AppEntriesString() string { return strings.Join(r.AppEntries, ",") }
+
+// Declared reports whether there is enough here to check anything. Without the
+// app root's entries there is no ambiguity to detect.
+func (r Roots) Declared() bool { return len(r.Roots) > 0 && len(r.AppEntries) > 0 }
 
 // Check rejects a canonical pattern whose first segment is not a top-level
 // entry of the repository — that is, one written against the wrong base. The
@@ -213,6 +229,19 @@ func (r Roots) Check(pattern string) error {
 		if first == root {
 			return nil
 		}
+	}
+	// Unknown to the repository root AND to the app root: a directory that
+	// does not exist yet, which a task is entitled to claim. Only the
+	// app-relative spelling is refused.
+	var ambiguous bool
+	for _, entry := range r.AppEntries {
+		if first == entry {
+			ambiguous = true
+			break
+		}
+	}
+	if !ambiguous {
+		return nil
 	}
 	if s := r.Suggest(pattern); s != "" {
 		return fmt.Errorf("scope path %q is not canonical: did you mean %q? paths are relative to the repository root (%s)",

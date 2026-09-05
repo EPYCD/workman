@@ -83,15 +83,21 @@ func parseWorktrees(out string) []Worktree {
 	return list
 }
 
-// TopLevelEntries lists the repository's tracked entries at its root, which is
-// what a repository-root-relative path can begin with. It reads the tree
-// rather than the directory on purpose: an untracked or ignored entry is not
-// something a claim can be about, and letting node_modules widen the set would
-// defeat the check it feeds.
-func TopLevelEntries(ctx context.Context, repoRoot string) ([]string, error) {
-	out, err := git(ctx, repoRoot, "ls-tree", "--name-only", "HEAD")
+// TopLevelEntries lists the tracked entries directly under dir, or under the
+// repository root when dir is empty. That is what a path relative to that
+// base can begin with.
+//
+// It reads the tree rather than the directory on purpose: an untracked or
+// ignored entry is not something a claim can be about, and letting
+// node_modules widen the set would defeat the check it feeds.
+func TopLevelEntries(ctx context.Context, repoRoot, dir string) ([]string, error) {
+	rev := "HEAD"
+	if dir = strings.Trim(dir, "/"); dir != "" {
+		rev = "HEAD:" + dir
+	}
+	out, err := git(ctx, repoRoot, "ls-tree", "--name-only", rev)
 	if err != nil {
-		return nil, fmt.Errorf("list the repository's top-level entries: %w", err)
+		return nil, fmt.Errorf("list the tracked entries of %q: %w", rev, err)
 	}
 	var entries []string
 	for _, line := range strings.Split(out, "\n") {

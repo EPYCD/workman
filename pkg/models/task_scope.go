@@ -150,11 +150,11 @@ func getProjectScopeRoots(s *xorm.Session, projectID int64) (ScopeRoots, error) 
 		return ScopeRoots{}, nil
 	}
 	p := &Project{}
-	has, err := s.Where("id = ?", projectID).Cols("scope_repo_roots", "scope_app_root").Get(p)
+	has, err := s.Where("id = ?", projectID).Cols("scope_repo_roots", "scope_app_root", "scope_app_entries").Get(p)
 	if err != nil || !has {
 		return ScopeRoots{}, err
 	}
-	return ParseScopeRoots(p.ScopeRepoRoots, p.ScopeAppRoot), nil
+	return ParseScopeRoots(p.ScopeRepoRoots, p.ScopeAppRoot, p.ScopeAppEntries), nil
 }
 
 func normalizeEndpoints(raw []string) ([]string, error) {

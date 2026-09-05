@@ -43,14 +43,32 @@ import (
 // path is not a claim on anything, and node_modules has no business widening
 // what the board will accept.
 func (e *Engine) RepoRoots(ctx context.Context) (pathpattern.Roots, error) {
-	entries, err := worktree.TopLevelEntries(ctx, e.RepoRoot)
+	entries, err := worktree.TopLevelEntries(ctx, e.RepoRoot, "")
 	if err != nil {
 		return pathpattern.Roots{}, err
 	}
-	return pathpattern.Roots{
+	roots := pathpattern.Roots{
 		Roots:   entries,
 		AppRoot: strings.Trim(strings.TrimSpace(e.Cfg.AppRoot), "/"),
-	}, nil
+	}
+	if roots.AppRoot == "" {
+		// No app root, no ambiguity: every path is relative to the one base
+		// there is, and nothing needs refusing.
+		return roots, nil
+	}
+	// The app root's own entries are the ambiguity. "src" here and no "src" at
+	// the repository root means a path starting "src/" was written as the
+	// application sees it, and is a second identity for a file already claimed
+	// from the repository root.
+	appEntries, err := worktree.TopLevelEntries(ctx, e.RepoRoot, roots.AppRoot)
+	if err != nil {
+		// An app_root that is not in the tree yet: publish the roots without
+		// the ambiguity set rather than failing, and enforce nothing until it
+		// is real.
+		return roots, nil //nolint:nilerr // an absent app root disables the check, it does not break publishing
+	}
+	roots.AppEntries = appEntries
+	return roots, nil
 }
 
 // PublishRepoRoots writes the repository's shape onto the board so the board
@@ -77,12 +95,15 @@ func (e *Engine) PublishRepoRoots(ctx context.Context) (roots pathpattern.Roots,
 	if err != nil {
 		return roots, false, err
 	}
-	if project.ScopeRepoRoots == roots.String() && project.ScopeAppRoot == roots.AppRoot {
+	if project.ScopeRepoRoots == roots.String() &&
+		project.ScopeAppRoot == roots.AppRoot &&
+		project.ScopeAppEntries == roots.AppEntriesString() {
 		return roots, false, nil
 	}
 	if _, err := e.Board.Client.PatchProject(ctx, e.Board.Cfg.ProjectID, map[string]any{
-		"scope_repo_roots": roots.String(),
-		"scope_app_root":   roots.AppRoot,
+		"scope_repo_roots":  roots.String(),
+		"scope_app_root":    roots.AppRoot,
+		"scope_app_entries": roots.AppEntriesString(),
 	}); err != nil {
 		return roots, false, err
 	}

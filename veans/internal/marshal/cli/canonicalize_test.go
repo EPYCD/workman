@@ -45,7 +45,7 @@ func repoWith(t *testing.T, files ...string) string {
 }
 
 func TestCanonicalizeListRebasesOnlyWhenTheRepositorySettlesIt(t *testing.T) {
-	roots := pathpattern.ParseRoots("app,docs", "app")
+	roots := pathpattern.ParseRoots("app,docs", "app", "src")
 	root := repoWith(t, "app/src/x.ts", "app/src/y.ts", "docs/api.md", "src/ambiguous.ts", "app/src/ambiguous.ts")
 
 	t.Run("an app-relative path whose rebased form exists is rewritten", func(t *testing.T) {

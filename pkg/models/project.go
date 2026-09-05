@@ -66,8 +66,9 @@ type Project struct {
 	// app-relative one by looking at it, so the repository tells it. Marshal
 	// publishes both from the checkout it has; while scope_repo_roots is empty
 	// nothing is enforced and every path is accepted as before.
-	ScopeRepoRoots string `xorm:"text null" json:"scope_repo_roots" doc:"Comma-separated top-level entries of the repository, e.g. \"captain-yard-web,.github,docs\". A scope path whose first segment is not one of these is refused as not canonical. Empty disables the check. Published by marshal setup and kept current by marshal serve; admins only."`
-	ScopeAppRoot   string `xorm:"varchar(250) null" json:"scope_app_root" doc:"The sub-directory the application lives in, e.g. \"captain-yard-web\". Used only to suggest the spelling a caller probably meant when a path is refused — never to rewrite one. Admins only."`
+	ScopeRepoRoots  string `xorm:"text null" json:"scope_repo_roots" doc:"Comma-separated top-level entries of the repository, e.g. \"captain-yard-web,.github,docs\". A scope path whose first segment is not one of these is refused as not canonical. Empty disables the check. Published by marshal setup and kept current by marshal serve; admins only."`
+	ScopeAppRoot    string `xorm:"varchar(250) null" json:"scope_app_root" doc:"The sub-directory the application lives in, e.g. \"captain-yard-web\". Used only to suggest the spelling a caller probably meant when a path is refused — never to rewrite one. Admins only."`
+	ScopeAppEntries string `xorm:"text null" json:"scope_app_entries" doc:"Comma-separated top-level entries of the app root, e.g. \"src,packages,docs\". A scope path starting with one of these, when the repository root has no such entry, is the app-relative spelling and is refused. Without it nothing is enforced: a first segment unknown to both is a directory that does not exist yet, which a task is entitled to claim. Published by marshal setup; admins only."`
 
 	// How the Discord relay presents this project. The webhook URL itself is
 	// deliberately absent: it is a credential, it belongs in the relay's own
@@ -1177,7 +1178,7 @@ func checkScopeRootsChange(s *xorm.Session, project *Project, auth web.Auth) err
 	// confusing "the repository's top-level entries" with "the paths I care
 	// about", and silently accepting it would make the check pass for paths it
 	// should refuse.
-	for _, root := range ParseScopeRoots(project.ScopeRepoRoots, project.ScopeAppRoot).Roots {
+	for _, root := range ParseScopeRoots(project.ScopeRepoRoots, project.ScopeAppRoot, project.ScopeAppEntries).Roots {
 		if strings.ContainsAny(root, "/\\") {
 			return ErrInvalidScopePath{Pattern: root, Reason: "a repository root is a single top-level entry, not a path"}
 		}
@@ -1208,7 +1209,7 @@ func projectUpdateColumns(project, stored *Project, updateBackground, receiptBot
 		cols = append(cols, "receipt_bot_id")
 	}
 	if scopeRootsChanged {
-		cols = append(cols, "scope_repo_roots", "scope_app_root")
+		cols = append(cols, "scope_repo_roots", "scope_app_root", "scope_app_entries")
 	}
 	// The Discord relay's presentation. These columns exist, are exposed on
 	// the model, are edited by the project settings page and are read by
@@ -1251,7 +1252,8 @@ func UpdateProject(s *xorm.Session, project *Project, auth web.Auth, updateProje
 	}
 
 	scopeRootsChanged := project.ScopeRepoRoots != storedProject.ScopeRepoRoots ||
-		project.ScopeAppRoot != storedProject.ScopeAppRoot
+		project.ScopeAppRoot != storedProject.ScopeAppRoot ||
+		project.ScopeAppEntries != storedProject.ScopeAppEntries
 	if scopeRootsChanged {
 		if err := checkScopeRootsChange(s, project, auth); err != nil {
 			return err

@@ -62,8 +62,9 @@ type Project struct {
 	// The repository's shape, as the board knows it. Marshal publishes both
 	// from its checkout; the board has none and cannot otherwise tell a
 	// repository-root-relative scope path from an app-relative one.
-	ScopeRepoRoots string `json:"scope_repo_roots,omitempty"`
-	ScopeAppRoot   string `json:"scope_app_root,omitempty"`
+	ScopeRepoRoots  string `json:"scope_repo_roots,omitempty"`
+	ScopeAppRoot    string `json:"scope_app_root,omitempty"`
+	ScopeAppEntries string `json:"scope_app_entries,omitempty"`
 
 	// How the relay presents this project. Set from the board's project
 	// settings; the webhook URL is deliberately not here, it stays a

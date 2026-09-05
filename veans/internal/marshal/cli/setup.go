@@ -192,7 +192,7 @@ func runSetup(ctx context.Context, w interface{ Write([]byte) (int, error) }, mc
 // A repository whose app_root is not actually in the tree publishes nothing:
 // enforcement that refuses valid paths would be worse than none.
 func publishScopeRoots(ctx context.Context, admin *client.Client, mcfg *config.Config, vcfg *veansconfig.Config, res *setupResult) error {
-	entries, err := worktree.TopLevelEntries(ctx, mcfg.Dir())
+	entries, err := worktree.TopLevelEntries(ctx, mcfg.Dir(), "")
 	if err != nil {
 		// A repository with no commits has no shape to publish yet; serve will
 		// pick it up on the first poll after one exists.
@@ -200,12 +200,18 @@ func publishScopeRoots(ctx context.Context, admin *client.Client, mcfg *config.C
 		return nil //nolint:nilerr // setup must not fail on an empty repository
 	}
 	roots := pathpattern.Roots{Roots: entries, AppRoot: strings.Trim(strings.TrimSpace(mcfg.AppRoot), "/")}
-	if roots.AppRoot != "" && !slices.Contains(roots.Roots, roots.AppRoot) {
-		return output.New(output.CodeValidation, "app_root %q in %s is not a top-level entry of the repository — fix it before the board starts enforcing against it", roots.AppRoot, config.Filename)
+	if roots.AppRoot != "" {
+		if !slices.Contains(roots.Roots, roots.AppRoot) {
+			return output.New(output.CodeValidation, "app_root %q in %s is not a top-level entry of the repository — fix it before the board starts enforcing against it", roots.AppRoot, config.Filename)
+		}
+		if appEntries, err := worktree.TopLevelEntries(ctx, mcfg.Dir(), roots.AppRoot); err == nil {
+			roots.AppEntries = appEntries
+		}
 	}
 	if _, err := admin.PatchProject(ctx, vcfg.ProjectID, map[string]any{
-		"scope_repo_roots": roots.String(),
-		"scope_app_root":   roots.AppRoot,
+		"scope_repo_roots":  roots.String(),
+		"scope_app_root":    roots.AppRoot,
+		"scope_app_entries": roots.AppEntriesString(),
 	}); err != nil {
 		return output.Wrap(output.CodeUnknown, err, "publish the repository's scope roots: %v", err)
 	}

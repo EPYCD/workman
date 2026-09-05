@@ -35,11 +35,13 @@ import (
 // sub-directory, "app", with the rest of the repository around it.
 
 // declareRoots publishes onto project 1 what Marshal would publish from a
-// checkout: the repository's top-level entries and where the application lives.
-func declareRoots(t *testing.T, s *xorm.Session, roots, appRoot string) {
+// checkout: the repository's top-level entries, where the application lives,
+// and the app root's own entries — the last being what makes a path ambiguous
+// rather than merely unfamiliar.
+func declareRoots(t *testing.T, s *xorm.Session, roots, appRoot, appEntries string) {
 	t.Helper()
-	_, err := s.ID(1).Cols("scope_repo_roots", "scope_app_root").
-		Update(&Project{ScopeRepoRoots: roots, ScopeAppRoot: appRoot})
+	_, err := s.ID(1).Cols("scope_repo_roots", "scope_app_root", "scope_app_entries").
+		Update(&Project{ScopeRepoRoots: roots, ScopeAppRoot: appRoot, ScopeAppEntries: appEntries})
 	require.NoError(t, err)
 }
 
@@ -55,7 +57,7 @@ func TestScopePathCannotBeSpelledTwoWays(t *testing.T) {
 		db.LoadAndAssertFixtures(t)
 		s := db.NewSession()
 		defer s.Close()
-		declareRoots(t, s, "app,docs,.github", "app")
+		declareRoots(t, s, "app,docs,.github", "app", "src,packages")
 
 		// The first task claims the file, spelled from the repository root.
 		first := &TaskScope{TaskID: 2, PathsOwned: []string{"app/src/x.ts"}}
@@ -88,7 +90,7 @@ func TestScopePathCannotBeSpelledTwoWays(t *testing.T) {
 		db.LoadAndAssertFixtures(t)
 		s := db.NewSession()
 		defer s.Close()
-		declareRoots(t, s, "app,docs", "app")
+		declareRoots(t, s, "app,docs", "app", "src")
 
 		sc := &TaskScope{TaskID: 2, PathsOwned: []string{"app/a.ts"}, PathsAffected: []string{"src/b.ts"}}
 		require.Error(t, sc.Update(s, user1))
@@ -98,9 +100,49 @@ func TestScopePathCannotBeSpelledTwoWays(t *testing.T) {
 		db.LoadAndAssertFixtures(t)
 		s := db.NewSession()
 		defer s.Close()
-		declareRoots(t, s, "app,docs", "app")
+		declareRoots(t, s, "app,docs", "app", "src")
 
 		sc := &TaskScope{TaskID: 2, PathsOwned: []string{"**/*.md", "*.lock"}}
+		require.NoError(t, sc.Update(s, user1))
+	})
+
+	// This is the false positive CI caught: a task whose whole job is to create
+	// src/ could not declare its scope, and there was no override to reach for.
+	// Only the app-relative spelling of an EXISTING app directory is ambiguous;
+	// a first segment unknown to both bases is simply new.
+	t.Run("a directory that does not exist yet is claimable", func(t *testing.T) {
+		db.LoadAndAssertFixtures(t)
+		s := db.NewSession()
+		defer s.Close()
+		declareRoots(t, s, "docs,.github,README", "", "")
+
+		sc := &TaskScope{TaskID: 2, PathsOwned: []string{"src/lib/contract/hire.ts"}}
+		require.NoError(t, sc.Update(s, user1))
+		assert.Equal(t, []string{"src/lib/contract/hire.ts"}, sc.PathsOwned)
+	})
+
+	t.Run("a new top-level directory is claimable even beside an app root", func(t *testing.T) {
+		db.LoadAndAssertFixtures(t)
+		s := db.NewSession()
+		defer s.Close()
+		// "src" is inside the app root, so app-relative. "tooling" is in
+		// neither, so it is a directory nobody has created yet.
+		declareRoots(t, s, "app,docs", "app", "src,packages")
+
+		ok := &TaskScope{TaskID: 2, PathsOwned: []string{"tooling/gen.ts"}}
+		require.NoError(t, ok.Update(s, user1))
+
+		ambiguous := &TaskScope{TaskID: 3, PathsOwned: []string{"src/x.ts"}}
+		require.Error(t, ambiguous.Update(s, user1))
+	})
+
+	t.Run("without the app root's entries there is no ambiguity to detect", func(t *testing.T) {
+		db.LoadAndAssertFixtures(t)
+		s := db.NewSession()
+		defer s.Close()
+		declareRoots(t, s, "app,docs", "app", "")
+
+		sc := &TaskScope{TaskID: 2, PathsOwned: []string{"src/x.ts"}}
 		require.NoError(t, sc.Update(s, user1))
 	})
 
@@ -120,7 +162,7 @@ func TestScopePathCannotBeSpelledTwoWays(t *testing.T) {
 		db.LoadAndAssertFixtures(t)
 		s := db.NewSession()
 		defer s.Close()
-		declareRoots(t, s, "pkg,frontend", "")
+		declareRoots(t, s, "pkg,frontend", "", "src")
 
 		err := (&TaskScope{TaskID: 2, PathsOwned: []string{"src/x.ts"}}).Update(s, user1)
 		require.True(t, IsErrNonCanonicalScopePath(err), "got %T: %v", err, err)
@@ -143,7 +185,7 @@ func TestScopeCheckOwnsWhatTheClaimSays(t *testing.T) {
 	db.LoadAndAssertFixtures(t)
 	s := db.NewSession()
 	defer s.Close()
-	declareRoots(t, s, "app,docs,.github", "app")
+	declareRoots(t, s, "app,docs,.github", "app", "src,packages")
 
 	claimed := []string{
 		"app/src/x.ts",

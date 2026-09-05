@@ -104,7 +104,7 @@ func TestCheckIsDeterministic(t *testing.T) {
 // producer, including one added after this was written — "every producer goes
 // through the one function" is a convention until something asserts it.
 func TestCheckPathCanonicality(t *testing.T) {
-	opts := Options{Roots: pathpattern.ParseRoots("app,docs,.github", "app")}
+	opts := Options{Roots: pathpattern.ParseRoots("app,docs,.github", "app", "src,packages")}
 	tasks := []Task{
 		{ID: 1, Paths: []string{"app/src/x.ts"}},
 		// Spelled differently from how it would be stored today.
@@ -159,7 +159,7 @@ func TestCheckPathCanonicality(t *testing.T) {
 // question is answerable does.
 func TestCheckChokepointReachability(t *testing.T) {
 	opts := Options{
-		Roots: pathpattern.ParseRoots("app,docs,.github", "app"),
+		Roots: pathpattern.ParseRoots("app,docs,.github", "app", "src,packages"),
 		// What CODEOWNERS ingestion used to produce on a project with an
 		// app_root: the anchoring root stripped off, leaving a pattern in a
 		// namespace no claim is ever stored in.
