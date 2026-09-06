@@ -234,10 +234,6 @@
 				v-model="settings.frontendSettings.allowIconChanges"
 				:label="$t('user.settings.general.allowIconChanges')"
 			/>
-			<FormCheckbox
-				v-model="settings.frontendSettings.alwaysShowBucketTaskCount"
-				:label="$t('user.settings.general.alwaysShowBucketTaskCount')"
-			/>
 			<FormField
 				:label="$t('user.settings.backgroundBrightness.title')"
 				layout="two-col"

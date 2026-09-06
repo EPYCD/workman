@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"code.vikunja.io/api/pkg/db"
+	"code.vikunja.io/api/pkg/user"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -764,4 +765,80 @@ func TestBulkInsertTaskPositions(t *testing.T) {
 func TestViewLockOrder(t *testing.T) {
 	ids := viewLockOrder([]*ProjectView{{ID: 4}, {ID: 1}, {ID: 4}, {ID: 2}})
 	assert.Equal(t, []int64{1, 2, 4}, ids)
+}
+
+// TestTaskPositionSurvivesClosing pins the position a closed task keeps.
+//
+// Task.Position is xorm:"-" — filled in only by a view endpoint, zero on every
+// other path — and moveTaskToDoneBuckets passed that zero to
+// calculateDefaultPosition, whose keep-what-you-have branch fires only on a
+// non-zero input. So the branch was unreachable and closing a task always
+// replaced its position with index * 2^16.
+//
+// On the live board that showed as a Done column ordered by task id: every one
+// of its 122 positions was exactly index * 65536, whatever order a person had
+// arranged them in beforehand.
+func TestTaskPositionSurvivesClosing(t *testing.T) {
+	const (
+		viewID       = 4    // the kanban view, done_bucket_id 3
+		taskID       = 1    // starts in bucket 1
+		handPlacedAt = 1234 // deliberately not index * 2^16
+	)
+
+	t.Run("closing keeps the position it had", func(t *testing.T) {
+		db.LoadAndAssertFixtures(t)
+		s := db.NewSession()
+		defer s.Close()
+		u := &user.User{ID: 1}
+
+		require.NoError(t, upsertTaskPosition(s, &TaskPosition{
+			TaskID: taskID, ProjectViewID: viewID, Position: handPlacedAt,
+		}))
+
+		task := &Task{ID: taskID, Done: true}
+		require.NoError(t, task.Update(s, u))
+
+		after := &TaskPosition{TaskID: taskID, ProjectViewID: viewID}
+		require.NoError(t, after.refresh(s))
+		assert.InDelta(t, float64(handPlacedAt), after.Position, 0.001,
+			"closing the task overwrote a position somebody chose")
+	})
+
+	t.Run("reopening keeps it too", func(t *testing.T) {
+		db.LoadAndAssertFixtures(t)
+		s := db.NewSession()
+		defer s.Close()
+		u := &user.User{ID: 1}
+
+		require.NoError(t, upsertTaskPosition(s, &TaskPosition{
+			TaskID: taskID, ProjectViewID: viewID, Position: handPlacedAt,
+		}))
+
+		task := &Task{ID: taskID, Done: true}
+		require.NoError(t, task.Update(s, u))
+		reopened := &Task{ID: taskID, Done: false}
+		require.NoError(t, reopened.Update(s, u))
+
+		after := &TaskPosition{TaskID: taskID, ProjectViewID: viewID}
+		require.NoError(t, after.refresh(s))
+		assert.InDelta(t, float64(handPlacedAt), after.Position, 0.001,
+			"reopening the task overwrote a position somebody chose")
+	})
+
+	t.Run("a task with no position still gets one", func(t *testing.T) {
+		db.LoadAndAssertFixtures(t)
+		s := db.NewSession()
+		defer s.Close()
+		u := &user.User{ID: 1}
+
+		// No position row for this task in this view: the fallback has to
+		// still produce a real, unique value rather than leaving it at zero,
+		// which would tie it with every other unplaced task.
+		task := &Task{ID: taskID, Done: true}
+		require.NoError(t, task.Update(s, u))
+
+		after := &TaskPosition{TaskID: taskID, ProjectViewID: viewID}
+		require.NoError(t, after.refresh(s))
+		assert.NotZero(t, after.Position)
+	})
 }
