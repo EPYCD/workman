@@ -154,6 +154,81 @@ func TestBucket_ReadAll(t *testing.T) {
 	})
 }
 
+// TestBucket_ReadAll_Count pins the number a column header shows.
+//
+// The bucket list endpoint returned every bucket with count 0 — the field was
+// declared, serialised and never assigned — so a board reading it showed no
+// size for any column, or worse, showed zero as if it meant empty. The count
+// has to be every task in the bucket, not the page of them a caller asked for,
+// and it has to agree with the number GetTasksInBucketsForView reports for the
+// same bucket.
+func TestBucket_ReadAll_Count(t *testing.T) {
+	t.Run("counts every task in the bucket", func(t *testing.T) {
+		db.LoadAndAssertFixtures(t)
+		s := db.NewSession()
+		defer s.Close()
+
+		testuser := &user.User{ID: 1}
+		b := &Bucket{ProjectViewID: 4, ProjectID: 1}
+
+		bucketsInterface, _, _, err := b.ReadAll(s, testuser, "", 0, 0)
+		require.NoError(t, err)
+		buckets, is := bucketsInterface.([]*Bucket)
+		require.True(t, is)
+		require.Len(t, buckets, 3)
+
+		assert.Equal(t, int64(11), buckets[0].Count)
+		assert.Equal(t, int64(3), buckets[1].Count)
+		assert.Equal(t, int64(4), buckets[2].Count)
+	})
+
+	t.Run("agrees with the board endpoint", func(t *testing.T) {
+		db.LoadAndAssertFixtures(t)
+		s := db.NewSession()
+		defer s.Close()
+
+		testuser := &user.User{ID: 1}
+
+		listed, _, _, err := (&Bucket{ProjectViewID: 4, ProjectID: 1}).ReadAll(s, testuser, "", 0, 0)
+		require.NoError(t, err)
+		fromList := listed.([]*Bucket)
+
+		withTasks, _, _, err := (&TaskCollection{ProjectViewID: 4, ProjectID: 1}).ReadAll(s, testuser, "", 0, 0)
+		require.NoError(t, err)
+		fromBoard := withTasks.([]*Bucket)
+
+		require.Len(t, fromList, len(fromBoard))
+		for i := range fromList {
+			// Two endpoints, one screen: a header that disagrees with the
+			// column under it is worse than no header at all.
+			assert.Equal(t, fromBoard[i].Count, fromList[i].Count,
+				"bucket %d: board says %d, list says %d", fromList[i].ID, fromBoard[i].Count, fromList[i].Count)
+		}
+	})
+
+	t.Run("a soft-deleted task is not counted", func(t *testing.T) {
+		db.LoadAndAssertFixtures(t)
+		s := db.NewSession()
+		defer s.Close()
+
+		testuser := &user.User{ID: 1}
+
+		before, _, _, err := (&Bucket{ProjectViewID: 4, ProjectID: 1}).ReadAll(s, testuser, "", 0, 0)
+		require.NoError(t, err)
+		was := before.([]*Bucket)[0].Count
+
+		// Soft delete leaves the task_buckets row behind, so a count taken from
+		// those rows alone would keep reporting work that no longer exists.
+		task := &Task{ID: 1}
+		_, err = s.Where("id = ?", task.ID).Delete(task)
+		require.NoError(t, err)
+
+		after, _, _, err := (&Bucket{ProjectViewID: 4, ProjectID: 1}).ReadAll(s, testuser, "", 0, 0)
+		require.NoError(t, err)
+		assert.Equal(t, was-1, after.([]*Bucket)[0].Count)
+	})
+}
+
 func TestBucket_Delete(t *testing.T) {
 	u := &user.User{ID: 1}
 

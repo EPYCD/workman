@@ -24,6 +24,7 @@ import (
 	"code.vikunja.io/api/pkg/log"
 	"code.vikunja.io/api/pkg/user"
 	"code.vikunja.io/api/pkg/web"
+	"xorm.io/builder"
 	"xorm.io/xorm"
 )
 
@@ -99,6 +100,85 @@ func getDefaultBucketID(s *xorm.Session, view *ProjectView) (bucketID int64, err
 	return bucket.ID, nil
 }
 
+// bucketTaskCounts returns how many tasks each bucket holds — every task in
+// it, not the page of them a caller happens to have asked for.
+//
+// The count is what a column header shows, so it has to be the same number the
+// board's own endpoint reports (GetTasksInBucketsForView sets Count from the
+// query total) and the same one the bucket limit is checked against. Anything
+// else means two places on one screen disagree about the size of a column.
+//
+// Two counting strategies, for the same reason checkBucketLimit has two:
+// task_buckets rows are the truth for a plain manual view, but not for a saved
+// filter or a filtered view, where a row can survive a task no longer matching
+// the filter.
+func bucketTaskCounts(s *xorm.Session, view *ProjectView, a web.Auth, buckets []*Bucket) (map[int64]int64, error) {
+	counts := make(map[int64]int64, len(buckets))
+	if len(buckets) == 0 {
+		return counts, nil
+	}
+
+	// A filtered view has to be counted through the collection: raw
+	// task_buckets rows include tasks that no longer match the filter, and the
+	// filter's own total counts across every bucket rather than this one.
+	if view.ProjectID < 0 || (view.Filter != nil && view.Filter.Filter != "") {
+		for _, b := range buckets {
+			tc := &TaskCollection{
+				ProjectID:     view.ProjectID,
+				ProjectViewID: view.ID,
+				Filter:        "bucket_id = " + strconv.FormatInt(b.ID, 10),
+			}
+			_, _, total, err := tc.ReadAll(s, a, "", 1, 1)
+			if err != nil {
+				return nil, err
+			}
+			counts[b.ID] = total
+		}
+		return counts, nil
+	}
+
+	ids := make([]int64, 0, len(buckets))
+	for _, b := range buckets {
+		ids = append(ids, b.ID)
+	}
+
+	// One grouped query for every bucket, rather than one per column: a board
+	// with twelve columns should cost one round trip, not twelve.
+	//
+	// The join to tasks is not decoration. A soft-deleted task keeps its
+	// task_buckets row, so counting the rows alone would report work that no
+	// longer exists — and xorm's deleted tag does not reach a join from
+	// another bean, which is what taskNotDeletedCond exists for.
+	type bucketCount struct {
+		BucketID int64 `xorm:"bucket_id"`
+		Count    int64 `xorm:"count"`
+	}
+	rows := []*bucketCount{}
+	err := s.Table("task_buckets").
+		Select("task_buckets.bucket_id AS bucket_id, count(task_buckets.task_id) AS count").
+		Join("INNER", "tasks", "tasks.id = task_buckets.task_id").
+		Where(builder.In("task_buckets.bucket_id", ids)).
+		And("task_buckets.project_view_id = ?", view.ID).
+		And(taskNotDeletedCond("tasks")).
+		GroupBy("task_buckets.bucket_id").
+		Find(&rows)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, r := range rows {
+		counts[r.BucketID] = r.Count
+	}
+	// A bucket with no rows is absent from a GROUP BY result and must still
+	// report zero rather than nothing.
+	for _, b := range buckets {
+		if _, has := counts[b.ID]; !has {
+			counts[b.ID] = 0
+		}
+	}
+	return counts, nil
+}
+
 // ReadAll returns all manual buckets for a certain project
 // @Summary Get all kanban buckets of a project
 // @Description Returns all kanban buckets which belong to that project. Buckets are always sorted by their `position` in ascending order. To get all buckets with their tasks, use the tasks endpoint with a kanban view.
@@ -150,6 +230,14 @@ func (b *Bucket) ReadAll(s *xorm.Session, auth web.Auth, _ string, _ int, _ int)
 		if createdBy, has := users[bb.CreatedByID]; has {
 			bb.CreatedBy = createdBy
 		}
+	}
+
+	counts, err := bucketTaskCounts(s, view, auth, buckets)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+	for _, bb := range buckets {
+		bb.Count = counts[bb.ID]
 	}
 
 	return buckets, len(buckets), int64(len(buckets)), nil
