@@ -83,26 +83,47 @@ and unsafe.
 
 ## Part 3 — Each agent, once
 
-On the machine the agent runs on, point git at the machine account rather than
-the person:
+On the machine the agent runs on, in the checkout it works in:
 
 ```bash
-cd <the checkout the agent works in>
-git config user.name  "capyard-agent-<name>"
-git config user.email "<the machine account's noreply address>"
-git remote set-url origin \
-  https://capyard-agent-<name>:<PAT>@github.com/<owner>/<repo>.git
+scripts/agent-identity.sh capyard-agent-<name> ~/path/to/checkout
 ```
 
-Repository-local config, not `--global`: the same machine usually also holds
-the person's own checkout, and that one should stay theirs.
+It asks for that account's PAT without echoing it, writes it to
+`~/.config/capyard-agent/credentials` at mode 0600, and points the checkout's
+git config at it. The token deliberately does **not** go into the remote URL:
+`.git/config` is readable by anything that can read the repository, and
+`git remote -v` prints it on any screen share.
 
-Verify the separation before trusting it:
+The config is repository-local, never `--global` — the same machine usually
+also holds the person's own checkout, and that one stays theirs.
+
+The script refuses if the account you name is the one `gh` is logged in as,
+because that is the exact mistake this whole arrangement exists to prevent.
+
+### Verify it before trusting it
+
+Configuration is not proof. Push a real branch, open a pull request, then:
 
 ```bash
-git log -1 --format='%an <%ae>'   # must be the machine account
-gh api user --jq .login           # must NOT be the reviewer's account
+gh pr list --repo <owner>/<repo> --limit 1 --json author --jq '.[].author.login'
 ```
+
+If that prints a **person's** name, the agent is still pushing as them and
+nothing below is enforcement — only convention. Everything else can be
+correct and this one line still wrong.
+
+## Two people, two agents: who reviews whom
+
+With more than one person there is a shortcut worth knowing, because it needs
+no new accounts at all: let each person's agent push as that person, and have
+them **review each other's** agents. GitHub is happy for one collaborator to
+approve another's pull request.
+
+It works, and it costs something: you can never land your own agent's work
+without the other person, and git history still cannot tell a person from
+their agent. Machine accounts avoid both. The shortcut is a reasonable
+stop-gap while the accounts are being created — it is not a destination.
 
 ---
 
