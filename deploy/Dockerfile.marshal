@@ -6,7 +6,7 @@ RUN go mod download
 COPY . .
 ARG VERSION=dev
 RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o /out/marshal ./cmd/marshal \
- && CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o /out/veans ./cmd/veans
+ && CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o /out/veans ./cmd/veans
 
 # git is what Marshal reads the repository with; wget is the healthcheck.
 FROM alpine:3.20
