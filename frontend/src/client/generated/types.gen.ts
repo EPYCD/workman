@@ -327,6 +327,25 @@ export type Bucket = {
     updated?: string;
 };
 
+export type BucketAssigneeCount = {
+    /**
+     * The bucket these tasks are in.
+     */
+    bucket_id?: number;
+    /**
+     * How many tasks in this bucket that person holds — every one of them, not the page the board has loaded.
+     */
+    count?: number;
+    /**
+     * The assignee, or null when user_id is 0.
+     */
+    user?: User;
+    /**
+     * The assignee, or 0 for tasks nobody is assigned to.
+     */
+    user_id?: number;
+};
+
 export type BucketsWithTasksBodyBody = {
     /**
      * A URL to the JSON Schema for this object.
@@ -1226,6 +1245,18 @@ export type PaginatedBucket = {
      */
     readonly $schema?: string;
     items?: Array<Bucket> | null;
+    page?: number;
+    per_page?: number;
+    total?: number;
+    total_pages?: number;
+};
+
+export type PaginatedBucketAssigneeCount = {
+    /**
+     * A URL to the JSON Schema for this object.
+     */
+    readonly $schema?: string;
+    items?: Array<BucketAssigneeCount> | null;
     page?: number;
     per_page?: number;
     total?: number;
@@ -4154,6 +4185,25 @@ export type BucketWritable = {
     updated?: string;
 };
 
+export type BucketAssigneeCountWritable = {
+    /**
+     * The bucket these tasks are in.
+     */
+    bucket_id?: number;
+    /**
+     * How many tasks in this bucket that person holds — every one of them, not the page the board has loaded.
+     */
+    count?: number;
+    /**
+     * The assignee, or null when user_id is 0.
+     */
+    user?: UserWritable;
+    /**
+     * The assignee, or 0 for tasks nobody is assigned to.
+     */
+    user_id?: number;
+};
+
 export type BucketsWithTasksBodyBodyWritable = {
     items?: Array<BucketWritable> | null;
     /**
@@ -4467,6 +4517,14 @@ export type PaginatedBotUserWritable = {
 
 export type PaginatedBucketWritable = {
     items?: Array<BucketWritable> | null;
+    page?: number;
+    per_page?: number;
+    total?: number;
+    total_pages?: number;
+};
+
+export type PaginatedBucketAssigneeCountWritable = {
+    items?: Array<BucketAssigneeCountWritable> | null;
     page?: number;
     per_page?: number;
     total?: number;
@@ -8818,6 +8876,40 @@ export type ProjectViewsUpdateResponses = {
 };
 
 export type ProjectViewsUpdateResponse = ProjectViewsUpdateResponses[keyof ProjectViewsUpdateResponses];
+
+export type ProjectsViewsAssigneeCountsData = {
+    body?: never;
+    path: {
+        /**
+         * The numeric id of the project.
+         */
+        project: number;
+        /**
+         * The numeric id of the kanban view.
+         */
+        view: number;
+    };
+    query?: never;
+    url: '/projects/{project}/views/{view}/assignee-counts';
+};
+
+export type ProjectsViewsAssigneeCountsErrors = {
+    /**
+     * Error
+     */
+    default: VikunjaErrorModel;
+};
+
+export type ProjectsViewsAssigneeCountsError = ProjectsViewsAssigneeCountsErrors[keyof ProjectsViewsAssigneeCountsErrors];
+
+export type ProjectsViewsAssigneeCountsResponses = {
+    /**
+     * OK
+     */
+    200: PaginatedBucketAssigneeCount;
+};
+
+export type ProjectsViewsAssigneeCountsResponse = ProjectsViewsAssigneeCountsResponses[keyof ProjectsViewsAssigneeCountsResponses];
 
 export type BucketsListData = {
     body?: never;

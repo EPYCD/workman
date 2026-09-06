@@ -4,12 +4,13 @@ import {queryOptions, useMutation} from '@tanstack/vue-query'
 import {
 	projectsAgents,
 	projectsLeasesList,
+	projectsViewsAssigneeCounts,
 	projectsViewsReadiness,
 	tasksLeasesRelease,
 	tasksScopeUpdate,
 	tasksScopeRead,
 } from '@/client/generated'
-import type {ProjectAgent, TaskPathLease, TaskReadiness, TaskScope, TaskScopeWritable} from '@/client/generated'
+import type {BucketAssigneeCount, ProjectAgent, TaskPathLease, TaskReadiness, TaskScope, TaskScopeWritable} from '@/client/generated'
 import {queryClient} from '@/client/queryClient'
 
 export const scopeKeys = {
@@ -18,6 +19,7 @@ export const scopeKeys = {
 	projectLeases: (projectId: number) => ['task-scope', 'leases', projectId] as const,
 	projectAgents: (projectId: number) => ['task-scope', 'agents', projectId] as const,
 	readiness: (projectId: number, viewId: number) => ['task-scope', 'readiness', projectId, viewId] as const,
+	assigneeCounts: (projectId: number, viewId: number) => ['task-scope', 'assignee-counts', projectId, viewId] as const,
 }
 
 export type ScopeList = 'paths_owned' | 'paths_affected' | 'endpoints'
@@ -89,6 +91,32 @@ export function viewReadinessQuery(projectId: number, viewId: number) {
 		},
 		staleTime: 15 * 1000,
 	})
+}
+
+// How many tasks each person holds in each bucket, counted over the whole
+// bucket rather than the page of it a board has loaded.
+//
+// A column of 122 loads 25 at a time, so a lane counted from the cards on
+// screen reads 4, then 5, then more as somebody scrolls — and every one of
+// those looks like a total.
+export function viewAssigneeCountsQuery(projectId: number, viewId: number) {
+	return queryOptions({
+		queryKey: scopeKeys.assigneeCounts(projectId, viewId),
+		queryFn: async (): Promise<BucketAssigneeCount[]> => {
+			const {data} = await projectsViewsAssigneeCounts({path: {project: projectId, view: viewId}})
+			return data.items ?? []
+		},
+		staleTime: 15 * 1000,
+	})
+}
+
+// Keyed by `${bucketId}:${userId}`, with userId 0 for the unassigned lane.
+export function assigneeCountsByLane(rows: BucketAssigneeCount[]): Record<string, number> {
+	const out: Record<string, number> = {}
+	for (const row of rows) {
+		out[`${row.bucket_id ?? 0}:${row.user_id ?? 0}`] = row.count ?? 0
+	}
+	return out
 }
 
 export interface TaskReadinessWithRank extends TaskReadiness {

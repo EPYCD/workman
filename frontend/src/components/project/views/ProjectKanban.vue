@@ -209,7 +209,9 @@
 													v-if="lane.owner"
 													class="kanban-lane__owner"
 												>· {{ $t('project.kanban.laneOwner', {user: lane.owner}) }}</span>
-												/ {{ lane.tasks.length }}
+												/ <span
+													v-tooltip="lane.tasks.length < lane.total ? $t('project.kanban.lanePartial', {loaded: lane.tasks.length, total: lane.total}) : ''"
+												>{{ lane.tasks.length < lane.total ? `${lane.tasks.length} / ${lane.total}` : lane.total }}</span>
 											</span>
 											<span
 												v-if="lane.leases > 0"
@@ -422,7 +424,8 @@ import {useTaskDragToProject} from '@/composables/useTaskDragToProject'
 import {success} from '@/message'
 import {useProjectStore} from '@/stores/projects'
 import {getDisplayName} from '@/models/user'
-import {invalidateReadiness, projectAgentsQuery, readinessByTask, viewReadinessQuery} from '@/client/queries/taskScope'
+import {assigneeCountsByLane, invalidateReadiness, projectAgentsQuery, readinessByTask, viewAssigneeCountsQuery, viewReadinessQuery} from '@/client/queries/taskScope'
+import {buildAssigneeLanes, type AssigneeLane} from './assigneeLanes'
 import type {TaskFilterParams} from '@/services/taskCollection'
 import type {IProjectView} from '@/modelTypes/IProjectView'
 import TaskPositionService from '@/services/taskPosition'
@@ -600,13 +603,6 @@ const readyOnly = useStorage('kanbanReadyOnly', false)
 // the agent (or human) holding them, unassigned last. Read-only while on,
 // since dragging across lanes has no meaning for positions.
 const byAssignee = useStorage('kanbanByAssignee', false)
-interface AssigneeLane {
-	key: string
-	label: string
-	owner: string | null
-	tasks: ITask[]
-	leases: number
-}
 
 // A bot lane names the human behind it; that answer lives on the agents
 // endpoint, not on the assignee embedded in the task.
@@ -624,32 +620,38 @@ const ownerByUserId = computed<Record<number, string>>(() => {
 	}
 	return out
 })
+
+// The lane totals. A column holds at most TASKS_PER_BUCKET cards at a time, so
+// counting the ones on screen answers a different question from the one the
+// lane header appears to be answering.
+const assigneeCountsQuery = useQuery(computed(() => ({
+	...viewAssigneeCountsQuery(projectIdWithFallback.value, props.viewId),
+	enabled: byAssignee.value && projectIdWithFallback.value > 0,
+})))
+const laneTotals = computed(() => assigneeCountsByLane(assigneeCountsQuery.data.value ?? []))
+
 function lanesFor(bucket: IBucket): AssigneeLane[] {
-	const lanes = new Map<string, AssigneeLane>()
-	const unassigned: AssigneeLane = {key: 'unassigned', label: t('project.kanban.unassignedLane'), owner: null, tasks: [], leases: 0}
-	for (const task of bucket.tasks) {
-		if (task.assignees.length === 0) {
-			unassigned.tasks.push(task)
-			unassigned.leases += task.leases?.length ?? 0
-			continue
+	return buildAssigneeLanes(bucket, {
+		totals: laneTotals.value,
+		ownerByUserId: ownerByUserId.value,
+		labelByUserId: laneLabels.value,
+		displayName: getDisplayName,
+		unassignedLabel: t('project.kanban.unassignedLane'),
+	})
+}
+
+// A lane with no loaded card has no task to take a name from; the assignee
+// counts carry the user for exactly that case.
+const laneLabels = computed<Record<number, string>>(() => {
+	const out: Record<number, string> = {}
+	for (const row of assigneeCountsQuery.data.value ?? []) {
+		if (row.user_id && row.user) {
+			out[row.user_id] = getDisplayName(row.user as never)
 		}
-		for (const user of task.assignees) {
-			const key = `user-${user.id}`
-			let lane = lanes.get(key)
-			if (!lane) {
-				lane = {key, label: getDisplayName(user), owner: ownerByUserId.value[user.id] ?? null, tasks: [], leases: 0}
-				lanes.set(key, lane)
-			}
-			lane.tasks.push(task)
-			lane.leases += task.leases?.length ?? 0
-		}
-	}
-	const out = [...lanes.values()].sort((a, b) => a.label.localeCompare(b.label))
-	if (unassigned.tasks.length > 0) {
-		out.push(unassigned)
 	}
 	return out
-}
+})
+
 function hiddenByReadiness(bucket: IBucket, task: ITask): boolean {
 	if (!readyOnly.value || bucket.id !== view.value?.defaultBucketId) {
 		return false
