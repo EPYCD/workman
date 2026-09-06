@@ -337,6 +337,10 @@ export type BucketAssigneeCount = {
      */
     count?: number;
     /**
+     * How many path leases those tasks hold between them, counted over the whole bucket for the same reason count is.
+     */
+    leases?: number;
+    /**
      * The assignee, or null when user_id is 0.
      */
     user?: User;
@@ -2397,7 +2401,7 @@ export type Task = {
      */
     readonly attachments?: Array<TaskAttachment> | null;
     /**
-     * The bucket the task is in. Only populated when the task is accessed via a view with buckets. To move a task between buckets, the new bucket must be in the same view as the old one.
+     * The bucket the task is in, or 0 when the task was not read through a view with buckets - a task has no single bucket outside a view, so 0 here means not applicable rather than bucket zero. To move a task between buckets, the new bucket must be in the same view as the old one.
      */
     bucket_id?: number;
     /**
@@ -2477,7 +2481,7 @@ export type Task = {
      */
     percent_done?: number;
     /**
-     * The task's position, saved per view. Only non-zero when the task is fetched through a view endpoint; use the task-position endpoint to change it.
+     * The task's position, saved per view. 0 when the task was not fetched through a view endpoint, which means not applicable rather than first in the column; use the task-position endpoint to change it.
      */
     readonly position?: number;
     priority?: number;
@@ -2880,7 +2884,7 @@ export type TaskReadOneBody = {
      */
     readonly attachments?: Array<TaskAttachment> | null;
     /**
-     * The bucket the task is in. Only populated when the task is accessed via a view with buckets. To move a task between buckets, the new bucket must be in the same view as the old one.
+     * The bucket the task is in, or 0 when the task was not read through a view with buckets - a task has no single bucket outside a view, so 0 here means not applicable rather than bucket zero. To move a task between buckets, the new bucket must be in the same view as the old one.
      */
     bucket_id?: number;
     /**
@@ -2964,7 +2968,7 @@ export type TaskReadOneBody = {
      */
     percent_done?: number;
     /**
-     * The task's position, saved per view. Only non-zero when the task is fetched through a view endpoint; use the task-position endpoint to change it.
+     * The task's position, saved per view. 0 when the task was not fetched through a view endpoint, which means not applicable rather than first in the column; use the task-position endpoint to change it.
      */
     readonly position?: number;
     priority?: number;
@@ -4195,6 +4199,10 @@ export type BucketAssigneeCountWritable = {
      */
     count?: number;
     /**
+     * How many path leases those tasks hold between them, counted over the whole bucket for the same reason count is.
+     */
+    leases?: number;
+    /**
      * The assignee, or null when user_id is 0.
      */
     user?: UserWritable;
@@ -5069,7 +5077,7 @@ export type ScopeCheckResultWritable = {
 
 export type TaskWritable = {
     /**
-     * The bucket the task is in. Only populated when the task is accessed via a view with buckets. To move a task between buckets, the new bucket must be in the same view as the old one.
+     * The bucket the task is in, or 0 when the task was not read through a view with buckets - a task has no single bucket outside a view, so 0 here means not applicable rather than bucket zero. To move a task between buckets, the new bucket must be in the same view as the old one.
      */
     bucket_id?: number;
     /**
@@ -5235,7 +5243,7 @@ export type TaskPositionWritable = {
 
 export type TaskReadOneBodyWritable = {
     /**
-     * The bucket the task is in. Only populated when the task is accessed via a view with buckets. To move a task between buckets, the new bucket must be in the same view as the old one.
+     * The bucket the task is in, or 0 when the task was not read through a view with buckets - a task has no single bucket outside a view, so 0 here means not applicable rather than bucket zero. To move a task between buckets, the new bucket must be in the same view as the old one.
      */
     bucket_id?: number;
     /**

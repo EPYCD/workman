@@ -58,12 +58,21 @@ export function taskScopeQuery(taskId: number) {
 	})
 }
 
+export interface LeaseList {
+	items: TaskPathLease[]
+	// What the server says the project holds. Kept because a header that shows
+	// items.length is only right while the endpoint returns everything, and
+	// nothing on the client can tell when that stops being true.
+	total: number
+}
+
 export function projectLeasesQuery(projectId: number) {
 	return queryOptions({
 		queryKey: scopeKeys.projectLeases(projectId),
-		queryFn: async (): Promise<TaskPathLease[]> => {
+		queryFn: async (): Promise<LeaseList> => {
 			const {data} = await projectsLeasesList({path: {project: projectId}})
-			return data.items ?? []
+			const items = data.items ?? []
+			return {items, total: data.total ?? items.length}
 		},
 		staleTime: 15 * 1000,
 	})
@@ -110,11 +119,16 @@ export function viewAssigneeCountsQuery(projectId: number, viewId: number) {
 	})
 }
 
+export interface LaneTotals {
+	count: number
+	leases: number
+}
+
 // Keyed by `${bucketId}:${userId}`, with userId 0 for the unassigned lane.
-export function assigneeCountsByLane(rows: BucketAssigneeCount[]): Record<string, number> {
-	const out: Record<string, number> = {}
+export function assigneeCountsByLane(rows: BucketAssigneeCount[]): Record<string, LaneTotals> {
+	const out: Record<string, LaneTotals> = {}
 	for (const row of rows) {
-		out[`${row.bucket_id ?? 0}:${row.user_id ?? 0}`] = row.count ?? 0
+		out[`${row.bucket_id ?? 0}:${row.user_id ?? 0}`] = {count: row.count ?? 0, leases: row.leases ?? 0}
 	}
 	return out
 }

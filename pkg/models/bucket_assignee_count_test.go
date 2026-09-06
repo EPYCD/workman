@@ -81,6 +81,61 @@ func TestGetBucketAssigneeCounts(t *testing.T) {
 		assert.Equal(t, int64(12+3+4), total)
 	})
 
+	t.Run("counts the leases those tasks hold", func(t *testing.T) {
+		db.LoadAndAssertFixtures(t)
+		s := db.NewSession()
+		defer s.Close()
+
+		view, err := GetProjectViewByIDAndProject(s, 4, 1)
+		require.NoError(t, err)
+		rows, err := GetBucketAssigneeCounts(s, view)
+		require.NoError(t, err)
+
+		// Task 1 is unassigned in bucket 1 and holds one lease. The lane header
+		// summed the leases of the cards it had loaded, which is the same
+		// partial answer the task count was giving.
+		var unassigned *BucketAssigneeCount
+		for _, r := range rows {
+			if r.BucketID == 1 && r.UserID == 0 {
+				unassigned = r
+			}
+		}
+		require.NotNil(t, unassigned)
+		assert.Equal(t, int64(1), unassigned.Leases)
+	})
+
+	t.Run("a second lease on one task does not inflate its task count", func(t *testing.T) {
+		db.LoadAndAssertFixtures(t)
+		s := db.NewSession()
+		defer s.Close()
+
+		view, err := GetProjectViewByIDAndProject(s, 4, 1)
+		require.NoError(t, err)
+
+		before, err := GetBucketAssigneeCounts(s, view)
+		require.NoError(t, err)
+		var wasCount, wasLeases int64
+		for _, r := range before {
+			if r.BucketID == 1 && r.UserID == 0 {
+				wasCount, wasLeases = r.Count, r.Leases
+			}
+		}
+
+		// Two left joins multiply against each other: without DISTINCT on both
+		// counts, one extra lease would also add one to the task count.
+		_, err = s.Insert(&TaskPathLease{TaskID: 1, ProjectID: 1, UserID: 1, Pattern: "pkg/models/other.go"})
+		require.NoError(t, err)
+
+		after, err := GetBucketAssigneeCounts(s, view)
+		require.NoError(t, err)
+		for _, r := range after {
+			if r.BucketID == 1 && r.UserID == 0 {
+				assert.Equal(t, wasCount, r.Count, "an extra lease changed the task count")
+				assert.Equal(t, wasLeases+1, r.Leases)
+			}
+		}
+	})
+
 	t.Run("the assignee is resolved, unassigned is not", func(t *testing.T) {
 		db.LoadAndAssertFixtures(t)
 		s := db.NewSession()

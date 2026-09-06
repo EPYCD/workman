@@ -145,7 +145,7 @@ type Task struct {
 
 	// The bucket id. Will only be populated when the task is accessed via a view with buckets.
 	// Can be used to move a task between buckets. In that case, the new bucket must be in the same view as the old one.
-	BucketID int64 `xorm:"-" json:"bucket_id" doc:"The bucket the task is in. Only populated when the task is accessed via a view with buckets. To move a task between buckets, the new bucket must be in the same view as the old one."`
+	BucketID int64 `xorm:"-" json:"bucket_id" doc:"The bucket the task is in, or 0 when the task was not read through a view with buckets - a task has no single bucket outside a view, so 0 here means not applicable rather than bucket zero. To move a task between buckets, the new bucket must be in the same view as the old one."`
 
 	// All buckets across all views this task is part of. Only present when fetching tasks with the `expand` parameter set to `buckets`.
 	Buckets []*Bucket `xorm:"-" json:"buckets,omitempty" readOnly:"true" doc:"The task's buckets across all views. Only present when requested via the buckets expand option."`
@@ -173,7 +173,7 @@ type Task struct {
 	// When accessing tasks via views with buckets, this is primarily used to sort them based on a range.
 	// Positions are always saved per view. They will automatically be set if you request the tasks through a view
 	// endpoint, otherwise they will always be 0. To update them, take a look at the Task Position endpoint.
-	Position float64 `xorm:"-" json:"position" readOnly:"true" doc:"The task's position, saved per view. Only non-zero when the task is fetched through a view endpoint; use the task-position endpoint to change it."`
+	Position float64 `xorm:"-" json:"position" readOnly:"true" doc:"The task's position, saved per view. 0 when the task was not fetched through a view endpoint, which means not applicable rather than first in the column; use the task-position endpoint to change it."`
 
 	// Reactions on that task.
 	Reactions ReactionMap `xorm:"-" json:"reactions" readOnly:"true" doc:"Reactions on this task. Only present when requested via the reactions expand option."`

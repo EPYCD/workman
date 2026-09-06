@@ -552,6 +552,8 @@
       "byAssigneeHint": "Group each column by who holds the task. Read-only while on.",
       "unassignedLane": "Unassigned",
       "lanePartial": "Showing {loaded} of {total}. The rest of this column has not loaded yet.",
+      "partialColumn": "Showing {loaded} of {total}. Filters and sorting apply to what has loaded.",
+      "readyOnlyNote": "Ready only: showing {shown} of {total} ready.",
       "laneOwner": "for {user}",
       "title": "Kanban",
       "limit": "Limit: {limit}",
