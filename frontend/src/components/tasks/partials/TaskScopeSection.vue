@@ -183,7 +183,7 @@ const scope = computed<TaskScope>(() => scopeQuery.data.value ?? emptyScope(prop
 
 const leasesQuery = useQuery(computed(() => projectLeasesQuery(props.projectId)))
 const leases = computed<TaskPathLease[]>(() =>
-	(leasesQuery.data.value ?? []).filter(lease => lease.task_id === props.taskId),
+	(leasesQuery.data.value?.items ?? []).filter(lease => lease.task_id === props.taskId),
 )
 const leasedPatterns = computed(() => new Set(leases.value.map(lease => lease.pattern)))
 

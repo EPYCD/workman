@@ -32,6 +32,7 @@ type BucketAssigneeCount struct {
 	UserID   int64      `json:"user_id" doc:"The assignee, or 0 for tasks nobody is assigned to."`
 	User     *user.User `json:"user" doc:"The assignee, or null when user_id is 0."`
 	Count    int64      `json:"count" doc:"How many tasks in this bucket that person holds — every one of them, not the page the board has loaded."`
+	Leases   int64      `json:"leases" doc:"How many path leases those tasks hold between them, counted over the whole bucket for the same reason count is."`
 }
 
 // GetBucketAssigneeCounts answers "who holds what" for a whole kanban view.
@@ -47,15 +48,24 @@ func GetBucketAssigneeCounts(s *xorm.Session, view *ProjectView) ([]*BucketAssig
 		BucketID int64 `xorm:"bucket_id"`
 		UserID   int64 `xorm:"user_id"`
 		Count    int64 `xorm:"count"`
+		Leases   int64 `xorm:"leases"`
 	}
 
 	rows := []*row{}
 	err := s.Table("task_buckets").
-		Select("task_buckets.bucket_id AS bucket_id, COALESCE(task_assignees.user_id, 0) AS user_id, count(DISTINCT task_buckets.task_id) AS count").
+		// Both counts are DISTINCT because the two left joins multiply rows
+		// against each other: a task with two assignees and three leases
+		// produces six. Counting distinct ids is what makes one query safe
+		// where a naive count(*) would report six of everything.
+		Select("task_buckets.bucket_id AS bucket_id, COALESCE(task_assignees.user_id, 0) AS user_id, "+
+			"count(DISTINCT task_buckets.task_id) AS count, "+
+			"count(DISTINCT task_path_leases.id) AS leases").
 		Join("INNER", "tasks", "tasks.id = task_buckets.task_id").
 		// A soft-deleted task keeps its task_buckets row, and xorm's deleted
 		// tag does not reach a join from another bean.
 		Join("LEFT", "task_assignees", "task_assignees.task_id = task_buckets.task_id").
+		// A lease is deleted when it is released, so every row is live.
+		Join("LEFT", "task_path_leases", "task_path_leases.task_id = task_buckets.task_id").
 		Where("task_buckets.project_view_id = ?", view.ID).
 		And(taskNotDeletedCond("tasks")).
 		GroupBy("task_buckets.bucket_id, COALESCE(task_assignees.user_id, 0)").
@@ -77,7 +87,7 @@ func GetBucketAssigneeCounts(s *xorm.Session, view *ProjectView) ([]*BucketAssig
 
 	out := make([]*BucketAssigneeCount, 0, len(rows))
 	for _, r := range rows {
-		c := &BucketAssigneeCount{BucketID: r.BucketID, UserID: r.UserID, Count: r.Count}
+		c := &BucketAssigneeCount{BucketID: r.BucketID, UserID: r.UserID, Count: r.Count, Leases: r.Leases}
 		if u, has := users[r.UserID]; has {
 			c.User = u
 		}

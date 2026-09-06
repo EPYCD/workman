@@ -193,6 +193,13 @@
 									</Dropdown>
 								</div>
 
+								<p
+									v-if="!collapsedBuckets[bucket.id] && columnNote(bucket)"
+									class="bucket-note"
+								>
+									{{ columnNote(bucket) }}
+								</p>
+
 								<ul
 									v-if="byAssignee"
 									class="tasks kanban-lanes"
@@ -651,6 +658,31 @@ const laneLabels = computed<Record<number, string>>(() => {
 	}
 	return out
 })
+
+// How many tasks in the queue bucket can be claimed right now. The readiness
+// endpoint answers for the whole bucket, not for the page the board has
+// loaded, so this is a total even when the column is not.
+const readyTotal = computed(() => Object.values(readinessByTaskId.value).filter(r => r.ready).length)
+
+// One line per column saying what it is not showing.
+//
+// A column holds TASKS_PER_BUCKET cards at a time; every filter and every sort
+// on this board runs over those. Without this line a filtered 122-card column
+// gives an answer that is wrong by construction and looks like the whole
+// truth — which is the failure this whole pass is about.
+function columnNote(bucket: IBucket): string {
+	// A bucket arrives without tasks while the board is still loading it, and
+	// on the filter-configured views that build buckets without them at all.
+	const tasks = bucket.tasks ?? []
+	if (readyOnly.value && bucket.id === view.value?.defaultBucketId) {
+		const shown = tasks.filter(task => !hiddenByReadiness(bucket, task)).length
+		return t('project.kanban.readyOnlyNote', {shown, total: readyTotal.value})
+	}
+	if (tasks.length < (bucket.count ?? 0)) {
+		return t('project.kanban.partialColumn', {loaded: tasks.length, total: bucket.count})
+	}
+	return ''
+}
 
 function hiddenByReadiness(bucket: IBucket, task: ITask): boolean {
 	if (!readyOnly.value || bucket.id !== view.value?.defaultBucketId) {
@@ -1140,6 +1172,14 @@ $filter-container-height: '1rem - #{$switch-view-height}';
 	@include mono-label;
 
 	color: var(--wm-text-secondary);
+}
+
+.bucket-note {
+	margin: 0 0 .5rem;
+	padding-inline: .25rem;
+	font-size: .7rem;
+	color: var(--wm-text-tertiary);
+	font-variant-numeric: tabular-nums;
 }
 
 .kanban-lane__leases {

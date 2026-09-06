@@ -17,9 +17,9 @@ function doneBucket(loaded: ITask[]): IBucket {
 	return {id: 9, title: 'Done', count: 122, limit: 0, tasks: loaded} as unknown as IBucket
 }
 
-function ctx(totals: Record<string, number>): LaneContext {
+function ctx(counts: Record<string, number>, leases: Record<string, number> = {}): LaneContext {
 	return {
-		totals,
+		totals: Object.fromEntries(Object.entries(counts).map(([k, count]) => [k, {count, leases: leases[k] ?? 0}])),
 		ownerByUserId: {},
 		labelByUserId: {7: 'Akshat', 8: 'Subin'},
 		displayName: (u: {name?: string, username?: string}) => u.name || u.username || '',
@@ -91,18 +91,31 @@ describe('buildAssigneeLanes', () => {
 		expect(lanes).toHaveLength(0)
 	})
 
+	it('survives a bucket that has no tasks array yet', () => {
+		// The board hands over a bucket without tasks while it is still
+		// loading, and the filter-configured views build buckets without them
+		// at all. Reading .length off that threw and took the whole board down.
+		const loading = {id: 9, title: 'Done', count: 122, limit: 0} as unknown as IBucket
+
+		expect(() => buildAssigneeLanes(loading, ctx({'9:7': 9}))).not.toThrow()
+		expect(buildAssigneeLanes(loading, ctx({'9:7': 9}))[0].total).toBe(9)
+	})
+
 	it('ignores totals belonging to another bucket', () => {
 		const lanes = buildAssigneeLanes(doneBucket([]), ctx({'7:8': 40}))
 
 		expect(lanes).toHaveLength(0)
 	})
 
-	it('sums the leases of the cards it has', () => {
+	it('takes the lease count from the server, not from the loaded cards', () => {
+		// Two loaded cards carry three leases between them; the nine tasks in
+		// the lane carry eleven. Summing the cards gave 3, which is the same
+		// partial answer the task count was giving.
 		const lanes = buildAssigneeLanes(
 			doneBucket([task(1, [AKSHAT], 2), task(2, [AKSHAT], 1)]),
-			ctx({'9:7': 9}),
+			ctx({'9:7': 9}, {'9:7': 11}),
 		)
 
-		expect(lanes.find(l => l.key === 'user-7')!.leases).toBe(3)
+		expect(lanes.find(l => l.key === 'user-7')!.leases).toBe(11)
 	})
 })

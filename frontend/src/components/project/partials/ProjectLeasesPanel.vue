@@ -3,14 +3,14 @@
 		variant="secondary"
 		icon="lock"
 		class="project-leases-button"
-		:class="{'has-leases': leases.length > 0}"
+		:class="{'has-leases': leaseTotal > 0}"
 		@click="open = true"
 	>
 		{{ $t('task.leasesPanel.button') }}
 		<span
-			v-if="leases.length > 0"
+			v-if="leaseTotal > 0"
 			class="project-leases-button__count"
-		>/ {{ leases.length }}</span>
+		>/ {{ leaseTotal }}</span>
 	</XButton>
 	<Modal
 		:enabled="open"
@@ -118,7 +118,9 @@ const leasesQuery = useQuery(computed(() => ({
 	...projectLeasesQuery(props.projectId),
 	enabled: props.projectId > 0,
 })))
-const leases = computed<TaskPathLease[]>(() => leasesQuery.data.value ?? [])
+const leases = computed<TaskPathLease[]>(() => leasesQuery.data.value?.items ?? [])
+// The server's number, not the length of what arrived.
+const leaseTotal = computed(() => leasesQuery.data.value?.total ?? leases.value.length)
 
 interface LeaseGroup {
 	taskId: number
