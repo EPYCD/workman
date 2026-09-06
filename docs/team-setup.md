@@ -83,84 +83,48 @@ and unsafe.
 
 ## Part 3 — Each agent, once
 
-On the machine the agent runs on, point git at the machine account rather than
-the person:
+On the machine the agent runs on, in the checkout it works in:
 
 ```bash
-cd <the checkout the agent works in>
-git config user.name  "capyard-agent-<name>"
-git config user.email "<the machine account's noreply address>"
-git remote set-url origin \
-  https://capyard-agent-<name>:<PAT>@github.com/<owner>/<repo>.git
+scripts/agent-identity.sh capyard-agent-<name> ~/path/to/checkout
 ```
 
-Repository-local config, not `--global`: the same machine usually also holds
-the person's own checkout, and that one should stay theirs.
+It asks for that account's PAT without echoing it, writes it to
+`~/.config/capyard-agent/credentials` at mode 0600, and points the checkout's
+git config at it. The token deliberately does **not** go into the remote URL:
+`.git/config` is readable by anything that can read the repository, and
+`git remote -v` prints it on any screen share.
 
-Verify the separation before trusting it:
+The config is repository-local, never `--global` — the same machine usually
+also holds the person's own checkout, and that one stays theirs.
+
+The script refuses if the account you name is the one `gh` is logged in as,
+because that is the exact mistake this whole arrangement exists to prevent.
+
+### Verify it before trusting it
+
+Configuration is not proof. Push a real branch, open a pull request, then:
 
 ```bash
-git log -1 --format='%an <%ae>'   # must be the machine account
-gh api user --jq .login           # must NOT be the reviewer's account
+gh pr list --repo <owner>/<repo> --limit 1 --json author --jq '.[].author.login'
 ```
 
----
+If that prints a **person's** name, the agent is still pushing as them and
+nothing below is enforcement — only convention. Everything else can be
+correct and this one line still wrong.
 
-## Part 4 — A new repository
+## Who merges
 
-One command wires the board, the bots and every repository file:
+**Merging is one person's job, and here that person is the repository owner.**
+Not whoever is free, and not the other developer as a favour — one account
+lands work, so there is one answer to "who let this in" and one person whose
+approval the branch protection is actually waiting for.
 
-```bash
-veans onboard --server https://board.<domain>
-```
+That is why every agent needs its own machine account. If an agent pushes as
+the person who reviews, GitHub will not let that person approve it, and the
+only way out is to have somebody else approve instead — which quietly moves
+the merge decision to whoever happens to be around. Separate accounts keep it
+where it belongs.
 
-It is `veans init` + `marshal init` + `marshal setup` plus the things none of
-those produce — `.mcp.json`, the four board workflows, and the vendored action.
-It never overwrites an existing file unless `--force` is given, so it is safe to
-re-run on a half-configured repository. Then do Part 1 for that repository.
-
----
-
-## The daily flow
-
-**The agent** claims a ticket, works, opens the pull request, moves the task to
-`in-review`, may enable auto-merge, and **starts the next ticket**. It does not
-watch the test run and it cannot approve anything.
-
-**The person** gets a review request. When they are happy, they press
-**Approve**. GitHub updates the branch if `main` has moved, waits for the
-checks, merges, and the merge hook closes the task from the `Refs:` trailer.
-
-One action per pull request, from a person, and nothing lands without it.
-
----
-
-## Checking it actually works
-
-Open a throwaway pull request from an agent's machine and confirm:
-
-1. The PR author is the **machine account**, not a person.
-2. A review is **requested automatically** from the code owners.
-3. The **Merge button is disabled** until someone approves.
-4. Approving it merges the PR **without further clicks** once checks are green.
-5. The task on the board moves to done by itself.
-
-If (3) does not hold, branch protection is not applied to the branch you tested.
-If (1) does not hold, the agent is still pushing as a person and none of the
-rest is enforcement — only convention.
-
----
-
-## What is still manual, deliberately
-
-**Deploying.** Merging updates GitHub; the running containers keep the old
-image until someone rebuilds. Nothing deploys on merge, and the checkout the
-stack builds from does not update itself:
-
-```bash
-cd ~/srv/workman && git pull --ff-only
-cd deploy && docker compose build workman marshal && docker compose up -d
-```
-
-Pull first, or you will ship the previous commit and wonder why the fix is not
-live.
+`.github/CODEOWNERS` names the reviewer, so the request is raised on every
+pull request automatically rather than waiting to be noticed.
