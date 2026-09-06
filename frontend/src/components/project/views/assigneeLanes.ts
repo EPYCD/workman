@@ -54,7 +54,8 @@ export function buildAssigneeLanes(bucket: IBucket, ctx: LaneContext): AssigneeL
 		total: unassignedTotals.count,
 	}
 
-	for (const task of bucket.tasks) {
+	// The board hands over a bucket without tasks while it is still loading.
+	for (const task of bucket.tasks ?? []) {
 		if (task.assignees.length === 0) {
 			unassigned.tasks.push(task)
 			continue

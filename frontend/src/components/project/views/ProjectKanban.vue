@@ -671,13 +671,15 @@ const readyTotal = computed(() => Object.values(readinessByTaskId.value).filter(
 // gives an answer that is wrong by construction and looks like the whole
 // truth — which is the failure this whole pass is about.
 function columnNote(bucket: IBucket): string {
-	const loaded = bucket.tasks.length
+	// A bucket arrives without tasks while the board is still loading it, and
+	// on the filter-configured views that build buckets without them at all.
+	const tasks = bucket.tasks ?? []
 	if (readyOnly.value && bucket.id === view.value?.defaultBucketId) {
-		const shown = bucket.tasks.filter(task => !hiddenByReadiness(bucket, task)).length
+		const shown = tasks.filter(task => !hiddenByReadiness(bucket, task)).length
 		return t('project.kanban.readyOnlyNote', {shown, total: readyTotal.value})
 	}
-	if (loaded < bucket.count) {
-		return t('project.kanban.partialColumn', {loaded, total: bucket.count})
+	if (tasks.length < (bucket.count ?? 0)) {
+		return t('project.kanban.partialColumn', {loaded: tasks.length, total: bucket.count})
 	}
 	return ''
 }

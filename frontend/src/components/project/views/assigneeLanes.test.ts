@@ -91,6 +91,16 @@ describe('buildAssigneeLanes', () => {
 		expect(lanes).toHaveLength(0)
 	})
 
+	it('survives a bucket that has no tasks array yet', () => {
+		// The board hands over a bucket without tasks while it is still
+		// loading, and the filter-configured views build buckets without them
+		// at all. Reading .length off that threw and took the whole board down.
+		const loading = {id: 9, title: 'Done', count: 122, limit: 0} as unknown as IBucket
+
+		expect(() => buildAssigneeLanes(loading, ctx({'9:7': 9}))).not.toThrow()
+		expect(buildAssigneeLanes(loading, ctx({'9:7': 9}))[0].total).toBe(9)
+	})
+
 	it('ignores totals belonging to another bucket', () => {
 		const lanes = buildAssigneeLanes(doneBucket([]), ctx({'7:8': 40}))
 
