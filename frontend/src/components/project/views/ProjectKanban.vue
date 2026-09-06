@@ -1166,18 +1166,18 @@ $filter-container-height: '1rem - #{$switch-view-height}';
 }
 
 .kanban-lane__label,
-.bucket-note {
-	margin: 0 0 .5rem;
-	padding-inline: .25rem;
-	font-size: .7rem;
-	color: var(--grey-500);
-	font-variant-numeric: tabular-nums;
-}
-
 .kanban-lane__leases {
 	@include mono-label;
 
 	color: var(--wm-text-secondary);
+}
+
+.bucket-note {
+	margin: 0 0 .5rem;
+	padding-inline: .25rem;
+	font-size: .7rem;
+	color: var(--wm-text-tertiary);
+	font-variant-numeric: tabular-nums;
 }
 
 .kanban-lane__leases {
