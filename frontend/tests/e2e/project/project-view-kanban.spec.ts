@@ -5,7 +5,6 @@ import {TaskFactory} from '../../factories/task'
 import {ProjectViewFactory} from '../../factories/project_view'
 import {TaskBucketFactory} from '../../factories/task_buckets'
 import {createTasksWithPriorities, createTasksWithSearch} from '../../support/filterTestHelpers'
-import {updateUserSettings} from '../../support/updateUserSettings'
 
 async function createSingleTaskInBucket(count = 1, attrs = {}) {
 	const projects = await ProjectFactory.create(1)
@@ -356,38 +355,21 @@ test.describe('Project View Kanban', () => {
 		await expect(page.locator('main h2')).toHaveCount(1)
 	})
 
-	test('Should not show task count by default when bucket has no limit', async ({authenticatedPage: page}) => {
+	// This used to assert the opposite — that a bucket without a limit shows no
+	// count unless the user turned one on in their settings. The count is the
+	// one thing a column header is for, and hiding it meant a correct number
+	// was computed, sent over the wire and shown to nobody.
+	test('Should show the task count on a bucket with no limit', async ({authenticatedPage: page}) => {
 		await createTaskWithBuckets(buckets, 5)
 		await page.goto('/projects/1/4')
 
 		// Wait for buckets to load
 		await expect(page.locator('.kanban .bucket .title').filter({hasText: buckets[0].title})).toBeVisible()
 
-		// Verify the task count span is not visible when no limit is set
-		await expect(page.locator('.kanban .bucket .bucket-header span.limit').first()).not.toBeVisible()
-	})
-
-	test('Should show task count when alwaysShowBucketTaskCount setting is enabled', async ({authenticatedPage: page, apiContext, userToken}) => {
-		await createTaskWithBuckets(buckets, 5)
-
-		// Enable the alwaysShowBucketTaskCount setting
-		await updateUserSettings(apiContext, userToken, {
-			frontendSettings: {
-				alwaysShowBucketTaskCount: true,
-			},
-		})
-
-		await page.goto('/projects/1/4')
-
-		// Wait for buckets to load
-		await expect(page.locator('.kanban .bucket .title').filter({hasText: buckets[0].title})).toBeVisible()
-
-		// Verify the task count is shown (without limit, just the count)
 		const limitSpan = page.locator('.kanban .bucket .bucket-header span.limit').first()
 		await expect(limitSpan).toBeVisible()
-		// Should show just the count (5) without a limit
+		// Just the count, with no limit to divide it by
 		await expect(limitSpan).toContainText('5')
-		// Should not contain a slash (no limit set)
 		await expect(limitSpan).not.toContainText('/')
 	})
 
