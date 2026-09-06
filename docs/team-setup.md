@@ -113,75 +113,18 @@ If that prints a **person's** name, the agent is still pushing as them and
 nothing below is enforcement — only convention. Everything else can be
 correct and this one line still wrong.
 
-## Two people, two agents: who reviews whom
+## Who merges
 
-With more than one person there is a shortcut worth knowing, because it needs
-no new accounts at all: let each person's agent push as that person, and have
-them **review each other's** agents. GitHub is happy for one collaborator to
-approve another's pull request.
+**Merging is one person's job, and here that person is the repository owner.**
+Not whoever is free, and not the other developer as a favour — one account
+lands work, so there is one answer to "who let this in" and one person whose
+approval the branch protection is actually waiting for.
 
-It works, and it costs something: you can never land your own agent's work
-without the other person, and git history still cannot tell a person from
-their agent. Machine accounts avoid both. The shortcut is a reasonable
-stop-gap while the accounts are being created — it is not a destination.
+That is why every agent needs its own machine account. If an agent pushes as
+the person who reviews, GitHub will not let that person approve it, and the
+only way out is to have somebody else approve instead — which quietly moves
+the merge decision to whoever happens to be around. Separate accounts keep it
+where it belongs.
 
----
-
-## Part 4 — A new repository
-
-One command wires the board, the bots and every repository file:
-
-```bash
-veans onboard --server https://board.<domain>
-```
-
-It is `veans init` + `marshal init` + `marshal setup` plus the things none of
-those produce — `.mcp.json`, the four board workflows, and the vendored action.
-It never overwrites an existing file unless `--force` is given, so it is safe to
-re-run on a half-configured repository. Then do Part 1 for that repository.
-
----
-
-## The daily flow
-
-**The agent** claims a ticket, works, opens the pull request, moves the task to
-`in-review`, may enable auto-merge, and **starts the next ticket**. It does not
-watch the test run and it cannot approve anything.
-
-**The person** gets a review request. When they are happy, they press
-**Approve**. GitHub updates the branch if `main` has moved, waits for the
-checks, merges, and the merge hook closes the task from the `Refs:` trailer.
-
-One action per pull request, from a person, and nothing lands without it.
-
----
-
-## Checking it actually works
-
-Open a throwaway pull request from an agent's machine and confirm:
-
-1. The PR author is the **machine account**, not a person.
-2. A review is **requested automatically** from the code owners.
-3. The **Merge button is disabled** until someone approves.
-4. Approving it merges the PR **without further clicks** once checks are green.
-5. The task on the board moves to done by itself.
-
-If (3) does not hold, branch protection is not applied to the branch you tested.
-If (1) does not hold, the agent is still pushing as a person and none of the
-rest is enforcement — only convention.
-
----
-
-## What is still manual, deliberately
-
-**Deploying.** Merging updates GitHub; the running containers keep the old
-image until someone rebuilds. Nothing deploys on merge, and the checkout the
-stack builds from does not update itself:
-
-```bash
-cd ~/srv/workman && git pull --ff-only
-cd deploy && docker compose build workman marshal && docker compose up -d
-```
-
-Pull first, or you will ship the previous commit and wonder why the fix is not
-live.
+`.github/CODEOWNERS` names the reviewer, so the request is raised on every
+pull request automatically rather than waiting to be noticed.
