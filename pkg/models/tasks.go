@@ -1733,6 +1733,13 @@ func updateTasks(s *xorm.Session, a web.Auth, t *Task, ids []int64, fields []str
 	return tasks, nil
 }
 
+// Task.Position is xorm:"-": it is filled in only when a task is fetched
+// through a view endpoint, and is zero everywhere else. Both bucket moves below
+// therefore have to read the stored position rather than trust the one on the
+// task — passing the zero value made calculateDefaultPosition's
+// keep-what-you-have branch unreachable, so closing a task silently replaced
+// its position with one derived from the task's creation index, discarding any
+// order a person had arranged by hand.
 func (t *Task) moveTaskToDoneBuckets(s *xorm.Session, a web.Auth, views []*ProjectView) error {
 	for _, view := range views {
 		currentTaskBucket := &TaskBucket{}
@@ -1781,8 +1788,11 @@ func (t *Task) moveTaskToDoneBuckets(s *xorm.Session, a web.Auth, views []*Proje
 		tp := TaskPosition{
 			TaskID:        t.ID,
 			ProjectViewID: view.ID,
-			Position:      calculateDefaultPosition(t.Index, t.Position),
 		}
+		if err := tp.refresh(s); err != nil {
+			return err
+		}
+		tp.Position = calculateDefaultPosition(t.Index, tp.Position)
 		err = updateTaskPosition(s, a, &tp)
 		if err != nil {
 			return err
@@ -1815,8 +1825,11 @@ func (t *Task) moveTaskToDefaultBuckets(s *xorm.Session, a web.Auth, views []*Pr
 		tp := TaskPosition{
 			TaskID:        t.ID,
 			ProjectViewID: view.ID,
-			Position:      calculateDefaultPosition(t.Index, t.Position),
 		}
+		if err := tp.refresh(s); err != nil {
+			return err
+		}
+		tp.Position = calculateDefaultPosition(t.Index, tp.Position)
 		if err := updateTaskPosition(s, a, &tp); err != nil {
 			return err
 		}
