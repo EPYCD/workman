@@ -6,6 +6,12 @@ import AbstractModel from '@/models/abstractModel'
 import type {IAbstract} from '@/modelTypes/IAbstract'
 import type {Permission} from '@/constants/permissions'
 
+declare module 'axios' {
+	interface AxiosRequestConfig {
+		payloadTransformed?: boolean
+	}
+}
+
 interface Paths {
 	create : string
 	get : string
@@ -74,6 +80,14 @@ export default abstract class AbstractService<Model extends IAbstract = IAbstrac
 
 		// Set the interceptors to process every request
 		this.http.interceptors.request.use((config) => {
+			// A retried request (see the 401 handler in AuthenticatedHTTPFactory)
+			// re-enters the interceptor chain with config.data already serialized to
+			// JSON by axios, so the payload transforms must only ever run once.
+			if (config.payloadTransformed) {
+				return config
+			}
+			config.payloadTransformed = true
+
 			switch (config.method) {
 				case 'post':
 					if (this.useUpdateInterceptor()) {
@@ -328,10 +342,12 @@ export default abstract class AbstractService<Model extends IAbstract = IAbstrac
 		
 		// Handle SVG blobs specially - convert to data URL for better browser compatibility
 		if (response.data.type === 'image/svg+xml') {
-			return new Promise<string>((resolve, reject) => {
+			return new Promise<string>(resolve => {
 				const reader = new FileReader()
 				reader.onload = () => resolve(reader.result as string)
-				reader.onerror = reject
+				// A read failure rejects with a ProgressEvent, which carries no
+				// stack and nothing to act on — take the same fallback instead.
+				reader.onerror = () => resolve(window.URL.createObjectURL(response.data))
 				reader.readAsDataURL(response.data)
 			})
 		}
