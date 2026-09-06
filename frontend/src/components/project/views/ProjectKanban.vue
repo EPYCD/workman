@@ -102,7 +102,6 @@
 										{{ bucket.title }}
 									</h2>
 									<span
-										v-if="bucket.limit > 0 || alwaysShowBucketTaskCount"
 										:class="{'is-max': bucket.limit > 0 && bucket.count >= bucket.limit}"
 										class="limit"
 									>
@@ -401,7 +400,6 @@ import type {ITask} from '@/modelTypes/ITask'
 import {useBaseStore} from '@/stores/base'
 import {useTaskStore} from '@/stores/tasks'
 import {useKanbanStore} from '@/stores/kanban'
-import {useAuthStore} from '@/stores/auth'
 import {useConfigStore} from '@/stores/config'
 
 import ProjectWrapper from '@/components/project/ProjectWrapper.vue'
@@ -460,10 +458,8 @@ const baseStore = useBaseStore()
 const kanbanStore = useKanbanStore()
 const taskStore = useTaskStore()
 const projectStore = useProjectStore()
-const authStore = useAuthStore()
 const configStore = useConfigStore()
 
-const alwaysShowBucketTaskCount = computed(() => authStore.settings.frontendSettings.alwaysShowBucketTaskCount)
 const marshalUrl = computed(() => configStore.marshalUrl)
 const {handleTaskDropToProject} = useTaskDragToProject()
 const taskPositionService = ref(new TaskPositionService())
