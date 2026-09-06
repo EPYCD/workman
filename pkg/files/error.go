@@ -40,7 +40,7 @@ func IsErrFileDoesNotExist(err error) bool {
 }
 
 // ErrCodeFileDoesNotExist holds the unique world-error code of this error
-const ErrCodeFileDoesNotExist = 4034
+const ErrCodeFileDoesNotExist = 4046
 
 // HTTPError holds the http error description
 func (err ErrFileDoesNotExist) HTTPError() web.HTTPError {
@@ -68,7 +68,7 @@ func IsErrFileIsTooLarge(err error) bool {
 }
 
 // ErrCodeFileIsTooLarge holds the unique world-error code of this error
-const ErrCodeFileIsTooLarge = 4013
+const ErrCodeFileIsTooLarge = 4045
 
 // HTTPError holds the http error description
 func (err ErrFileIsTooLarge) HTTPError() web.HTTPError {

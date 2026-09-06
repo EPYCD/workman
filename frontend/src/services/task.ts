@@ -8,17 +8,36 @@ import {SECONDS_A_DAY, SECONDS_A_HOUR, SECONDS_A_WEEK} from '@/constants/date'
 import {objectToSnakeCase} from '@/helpers/case'
 import {apiV2Url, AuthenticatedHTTPFactory} from '@/helpers/fetcher'
 import {invalidateCachedTask} from '@/helpers/taskCache'
+import {toISOStringOrNull} from '@/helpers/time/toISOStringOrNull'
 import {translatedError} from '@/message'
 
 // Mirrors models.MaxTasksPerBulkCreation on the backend.
 const MAX_TASKS_PER_BULK_CREATION = 100
 
-const parseDate = date => {
-	if (date) {
-		return new Date(date).toISOString()
+/**
+ * Tasks reaching processModel did not necessarily go through the TaskModel
+ * constructor - related tasks nested in a task are plain api objects - so
+ * repeatAfter is either the parsed object, raw seconds, or missing entirely.
+ */
+function repeatAfterToSeconds(repeatAfter: ITask['repeatAfter'] | undefined): number {
+	if (typeof repeatAfter === 'number') {
+		return repeatAfter
 	}
 
-	return null
+	if (!repeatAfter?.amount) {
+		return 0
+	}
+
+	switch (repeatAfter.type) {
+		case 'hours':
+			return repeatAfter.amount * SECONDS_A_HOUR
+		case 'days':
+			return repeatAfter.amount * SECONDS_A_DAY
+		case 'weeks':
+			return repeatAfter.amount * SECONDS_A_WEEK
+		default:
+			return 0
+	}
 }
 
 export default class TaskService extends AbstractService<ITask> {
@@ -69,52 +88,38 @@ export default class TaskService extends AbstractService<ITask> {
 		model.projectId = Number(model.projectId)
 
 		// Convert dates into an iso string
-		model.dueDate = parseDate(model.dueDate)
-		model.startDate = parseDate(model.startDate)
-		model.endDate = parseDate(model.endDate)
-		model.doneAt = parseDate(model.doneAt)
-		model.deletedAt = parseDate(model.deletedAt)
-		model.created = new Date(model.created).toISOString()
-		model.updated = new Date(model.updated).toISOString()
+		model.dueDate = toISOStringOrNull(model.dueDate)
+		model.startDate = toISOStringOrNull(model.startDate)
+		model.endDate = toISOStringOrNull(model.endDate)
+		model.doneAt = toISOStringOrNull(model.doneAt)
+		model.deletedAt = toISOStringOrNull(model.deletedAt)
+		model.created = toISOStringOrNull(model.created)
+		model.updated = toISOStringOrNull(model.updated)
 
 		model.reminderDates = null
 		// remove all nulls, these would create empty reminders
-		model.reminders = model.reminders.filter(r => r !== null)
+		model.reminders = (model.reminders ?? []).filter(r => r !== null)
 		// Make normal timestamps from js dates
 		if (model.reminders.length > 0) {
 			model.reminders.forEach(r => {
-				r.reminder = new Date(r.reminder).toISOString()
+				r.reminder = toISOStringOrNull(r.reminder)
 			})
 		}
 
-		// Make the repeating amount to seconds
-		let repeatAfterSeconds = 0
-		if (model.repeatAfter !== null && (model.repeatAfter.amount !== null || model.repeatAfter.amount !== 0)) {
-			switch (model.repeatAfter.type) {
-				case 'hours':
-					repeatAfterSeconds = model.repeatAfter.amount * SECONDS_A_HOUR
-					break
-				case 'days':
-					repeatAfterSeconds = model.repeatAfter.amount * SECONDS_A_DAY
-					break
-				case 'weeks':
-					repeatAfterSeconds = model.repeatAfter.amount * SECONDS_A_WEEK
-					break
-			}
-		}
-		model.repeatAfter = repeatAfterSeconds
+		model.repeatAfter = repeatAfterToSeconds(model.repeatAfter)
 
-		model.hexColor = colorFromHex(model.hexColor)
+		model.hexColor = colorFromHex(model.hexColor ?? '')
 
-		// Do the same for all related tasks
-		Object.keys(model.relatedTasks).forEach(relationKind => {
-			model.relatedTasks[relationKind] = model.relatedTasks[relationKind].map(t => {
-				return this.processModel(t)
-			})
-		})
+		// Do the same for all related tasks. `model` is only a shallow copy, so this
+		// has to build a new object - assigning into relatedTasks would replace the
+		// related tasks of the task we were passed with their api representation.
+		model.relatedTasks = Object.fromEntries(
+			Object.entries<ITask[]>(model.relatedTasks ?? {})
+				.map(([relationKind, tasks]) => [relationKind, tasks.map(t => this.processModel(t))]),
+		)
 
 		// Process all attachments to prevent parsing errors
-		if (model.attachments.length > 0) {
+		if (model.attachments?.length > 0) {
 			const attachmentService = new AttachmentService()
 			model.attachments.map(a => {
 				return attachmentService.processModel(a)

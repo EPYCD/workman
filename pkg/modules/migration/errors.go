@@ -126,7 +126,7 @@ func (err *ErrNotAZipFile) Error() string {
 }
 
 // ErrCodeNotAZipFile holds the unique world-error code of this error
-const ErrCodeNotAZipFile = 14001
+const ErrCodeNotAZipFile = 14011
 
 // HTTPError holds the http error description
 func (err *ErrNotAZipFile) HTTPError() web.HTTPError {
@@ -145,7 +145,7 @@ func (err *ErrFileIsEmpty) Error() string {
 }
 
 // ErrCodeFileIsEmpty holds the unique world-error code of this error
-const ErrCodeFileIsEmpty = 14002
+const ErrCodeFileIsEmpty = 14012
 
 // HTTPError holds the http error description
 func (err *ErrFileIsEmpty) HTTPError() web.HTTPError {
@@ -213,5 +213,52 @@ func (err *ErrNotACSVFile) HTTPError() web.HTTPError {
 		HTTPCode: http.StatusBadRequest,
 		Code:     ErrCodeNotACSVFile,
 		Message:  "The provided file is not a valid CSV file.",
+	}
+}
+
+// ErrInvalidImportFile represents an import file which could not be parsed.
+type ErrInvalidImportFile struct {
+	Err error
+}
+
+func (err *ErrInvalidImportFile) Error() string {
+	return "The provided file could not be parsed: " + err.Err.Error()
+}
+
+func (err *ErrInvalidImportFile) Unwrap() error {
+	return err.Err
+}
+
+// ErrCodeInvalidImportFile holds the unique world-error code of this error
+const ErrCodeInvalidImportFile = 14010
+
+// HTTPError holds the http error description
+func (err *ErrInvalidImportFile) HTTPError() web.HTTPError {
+	return web.HTTPError{
+		HTTPCode: http.StatusBadRequest,
+		Code:     ErrCodeInvalidImportFile,
+		Message:  "The provided file could not be parsed. Please make sure it is a valid export file.",
+	}
+}
+
+// ErrImportFromUnsupportedVersion represents an export created by a Vikunja version we can no longer read.
+type ErrImportFromUnsupportedVersion struct {
+	DumpVersion string
+	MinVersion  string
+}
+
+func (err *ErrImportFromUnsupportedVersion) Error() string {
+	return "export was created with an older version " + err.DumpVersion + ", need at least " + err.MinVersion
+}
+
+// ErrCodeImportFromUnsupportedVersion holds the unique world-error code of this error
+const ErrCodeImportFromUnsupportedVersion = 14013
+
+// HTTPError holds the http error description
+func (err *ErrImportFromUnsupportedVersion) HTTPError() web.HTTPError {
+	return web.HTTPError{
+		HTTPCode: http.StatusBadRequest,
+		Code:     ErrCodeImportFromUnsupportedVersion,
+		Message:  "The export was created with a Vikunja version that is too old to import. Please create a new export with a more recent version.",
 	}
 }
