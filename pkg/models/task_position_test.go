@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"xorm.io/builder"
+	"xorm.io/xorm"
 )
 
 func TestFindPositionConflicts(t *testing.T) {
@@ -840,5 +841,82 @@ func TestTaskPositionSurvivesClosing(t *testing.T) {
 		after := &TaskPosition{TaskID: taskID, ProjectViewID: viewID}
 		require.NoError(t, after.refresh(s))
 		assert.NotZero(t, after.Position)
+	})
+}
+
+// TestDoneBucketOrdersNewestFirst pins what a Done column is for.
+//
+// A closed task used to keep the position it held in the queue, so Done came
+// out ordered by when each task was created — on the live board every one of
+// its positions was the task's index times 2^16. Nobody scrolls a column of
+// finished work looking for the oldest thing in it.
+func TestDoneBucketOrdersNewestFirst(t *testing.T) {
+	const (
+		viewID       = 4 // the kanban view, done_bucket_id 3
+		doneBucketID = 3
+	)
+
+	positionOf := func(t *testing.T, s *xorm.Session, taskID int64) float64 {
+		t.Helper()
+		tp := &TaskPosition{TaskID: taskID, ProjectViewID: viewID}
+		require.NoError(t, tp.refresh(s))
+		return tp.Position
+	}
+
+	closeTask := func(t *testing.T, s *xorm.Session, u *user.User, taskID int64) {
+		t.Helper()
+		require.NoError(t, (&Task{ID: taskID, Done: true}).Update(s, u))
+	}
+
+	t.Run("a closed task lands above everything already done", func(t *testing.T) {
+		db.LoadAndAssertFixtures(t)
+		s := db.NewSession()
+		defer s.Close()
+		u := &user.User{ID: 1}
+
+		// Task 2 is already in the done bucket in this view's fixtures; give it
+		// a known place so there is something to land above.
+		require.NoError(t, upsertTaskPosition(s, &TaskPosition{
+			TaskID: 2, ProjectViewID: viewID, Position: 1000,
+		}))
+		_, err := s.Where("task_id = ? AND project_view_id = ?", 2, viewID).
+			Cols("bucket_id").Update(&TaskBucket{BucketID: doneBucketID})
+		require.NoError(t, err)
+
+		closeTask(t, s, u, 1)
+
+		assert.Less(t, positionOf(t, s, 1), positionOf(t, s, 2),
+			"the task just closed did not land above the one closed before it")
+	})
+
+	t.Run("two closes in a row keep their order", func(t *testing.T) {
+		db.LoadAndAssertFixtures(t)
+		s := db.NewSession()
+		defer s.Close()
+		u := &user.User{ID: 1}
+
+		closeTask(t, s, u, 1)
+		first := positionOf(t, s, 1)
+		closeTask(t, s, u, 9)
+		second := positionOf(t, s, 9)
+
+		assert.Less(t, second, first, "the second task closed did not land above the first")
+	})
+
+	t.Run("reopening keeps the position it had", func(t *testing.T) {
+		db.LoadAndAssertFixtures(t)
+		s := db.NewSession()
+		defer s.Close()
+		u := &user.User{ID: 1}
+
+		// The queue is a running order somebody arranged. A task coming back
+		// out of Done has no claim on the top of it.
+		require.NoError(t, upsertTaskPosition(s, &TaskPosition{
+			TaskID: 1, ProjectViewID: viewID, Position: 4321,
+		}))
+		closeTask(t, s, u, 1)
+		require.NoError(t, (&Task{ID: 1, Done: false}).Update(s, u))
+
+		assert.InDelta(t, 4321.0, positionOf(t, s, 1), 0.001)
 	})
 }

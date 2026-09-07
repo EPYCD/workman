@@ -1774,6 +1774,10 @@ func (t *Task) moveTaskToDoneBuckets(s *xorm.Session, a web.Auth, views []*Proje
 			}
 		}
 
+		// Decided before the move, because updateTaskBucket is what makes it
+		// no longer true.
+		entering := t.Done && view.DoneBucketID != 0 && currentTaskBucket.BucketID != view.DoneBucketID
+
 		tb := &TaskBucket{
 			BucketID:      bucketID,
 			TaskID:        t.ID,
@@ -1792,13 +1796,65 @@ func (t *Task) moveTaskToDoneBuckets(s *xorm.Session, a web.Auth, views []*Proje
 		if err := tp.refresh(s); err != nil {
 			return err
 		}
-		tp.Position = calculateDefaultPosition(t.Index, tp.Position)
+
+		// Landing in the done bucket puts the task at the top of it, so the
+		// column reads newest-finished-first. Keeping the position it had in
+		// the queue instead ordered Done by when each task was created, which
+		// answers a question nobody asks of a column of finished work.
+		//
+		// Only on the way in. Leaving the done bucket keeps the position,
+		// because the queue is a running order somebody arranged and a
+		// reopened task has no claim on the top of it.
+		if entering {
+			top, has, err := lowestPositionInBucket(s, view.ID, bucketID, t.ID)
+			if err != nil {
+				return err
+			}
+			if has {
+				// Halving is how the board inserts at the top too, and
+				// updateTaskPosition recalculates the whole view if it ever
+				// runs out of room.
+				tp.Position = top / 2
+			} else {
+				tp.Position = calculateDefaultPosition(t.Index, tp.Position)
+			}
+		} else {
+			tp.Position = calculateDefaultPosition(t.Index, tp.Position)
+		}
+
 		err = updateTaskPosition(s, a, &tp)
 		if err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// lowestPositionInBucket returns the smallest position among the tasks in one
+// bucket of one view, ignoring the task being placed — by the time this runs
+// its bucket row has already moved, so counting it would compare the task
+// against itself.
+//
+// has is false when the bucket holds nothing else, which is a real answer and
+// not an error: the first task into an empty column has nothing to sort above.
+func lowestPositionInBucket(s *xorm.Session, viewID, bucketID, excludeTaskID int64) (position float64, has bool, err error) {
+	lowest := &TaskPosition{}
+	has, err = s.Table("task_positions").
+		Join("INNER", "task_buckets", "task_buckets.task_id = task_positions.task_id AND task_buckets.project_view_id = task_positions.project_view_id").
+		// A soft-deleted task keeps both rows, and would otherwise hold the top
+		// of a column it is no longer in.
+		Join("INNER", "tasks", "tasks.id = task_positions.task_id").
+		Where("task_positions.project_view_id = ?", viewID).
+		And("task_buckets.bucket_id = ?", bucketID).
+		And("task_positions.task_id != ?", excludeTaskID).
+		And(taskNotDeletedCond("tasks")).
+		OrderBy("task_positions.position ASC").
+		Limit(1).
+		Get(lowest)
+	if err != nil {
+		return 0, false, err
+	}
+	return lowest.Position, has, nil
 }
 
 // moveTaskToDefaultBuckets moves the task to the default bucket of
