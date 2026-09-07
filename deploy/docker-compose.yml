@@ -132,7 +132,15 @@ services:
       - ${REPO_PATH}:/repo
       - ./repo-sync.sh:/repo-sync.sh:ro
       # The deploy key, so the fetch authenticates the same way Marshal's does.
+      # Only used while origin is still an ssh remote on GitHub; the Forgejo
+      # remote authenticates with a token in the URL instead.
       - marshal-ssh:/home/marshal/.ssh
+    # The forge is in its own stack, so `forgejo` is only resolvable from its
+    # network. Without this the fetch fails with a DNS error that reads as the
+    # repository being gone rather than the network being wrong.
+    networks:
+      - default
+      - forgejo
     depends_on:
       - marshal
     logging:

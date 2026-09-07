@@ -64,4 +64,12 @@ deploy/.env
 # ...and any nested stack's, e.g. deploy/upstream-watch/.env. The plain rule
 # above does not match a subdirectory, and these hold webhook URLs.
 deploy/*/.env
+# The plain rule above covers `.env` and nothing else. A rotation leaves
+# `deploy/.env.bak.<date>` — the OLD tokens, still valid until revoked — and the
+# forge sync leaves a token file beside it. Both are plaintext credentials one
+# `git add -A` away from being published, so name them explicitly rather than
+# relying on nobody typing that.
+deploy/.env.bak*
+deploy/*.token
+deploy/.*-token
 .marshal/
