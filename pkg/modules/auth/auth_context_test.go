@@ -14,18 +14,30 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package migration
+package auth
 
 import (
-	"os"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
-	"code.vikunja.io/api/pkg/config"
-	"code.vikunja.io/api/pkg/log"
+	"code.vikunja.io/api/pkg/models"
+	"code.vikunja.io/api/pkg/user"
+
+	"github.com/labstack/echo/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestMain(m *testing.M) {
-	log.InitLogger()
-	config.InitDefaultConfig()
-	os.Exit(m.Run())
+func TestGetAuthFromClaimsUsesTheAPIUserFromContext(t *testing.T) {
+	e := echo.New()
+	c := e.NewContext(httptest.NewRequest(http.MethodGet, "/", nil), httptest.NewRecorder())
+	owner := &user.User{ID: 42, Username: "owner"}
+	// No database behind this test: a lookup by token would fail, the context user must win.
+	c.Set("api_token", &models.APIToken{ID: 1, OwnerID: 42})
+	c.Set("api_user", owner)
+
+	a, err := GetAuthFromClaims(c)
+	require.NoError(t, err)
+	assert.Same(t, owner, a)
 }

@@ -240,7 +240,7 @@ function formatPermissionTitle(title: string): string {
 async function createToken() {
 	newTokenTitleValid.value = newToken.value.title.trim() !== ''
 	if (!newTokenTitleValid.value) {
-		apiTokenTitle.value.focus()
+		apiTokenTitle.value?.focus()
 		return
 	}
 
@@ -275,12 +275,15 @@ async function createToken() {
 	}
 
 	const token = await service.create(newToken.value)
-	emit('created', token)
 
+	// Reset before emitting: parents hide the form in their `created` handler, so
+	// anything after the emit would write to a component that's already unmounting.
 	newToken.value = new ApiTokenModel()
 	newTokenExpiry.value = 30
 	newTokenExpiryCustom.value = new Date()
 	resetPermissions()
+
+	emit('created', token)
 }
 </script>
 
@@ -329,12 +332,18 @@ async function createToken() {
 						</option>
 					</select>
 				</div>
-				<flat-pickr
+				<!-- flatpickr's altInput is a sibling Vue doesn't own. Without this wrapper
+				     Vue anchors the v-if placeholder on it, and flatpickr's destroy hook has
+				     already removed it by then, so the patch throws (FRONTEND-OSS-2AR). -->
+				<div
 					v-if="newTokenExpiry === 'custom'"
-					v-model="newTokenExpiryCustom"
-					class="mis-2"
-					:config="flatPickerConfig"
-				/>
+					class="control mis-2"
+				>
+					<flat-pickr
+						v-model="newTokenExpiryCustom"
+						:config="flatPickerConfig"
+					/>
+				</div>
 			</div>
 		</div>
 
