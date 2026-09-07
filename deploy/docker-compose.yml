@@ -90,6 +90,13 @@ services:
       # it falls back to a file here; without this volume a container
       # recreate loses the bot's token and needs `veans login` again.
       - marshal-config:/home/marshal/.config
+    # Marshal fetches the coordinated clone itself, and that clone's origin is
+    # now the forge. Same network need as repo-sync — missed when that one was
+    # moved, and the symptom was `Could not resolve host: forgejo` once a minute
+    # while the board itself stayed healthy, so nothing looked wrong.
+    networks:
+      - default
+      - forgejo
     depends_on:
       workman:
         condition: service_healthy
