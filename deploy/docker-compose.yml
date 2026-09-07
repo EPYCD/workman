@@ -150,6 +150,17 @@ services:
     depends_on:
       - workman
       - marshal
+    # gitler.kaoxhq.tech is served from the forgejo stack, which has its own
+    # network. Without this the tunnel cannot resolve `forgejo` and that hostname
+    # 502s while every container reports healthy — the failure looks like
+    # Cloudflare, or the forge, and is neither.
+    #
+    # It was originally done with `docker network connect`, which works on a
+    # running container and is lost the moment this one is recreated. Declared
+    # here so a recreate cannot quietly undo it.
+    networks:
+      - default
+      - forgejo
 
 volumes:
   workman-files:
@@ -157,3 +168,11 @@ volumes:
   marshal-state:
   marshal-ssh:
   marshal-config:
+
+networks:
+  default:
+  # Created by ~/srv/forgejo/docker-compose.yml. External so this stack joins it
+  # rather than trying to own it.
+  forgejo:
+    external: true
+    name: forgejo_default
