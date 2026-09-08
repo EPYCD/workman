@@ -127,7 +127,7 @@ services:
     image: ${MARSHAL_IMAGE:-ghcr.io/epycd/marshal:latest}
     restart: unless-stopped
     user: "10001:10001"
-    entrypoint: ["/bin/sh", "/repo-sync.sh"]
+    entrypoint: ["/bin/sh", "/opt/bin/repo-sync.sh"]
     environment:
       SYNC_INTERVAL: ${REPO_SYNC_INTERVAL:-300}
       SYNC_REF: ${MARSHAL_BASE_BRANCH:-origin/main}
@@ -137,7 +137,10 @@ services:
       GIT_TERMINAL_PROMPT: "0"
     volumes:
       - ${REPO_PATH}:/repo
-      - ./repo-sync.sh:/repo-sync.sh:ro
+      # Mount the DIRECTORY, not the file. Docker Desktop stages single-file
+      # bind mounts under a path it wipes on restart; the container then fails
+      # to start with exit 127 and restart:unless-stopped cannot recover it.
+      - ./scripts:/opt/bin:ro
       # The deploy key, so the fetch authenticates the same way Marshal's does.
       # Only used while origin is still an ssh remote on GitHub; the Forgejo
       # remote authenticates with a token in the URL instead.
