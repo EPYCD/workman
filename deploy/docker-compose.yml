@@ -94,6 +94,23 @@ services:
       # committed. Marshal only reads it (git fetch, git log, file reads).
       MARSHAL_TOKEN: ${MARSHAL_TOKEN}
       MARSHAL_PUBLIC_URL: https://${MARSHAL_HOST}
+      # Where Marshal CALLS the board, as opposed to the address it prints.
+      #
+      # .veans.yml's `server` is the public url and stays that — it is
+      # committed, every human and every checkout reads it, and it is the key
+      # the credential store files tokens under. But Marshal is right here, on
+      # this network, and the public name means leaving the machine and coming
+      # back through the tunnel to reach a container two lines up in this file.
+      #
+      # On 08-09-2026 the tunnel dropped all four edge connections and went
+      # silent. Marshal spent six minutes logging `lookup ${BOARD_HOST}: no
+      # such host` once a minute and lost a queued lag write, while the board
+      # was up and healthy the whole time. CI had the same bug and was fixed
+      # for it first; this is the other side of the same board.
+      #
+      # Ignored by a Marshal older than the release that added it, so keep
+      # this line and the image version moving together.
+      MARSHAL_BOARD_URL: http://workman:3456
       MARSHAL_WEBHOOK_SECRET: ${MARSHAL_WEBHOOK_SECRET}
       MARSHAL_DISCORD_WEBHOOK: ${DISCORD_WEBHOOK_URL:-}
       MARSHAL_LISTEN: 0.0.0.0:8090
