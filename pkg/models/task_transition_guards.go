@@ -120,6 +120,31 @@ func checkDoneAllowed(s *xorm.Session, a web.Auth, task *Task, current *TaskBuck
 		return nil
 	}
 
+	// Operations work is exempt for exactly the reason a container is. A task
+	// like "the CI account has no minutes" or "get the payment credentials" is
+	// something a person does to the running system, not a change to the
+	// repository: it has no branch, no commit and no pull request, so a truthful
+	// receipt for it cannot exist and requiring one wedges it open forever.
+	//
+	// #175 is the case that forced this. It was resolved on 2026-09-08 by moving
+	// the forge off GitHub Actions entirely, every one of its stated "done when"
+	// conditions held, and the board still refused to close it — leaving the
+	// only ways out a receipt asserting a merged pull request that never existed,
+	// or leaving the ticket open forever. Both are worse than this exemption.
+	//
+	// It is deliberately narrow: the veans:ops label and nothing else, and the
+	// label is applied by a human on the board. Like the container exemption it
+	// returns here, so the submitter rule below does not apply either — that rule
+	// asks a second person to close what one person put up for review, and on
+	// operations work there is no review and often only one person.
+	ops, err := hasOpsLabel(s, task.ID)
+	if err != nil {
+		return err
+	}
+	if ops {
+		return nil
+	}
+
 	has, err := s.Where("task_id = ? AND merged = ? AND passed = ?", task.ID, true, true).Exist(&TaskReceipt{})
 	if err != nil {
 		return err
@@ -144,6 +169,25 @@ func checkDoneAllowed(s *xorm.Session, a web.Auth, task *Task, current *TaskBuck
 		}
 	}
 	return nil
+}
+
+// opsLabelTitle marks a task as operations work rather than a change to the
+// repository. It sits alongside veans:branch: in task_path_lease.go: labels in
+// the veans: namespace are the board's contract with the tooling.
+const opsLabelTitle = "veans:ops"
+
+// hasOpsLabel reports whether the task carries the operations label. One
+// indexed join, and only reached for a task that is not already exempt.
+func hasOpsLabel(s *xorm.Session, taskID int64) (bool, error) {
+	count, err := s.Table("labels").
+		Join("INNER", "label_tasks", "label_tasks.label_id = labels.id").
+		Where("label_tasks.task_id = ?", taskID).
+		And("labels.title = ?", opsLabelTitle).
+		Count()
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 // isCompleteContainer reports whether the task has subtasks and every one of
