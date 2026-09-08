@@ -207,6 +207,62 @@ func TestDoneRequiresReceipt(t *testing.T) {
 		require.NoError(t, s3.Commit())
 		db.AssertExists(t, "tasks", map[string]interface{}{"id": 1, "done": true}, false)
 	})
+
+	t.Run("operations work carries no receipt and is exempt", func(t *testing.T) {
+		db.LoadAndAssertFixtures(t)
+		_ = receiptProject(t)
+
+		// The same task, same project, same absent receipt: refused.
+		s := db.NewSession()
+		err := (&Task{ID: 1, Done: true}).Update(s, user1)
+		assert.True(t, IsErrTaskDoneRequiresReceipt(err), "got %v", err)
+		_ = s.Rollback()
+		s.Close()
+
+		labelOpsTask(t, 1)
+
+		// With the label it closes, and no receipt was ever posted.
+		s2 := db.NewSession()
+		defer s2.Close()
+		require.NoError(t, (&Task{ID: 1, Done: true}).Update(s2, user1))
+		require.NoError(t, s2.Commit())
+		db.AssertExists(t, "tasks", map[string]interface{}{"id": 1, "done": true}, false)
+		db.AssertMissing(t, "task_receipts", map[string]interface{}{"task_id": 1})
+	})
+
+	t.Run("a different veans label is not an exemption", func(t *testing.T) {
+		db.LoadAndAssertFixtures(t)
+		_ = receiptProject(t)
+		labelTask(t, 1, "veans:phase-2")
+
+		s := db.NewSession()
+		defer s.Close()
+		err := (&Task{ID: 1, Done: true}).Update(s, user1)
+		assert.True(t, IsErrTaskDoneRequiresReceipt(err), "got %v", err)
+	})
+}
+
+// labelOpsTask attaches the operations label that exempts a task from the
+// receipt rule.
+func labelOpsTask(t *testing.T, taskID int64) {
+	t.Helper()
+	labelTask(t, taskID, opsLabelTitle)
+}
+
+// labelTask attaches a label with the given title to the task, creating the
+// label itself. Written against the tables rather than the label API so the
+// test states exactly the row the guard reads.
+func labelTask(t *testing.T, taskID int64, title string) {
+	t.Helper()
+	s := db.NewSession()
+	defer s.Close()
+	label := &Label{Title: title, CreatedByID: 1}
+	_, err := s.Insert(label)
+	require.NoError(t, err)
+	require.NotZero(t, label.ID)
+	_, err = s.Insert(&LabelTask{TaskID: taskID, LabelID: label.ID})
+	require.NoError(t, err)
+	require.NoError(t, s.Commit())
 }
 
 func TestProjectReceiptBot(t *testing.T) {
