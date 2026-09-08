@@ -180,7 +180,22 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
-    command: tunnel --no-autoupdate run
+    # --protocol http2, not the default quic.
+    #
+    # QUIC wants a UDP receive buffer of roughly 2.5MB; this host has the Linux
+    # default of 212992 (~208KB) and neither raising it nor persisting it is
+    # reliable here — net.core.* is not dependably namespaced for a container,
+    # and WSL2 does not keep sysctls across a restart. Undersized buffers drop
+    # packets under load, which cloudflared reports as
+    # "failed to dial a quic connection: timeout: no recent network activity".
+    #
+    # That is what flapped for fifteen minutes on 2026-09-08: three CI runs died
+    # on it, one of them named "typecheck · lint · test", and a ticket that had
+    # merged green quietly stayed open because the close hook could not reach the
+    # board. http2 carries the tunnel over TCP and has no such dependency.
+    # Marginally slower than QUIC; for a home forge that is not a cost worth an
+    # outage.
+    command: tunnel --no-autoupdate --protocol http2 run
     environment:
       TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
     depends_on:
