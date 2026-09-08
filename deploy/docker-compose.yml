@@ -39,6 +39,24 @@ services:
       VIKUNJA_MAILER_ENABLED: ${WORKMAN_MAILER_ENABLED:-false}
     volumes:
       - workman-files:/app/vikunja/files
+    # Also on the forge's network, under a stable alias, so a CI job can reach
+    # the board WITHOUT leaving the machine.
+    #
+    # Every workflow addressed it as https://workman.kaoxhq.tech, which means a
+    # job running here went out to Cloudflare's edge and back down the tunnel to
+    # a container sitting beside it. On 2026-09-08 the tunnel flapped for fifteen
+    # minutes and three runs failed on it -- one of them named
+    # "typecheck · lint · test", which is not what broke. A ticket then quietly
+    # stayed open because the close hook could not reach the board.
+    #
+    # Same argument the runner already makes for talking to Forgejo over the
+    # compose network: a job that depends on Cloudflare to reach a service on the
+    # same host is one more thing that can break while nothing looks wrong.
+    networks:
+      default:
+      forgejo:
+        aliases:
+          - workman
     depends_on:
       db:
         condition: service_healthy
