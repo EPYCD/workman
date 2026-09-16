@@ -1511,6 +1511,13 @@ h2 .button {
 	}
 }
 
+// keep the title clear of the modal's fixed close button
+.is-modal .heading {
+	@media screen and (min-width: $tablet) and (max-width: $desktop) {
+		padding-inline-end: 3.5rem;
+	}
+}
+
 .is-modal .action-buttons {
 	// we need same top margin for the modal close button 
 	@media screen and (min-width: $tablet) {
@@ -1582,5 +1589,12 @@ h2 .button {
 .modal-content .scroll-to-comments-button {
 	inset-block-end: .75rem;
 	inset-inline-end: 1rem;
+}
+
+// the task card spans the full width here, so the modal's white close button sits on it instead of the scrim
+@media screen and (min-width: $tablet) and (max-width: $desktop) {
+	.modal-dialog:has(.task-view-container.is-modal) .modal-container > .close {
+		color: var(--text);
+	}
 }
 </style>

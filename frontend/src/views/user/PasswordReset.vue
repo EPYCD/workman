@@ -59,6 +59,7 @@ import {useI18n} from 'vue-i18n'
 import PasswordResetModel from '@/models/passwordReset'
 import PasswordResetService from '@/services/passwordReset'
 import Message from '@/components/misc/Message.vue'
+import {getErrorText} from '@/message'
 import Password from '@/components/input/Password.vue'
 
 const credentials = reactive({
@@ -90,7 +91,7 @@ async function resetPassword() {
 		const {message} = await passwordResetService.resetPassword(passwordReset)
 		successMessage.value = message
 	} catch (e) {
-		errorMsg.value = e.response.data.message
+		errorMsg.value = getErrorText(e)
 	}
 }
 </script>
