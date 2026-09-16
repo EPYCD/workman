@@ -1397,6 +1397,8 @@ $filter-container-height: '1rem - #{$switch-view-height}';
 		background-color: var(--wm-surface-sunken);
 		border-block-start: 1px solid var(--wm-line-faint);
 		transform: none;
+		// At fractional device pixel ratios the scroll clip ends below the sticky footer, showing a sliver of tasks
+		box-shadow: 0 1px 0 var(--wm-surface-sunken);
 
 		.button {
 			background-color: transparent;

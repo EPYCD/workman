@@ -46,7 +46,7 @@ const CustomLogo = computed(() => {
 			:class="{ 'logo--pride': isPride }"
 		/>
 		<img
-			v-show="CustomLogo"
+			v-else
 			:src="CustomLogo"
 			alt="Workman"
 			class="logo"
