@@ -1,5 +1,5 @@
 {
-	"total": 1628,
+	"total": 1616,
 	"files": {
 		"src/components/home/ContentAuth.vue": 2,
 		"src/components/home/ProjectsNavigation.vue": 4,
@@ -18,7 +18,7 @@
 		"src/components/project/partials/FilterPopup.vue": 2,
 		"src/components/project/partials/Filters.vue": 4,
 		"src/components/project/ProjectSettingsDropdown.vue": 2,
-		"src/components/project/ProjectWrapper.vue": 18,
+		"src/components/project/ProjectWrapper.vue": 14,
 		"src/components/project/views/ProjectGantt.vue": 6,
 		"src/components/project/views/ProjectKanban.vue": 46,
 		"src/components/project/views/ProjectList.vue": 22,
@@ -99,7 +99,7 @@
 		"src/modules/quickAddMagic/dateParser.ts": 2,
 		"src/modules/quickAddMagic/quickAddMagic.test.ts": 34,
 		"src/router/index.ts": 4,
-		"src/sentry.ts": 14,
+		"src/sentry.ts": 6,
 		"src/services/abstractService.ts": 20,
 		"src/services/accountDelete.ts": 6,
 		"src/services/apiToken.ts": 2,

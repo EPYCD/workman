@@ -56,16 +56,19 @@ export default async function setupSentry(app: App, router: Router) {
 	document.body.addEventListener(
 		'error',
 		(event) => {
-			if (!event.target) return
-	
-			if (event.target.tagName === 'IMG') {
+			const target = event.target
+
+			if (target instanceof HTMLImageElement) {
+				// Users can put any src into their descriptions and comments, a broken one is not our bug.
+				if (target.closest('[data-user-content]')) return
+
 				Sentry.captureMessage(
-					`Failed to load image: ${event.target.src}`,
+					`Failed to load image: ${target.src}`,
 					'warning',
 				)
-			} else if (event.target.tagName === 'LINK') {
+			} else if (target instanceof HTMLLinkElement) {
 				Sentry.captureMessage(
-					`Failed to load css: ${event.target.href}`,
+					`Failed to load css: ${target.href}`,
 					'warning',
 				)
 			}
