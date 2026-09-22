@@ -1,6 +1,7 @@
 import {ref, readonly} from 'vue'
 
-import {getToken} from '@/helpers/auth'
+import {getToken, getTokenType} from '@/helpers/auth'
+import {AUTH_TYPES} from '@/modelTypes/IUser'
 
 type MessageCallback = (msg: WebSocketEvent) => void
 
@@ -114,13 +115,17 @@ function scheduleReconnect() {
 	}, delay)
 }
 
+// Link share tokens are rejected by the socket, so their session never opens one.
+function mayOpenSocket(): boolean {
+	return getTokenType(getToken()) === AUTH_TYPES.USER
+}
+
 function connect() {
 	if (socket?.readyState === WebSocket.OPEN || socket?.readyState === WebSocket.CONNECTING) {
 		return
 	}
 
-	const token = getToken()
-	if (!token) {
+	if (!mayOpenSocket()) {
 		return
 	}
 
