@@ -9,7 +9,8 @@
 				'is-danger': danger,
 			}
 		]"
-		:disabled="disabled || loading"
+		:disabled="disabled"
+		:aria-disabled="loading || undefined"
 		:style="{
 			'--button-white-space': wrap ? 'break-spaces' : 'nowrap',
 		}"
@@ -116,7 +117,8 @@ const variantClass = computed<string>(() => VARIANT_CLASS_MAP[props.variant])
 		outline-offset: 2px;
 	}
 
-	&[disabled] {
+	&[disabled],
+	&[aria-disabled='true'] {
 		opacity: 0.45;
 		cursor: not-allowed;
 		pointer-events: none;
