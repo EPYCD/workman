@@ -32,8 +32,9 @@ import TaskCollectionService, {type TaskFilterParams} from '@/services/taskColle
 import {getRandomColorHex} from '@/helpers/color/randomColor'
 import {runWrites} from '@/helpers/runWrites'
 import {toISOStringOrNull} from '@/helpers/time/toISOStringOrNull'
+import {getDateWithTime} from '@/helpers/time/getDateWithTime'
 import {error} from '@/message'
-import {REPEAT_TYPES} from '@/types/IRepeatAfter'
+import {REPEAT_TYPES, type IRepeatAfter} from '@/types/IRepeatAfter'
 import {TASK_REPEAT_MODES} from '@/types/IRepeatMode'
 import {taskLabelsCreate, taskLabelsDelete} from '@/client/generated'
 import type {Label} from '@/client/generated'
@@ -63,6 +64,16 @@ export function buildDefaultRemindersForQuickAdd(
 		relativePeriod: d.relativePeriod,
 		relativeTo: REMINDER_PERIOD_RELATIVE_TO_TYPES.DUEDATE,
 	}))
+}
+
+// Without a due date, a repeating task never becomes due: it never shows up
+// in Upcoming, never goes overdue and its reminders never fire. So a quick add
+// that repeats but names no date starts today, at the user's default due time.
+export function quickAddDueDate(
+	date: Date | null,
+	repeats: IRepeatAfter | null,
+): string | null {
+	return toISOStringOrNull(date ?? (repeats ? getDateWithTime(new Date()) : null))
 }
 
 // IDEA: maybe use a small fuzzy search here to prevent errors
@@ -518,7 +529,7 @@ export const useTaskStore = defineStore('task', () => {
 		}
 
 		// I don't know why, but it all goes up in flames when I just pass in the date normally.
-		const dueDate = toISOStringOrNull(parsedTask.date)
+		const dueDate = quickAddDueDate(parsedTask.date, parsedTask.repeats)
 
 		const task = new TaskModel({
 			title: cleanedTitle,

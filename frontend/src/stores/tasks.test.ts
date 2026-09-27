@@ -1,5 +1,5 @@
 import {setActivePinia, createPinia} from 'pinia'
-import {beforeEach, describe, expect, it, vi} from 'vitest'
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 vi.mock('@/router', () => ({
 	default: {
@@ -34,7 +34,10 @@ const labelSdk = vi.hoisted(() => ({
 vi.mock('@/client/queries/labels', () => labelQueries)
 vi.mock('@/client/generated', () => labelSdk)
 
-import {buildDefaultRemindersForQuickAdd, useTaskStore} from './tasks'
+import {buildDefaultRemindersForQuickAdd, quickAddDueDate, useTaskStore} from './tasks'
+import {useAuthStore} from './auth'
+import UserSettingsModel from '@/models/userSettings'
+import {parseTaskText, PrefixMode} from '@/modules/quickAddMagic'
 import {useKanbanStore} from './kanban'
 import {REMINDER_PERIOD_RELATIVE_TO_TYPES} from '@/types/IReminderPeriodRelativeTo'
 import type {ITaskReminder} from '@/modelTypes/ITaskReminder'
@@ -78,6 +81,39 @@ describe('buildDefaultRemindersForQuickAdd', () => {
 		const weird = {...aDefault, relativeTo: REMINDER_PERIOD_RELATIVE_TO_TYPES.STARTDATE} as ITaskReminder
 		const result = buildDefaultRemindersForQuickAdd([weird], '2026-05-01T00:00:00.000Z')
 		expect(result[0].relativeTo).toBe(REMINDER_PERIOD_RELATIVE_TO_TYPES.DUEDATE)
+	})
+})
+
+describe('quickAddDueDate', () => {
+	beforeEach(() => {
+		setActivePinia(createPinia())
+		vi.useFakeTimers()
+		vi.setSystemTime(new Date(2026, 8, 23, 9, 15))
+	})
+
+	afterEach(() => {
+		vi.useRealTimers()
+	})
+
+	it('starts a repeating task without a date today, at the default due time', () => {
+		const settings = new UserSettingsModel()
+		settings.frontendSettings.defaultDueTime = '14:30'
+		useAuthStore().setUserSettings(settings)
+		const parsed = parseTaskText('Call mom every day', PrefixMode.Default)
+
+		expect(quickAddDueDate(parsed.date, parsed.repeats)).toBe(new Date(2026, 8, 23, 14, 30).toISOString())
+	})
+
+	it('keeps an explicitly parsed date', () => {
+		const parsed = parseTaskText('Call mom every day at 11:42', PrefixMode.Default)
+
+		expect(quickAddDueDate(parsed.date, parsed.repeats)).toBe(new Date(2026, 8, 23, 11, 42).toISOString())
+	})
+
+	it('leaves a task that neither repeats nor names a date without one', () => {
+		const parsed = parseTaskText('Call mom', PrefixMode.Default)
+
+		expect(quickAddDueDate(parsed.date, parsed.repeats)).toBeNull()
 	})
 })
 
