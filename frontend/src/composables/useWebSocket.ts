@@ -1,6 +1,6 @@
 import {ref, readonly} from 'vue'
 
-import {getToken, getTokenType} from '@/helpers/auth'
+import {getToken, getTokenType, isRefreshRejected, isTokenExpired, onTokenRefreshed, refreshToken} from '@/helpers/auth'
 import {AUTH_TYPES} from '@/modelTypes/IUser'
 
 type MessageCallback = (msg: WebSocketEvent) => void
@@ -15,6 +15,8 @@ interface WebSocketEvent {
 
 const RECONNECT_BASE_DELAY = 1000
 const RECONNECT_MAX_DELAY = 30000
+// The server clock offset comes from whole-second iat, so our server time can lag by up to a second.
+const TOKEN_EXPIRY_MARGIN_SECONDS = 5
 
 let socket: WebSocket | null = null
 let reconnectAttempt = 0
@@ -36,12 +38,35 @@ function sendMessage(msg: object) {
 	}
 }
 
-function sendAuth() {
+async function sendAuth(connection: WebSocket) {
+	// The server closes the socket on token expiry, so reconnects start stale.
+	if (isTokenExpired(getToken(), TOKEN_EXPIRY_MARGIN_SECONDS)) {
+		try {
+			await refreshToken(true)
+		} catch (e) {
+			// A rejected refresh means the session is gone; the stale token's invalid_token stops retries.
+			if (!isRefreshRejected(e)) {
+				connection.close()
+				return
+			}
+		}
+	}
 	const token = getToken()
-	if (token) {
+	if (token && socket === connection) {
 		sendMessage({action: 'auth', token})
 	}
 }
+
+// Extends the open socket past the old token's expiry instead of letting the server close it.
+function reauthenticate() {
+	const token = getToken()
+	if (!authenticated.value || !token || !mayOpenSocket()) {
+		return
+	}
+	sendMessage({action: 'auth', token})
+}
+
+onTokenRefreshed(reauthenticate)
 
 function resubscribeAll() {
 	for (const event of subscriptions.keys()) {
@@ -60,7 +85,12 @@ function handleMessage(event: MessageEvent) {
 
 	// Handle auth success
 	if (msg.action === 'auth.success' && msg.success) {
+		// A re-auth keeps the server-side subscriptions.
+		if (authenticated.value) {
+			return
+		}
 		authenticated.value = true
+		reconnectAttempt = 0
 		console.debug('WebSocket: authenticated')
 		resubscribeAll()
 		return
@@ -71,6 +101,7 @@ function handleMessage(event: MessageEvent) {
 	if (msg.error === 'invalid_token' || msg.error === 'auth_required') {
 		console.warn('WebSocket: auth failed:', msg.error)
 		manuallyDisconnected = true
+		reconnectAttempt = 0
 		authenticated.value = false
 		connected.value = false
 		socket?.close()
@@ -141,16 +172,21 @@ function connect() {
 		return
 	}
 
+	const connection = socket
+
 	socket.onopen = () => {
 		connected.value = true
-		reconnectAttempt = 0
 		console.debug('WebSocket: connected, sending auth')
-		sendAuth()
+		void sendAuth(connection)
 	}
 
 	socket.onmessage = handleMessage
 
 	socket.onclose = () => {
+		// A socket that was already replaced or dropped must not tear down its successor.
+		if (socket !== null && socket !== connection) {
+			return
+		}
 		connected.value = false
 		authenticated.value = false
 		socket = null

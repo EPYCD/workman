@@ -41,11 +41,12 @@ func (pa *projectAccess) permission(projectID int64) (Permission, bool) {
 	return p, has
 }
 
-// One row per project and granting ancestor-or-self, so MAX over a project's rows is
-// the greatest of its own grant and everything it inherits: a grant on a descendant
-// can raise an inherited permission, never lower it. Binds the user id three times.
-// tree uses UNION, not UNION ALL: deduplicating (id, permission) terminates on a
-// parent_project_id cycle and caps the row count at three per project.
+// Binds the user id three times.
+// tree carries, per project, its own grant, the grant of its nearest granting ancestor
+// (only when it has none of its own) and every admin grant above it: a non-admin
+// permission stops propagating at the first descendant with its own grant, admin
+// never stops. tree uses UNION, not UNION ALL: deduplicating (id, permission)
+// terminates on a parent_project_id cycle and caps the row count at three per project.
 // The recursive step's join implies parent_project_id IS NOT NULL, which is why root
 // projects store NULL: the partial index then covers real children only.
 const projectAccessCTE = `
@@ -71,8 +72,13 @@ tree (id, permission) AS (
     SELECT p.id, t.permission
     FROM projects p
     INNER JOIN tree t ON p.parent_project_id = t.id
+    LEFT JOIN grants own ON own.project_id = p.id
+    WHERE t.permission = 2 OR own.project_id IS NULL
 )`
 
+// Inherited admin is sticky (it could unshare the parent anyway); below that the nearest
+// grant wins. tree already holds exactly those rows, so MAX picks admin when present and
+// otherwise the single nearest grant.
 const projectAccessQuery = projectAccessCTE + `
 SELECT id, MAX(permission) AS permission FROM tree GROUP BY id`
 

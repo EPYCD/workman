@@ -310,6 +310,46 @@ export type BotUserReadBody = {
     username?: string;
 };
 
+export type BotUserUpdateBody = {
+    /**
+     * A URL to the JSON Schema for this object.
+     */
+    readonly $schema?: string;
+    /**
+     * The id of the owning (human) user. Set by the server on creation; a non-zero value means this user is a bot.
+     */
+    readonly bot_owner_id?: number;
+    /**
+     * A timestamp when this user was created. You cannot change this value.
+     */
+    readonly created?: string;
+    /**
+     * The user's email address. Always empty for bot users.
+     */
+    email?: string;
+    /**
+     * The unique, numeric id of this user.
+     */
+    readonly id?: number;
+    readonly max_permission?: number;
+    /**
+     * The full name of the user.
+     */
+    name?: string;
+    /**
+     * The bot's status: 0=active, 2=disabled.
+     */
+    status: number;
+    /**
+     * A timestamp when this user was last updated. You cannot change this value.
+     */
+    readonly updated?: string;
+    /**
+     * The username of the user. Is always unique. For bot users it must start with the 'bot-' prefix.
+     */
+    username?: string;
+};
+
 export type Bucket = {
     /**
      * A URL to the JSON Schema for this object.
@@ -4176,6 +4216,25 @@ export type BotUserReadBodyWritable = {
     username?: string;
 };
 
+export type BotUserUpdateBodyWritable = {
+    /**
+     * The user's email address. Always empty for bot users.
+     */
+    email?: string;
+    /**
+     * The full name of the user.
+     */
+    name?: string;
+    /**
+     * The bot's status: 0=active, 2=disabled.
+     */
+    status: number;
+    /**
+     * The username of the user. Is always unique. For bot users it must start with the 'bot-' prefix.
+     */
+    username?: string;
+};
+
 export type BucketWritable = {
     count?: number;
     created?: string;
@@ -5871,6 +5930,22 @@ export type AdminProjectsListData = {
          * Search query; filters the list to items matching this string.
          */
         q?: string;
+        /**
+         * Only return projects owned by this user.
+         */
+        owner_id?: number;
+        /**
+         * Hide projects that are their owner's default project.
+         */
+        exclude_default_projects?: boolean;
+        /**
+         * Fields to sort by. Repeatable; pair positionally with order_by. owner sorts by the owner's username. Defaults to id descending.
+         */
+        sort_by?: Array<'id' | 'title' | 'owner' | 'created' | 'updated'> | null;
+        /**
+         * Sort order per sort_by field. Repeatable; defaults to asc.
+         */
+        order_by?: Array<'asc' | 'desc'> | null;
     };
     url: '/admin/projects';
 };
@@ -11843,7 +11918,7 @@ export type PatchBotsReadResponses = {
 export type PatchBotsReadResponse = PatchBotsReadResponses[keyof PatchBotsReadResponses];
 
 export type BotsUpdateData = {
-    body: BotUserReadBodyWritable;
+    body: BotUserUpdateBodyWritable;
     path: {
         bot: number;
     };
@@ -12366,6 +12441,56 @@ export type UserResendEmailConfirmationResponses = {
 };
 
 export type UserResendEmailConfirmationResponse = UserResendEmailConfirmationResponses[keyof UserResendEmailConfirmationResponses];
+
+export type UserSettingsReadData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/user/settings/general';
+};
+
+export type UserSettingsReadErrors = {
+    /**
+     * Error
+     */
+    default: VikunjaErrorModel;
+};
+
+export type UserSettingsReadError = UserSettingsReadErrors[keyof UserSettingsReadErrors];
+
+export type UserSettingsReadResponses = {
+    /**
+     * OK
+     */
+    200: UserGeneralSettings;
+};
+
+export type UserSettingsReadResponse = UserSettingsReadResponses[keyof UserSettingsReadResponses];
+
+export type PatchUserSettingsReadData = {
+    body: Array<JsonPatchOp> | null;
+    path?: never;
+    query?: never;
+    url: '/user/settings/general';
+};
+
+export type PatchUserSettingsReadErrors = {
+    /**
+     * Error
+     */
+    default: VikunjaErrorModel;
+};
+
+export type PatchUserSettingsReadError = PatchUserSettingsReadErrors[keyof PatchUserSettingsReadErrors];
+
+export type PatchUserSettingsReadResponses = {
+    /**
+     * OK
+     */
+    200: UserActionMessageBody;
+};
+
+export type PatchUserSettingsReadResponse = PatchUserSettingsReadResponses[keyof PatchUserSettingsReadResponses];
 
 export type UserUpdateSettingsData = {
     body: UserGeneralSettingsWritable;

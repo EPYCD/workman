@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"xorm.io/builder"
+	"xorm.io/xorm"
 )
 
 func TestProject_CreateOrUpdate(t *testing.T) {
@@ -676,8 +677,10 @@ func TestProject_Delete(t *testing.T) {
 			ID: 4,
 		}
 		err := project.Delete(s, &user.User{ID: 3})
-		require.Error(t, err)
-		assert.True(t, IsErrCannotDeleteDefaultProject(err))
+		require.NoError(t, err)
+		require.NoError(t, s.Commit())
+		db.AssertMissing(t, "projects", map[string]interface{}{"id": 4})
+		db.AssertExists(t, "users", map[string]interface{}{"id": 3, "default_project_id": 0}, false)
 	})
 	t.Run("default project of a different user", func(t *testing.T) {
 		db.LoadAndAssertFixtures(t)
@@ -1014,5 +1017,35 @@ func TestCheckIsArchived(t *testing.T) {
 		p := &Project{ID: 1}
 		err := p.CheckIsArchived(s)
 		require.NoError(t, err)
+	})
+}
+
+// GHSA-fprf-r6rv-xg99
+func TestProject_ForeignDefaultDoesNotBlockOwner(t *testing.T) {
+	pointUser2At := func(t *testing.T, s *xorm.Session, projectID int64) {
+		_, err := s.ID(2).Cols("default_project_id").Update(&user.User{DefaultProjectID: projectID})
+		require.NoError(t, err)
+	}
+
+	t.Run("archive", func(t *testing.T) {
+		db.LoadAndAssertFixtures(t)
+		s := db.NewSession()
+		defer s.Close()
+		pointUser2At(t, s, 1)
+
+		project := Project{ID: 1, Title: "Test1", IsArchived: true}
+		require.NoError(t, project.Update(s, &user.User{ID: 1}))
+	})
+	t.Run("delete", func(t *testing.T) {
+		db.LoadAndAssertFixtures(t)
+		s := db.NewSession()
+		defer s.Close()
+		pointUser2At(t, s, 1)
+
+		project := Project{ID: 1}
+		require.NoError(t, project.Delete(s, &user.User{ID: 1}))
+		require.NoError(t, s.Commit())
+		db.AssertMissing(t, "projects", map[string]interface{}{"id": 1})
+		db.AssertExists(t, "users", map[string]interface{}{"id": 2, "default_project_id": 0}, false)
 	})
 }

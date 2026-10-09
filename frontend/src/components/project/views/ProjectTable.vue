@@ -283,7 +283,6 @@
 									<td v-if="activeColumns.priority">
 										<PriorityLabel
 											:priority="t.priority"
-											:done="t.done"
 											:show-all="true"
 										/>
 									</td>

@@ -9,6 +9,7 @@ import AvatarService from '@/services/avatar'
 import UserSettingsService from '@/services/userSettings'
 import {getToken, refreshToken, removeToken, saveToken} from '@/helpers/auth'
 import {clearTaskCache} from '@/helpers/taskCache'
+import {serverNowSeconds} from '@/helpers/serverClock'
 import {useWebSocket} from '@/composables/useWebSocket'
 import {setModuleLoading} from '@/stores/helper'
 import {success, error} from '@/message'
@@ -22,7 +23,6 @@ import type {IUserSettings} from '@/modelTypes/IUserSettings'
 import router from '@/router'
 import {useConfigStore} from '@/stores/config'
 import UserSettingsModel from '@/models/userSettings'
-import {MILLISECONDS_A_SECOND} from '@/constants/date'
 import {PrefixMode} from '@/modules/quickAddMagic'
 import {DATE_DISPLAY} from '@/constants/dateDisplay'
 import {TIME_FORMAT} from '@/constants/timeFormat'
@@ -62,13 +62,33 @@ function redirectToSpecifiedProvider() {
 	}
 }
 
+// pkg/models ErrCodeNoRefreshToken
+const ERROR_CODE_NO_REFRESH_TOKEN = 16005
+
+interface RefreshFailure {
+	cause?: {
+		response?: {
+			status?: number
+			data?: {code?: number}
+		}
+	}
+}
+
+function refreshFailureResponse(e: unknown) {
+	return (e as RefreshFailure | undefined)?.cause?.response
+}
+
 // A race-loser's refresh fails but the rotated cookie is already valid, so a
 // second attempt succeeds — recovering what would otherwise be a spurious
 // logout. Exactly one retry: a genuinely dead session still logs out, no loop.
+// Without a cookie there is nothing another caller could have rotated.
 async function refreshTokenWithRetry(persist: boolean): Promise<void> {
 	try {
 		await refreshToken(persist)
-	} catch {
+	} catch (e) {
+		if (refreshFailureResponse(e)?.data?.code === ERROR_CODE_NO_REFRESH_TOKEN) {
+			throw e
+		}
 		await refreshToken(persist)
 	}
 }
@@ -97,6 +117,8 @@ export const useAuthStore = defineStore('auth', () => {
 	
 	const currentSessionId = ref<string | null>(null)
 	const lastUserInfoRefresh = ref<Date | null>(null)
+	// Stops every navigation of this boot from re-refreshing a token whose refresh already failed.
+	let jwtWithFailedRefresh: string | null = null
 	const isLoading = ref(false)
 	const isLoadingGeneralSettings = ref(false)
 
@@ -347,9 +369,7 @@ export const useAuthStore = defineStore('auth', () => {
 				const payload = JSON.parse(atob(base64))
 				const jwtUser = new UserModel(payload)
 				jwtUserType = jwtUser.type
-				const ts = Math.round((new Date()).getTime() / MILLISECONDS_A_SECOND)
-
-				isAuthenticated = jwtUser.exp >= ts
+				isAuthenticated = jwtUser.exp >= serverNowSeconds()
 				currentSessionId.value = payload.sid ?? null
 
 				if (isAuthenticated) {
@@ -374,7 +394,7 @@ export const useAuthStore = defineStore('auth', () => {
 						// Always keep exp in sync so token renewal checks stay accurate
 						info.value.exp = jwtUser.exp
 					}
-				} else if (jwtUser.type === AUTH_TYPES.USER) {
+				} else if (jwtUser.type === AUTH_TYPES.USER && jwt !== jwtWithFailedRefresh) {
 					// JWT expired but this is a user session — attempt a cookie-based
 					// refresh before giving up. This lets users who reopen the app
 					// after the short JWT TTL seamlessly resume their session.
@@ -385,7 +405,8 @@ export const useAuthStore = defineStore('auth', () => {
 							const b64 = freshJwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
 							const p = JSON.parse(atob(b64))
 							const freshUser = new UserModel(p)
-							isAuthenticated = freshUser.exp >= ts
+							// The server just issued it, so it's valid even if our clock disagrees.
+							isAuthenticated = true
 							currentSessionId.value = p.sid ?? null
 							if (info.value === null || info.value.id !== freshUser.id) {
 								setUser(freshUser, false)
@@ -393,8 +414,18 @@ export const useAuthStore = defineStore('auth', () => {
 								info.value.exp = freshUser.exp
 							}
 						}
-					} catch {
-						// Refresh failed — stay unauthenticated
+					} catch (e) {
+						// A network error or a 5xx is recoverable: leave the token unlatched so
+						// the next navigation refreshes again instead of staying logged out.
+						const status = refreshFailureResponse(e)?.status
+						if (status !== undefined && status < 500) {
+							jwtWithFailedRefresh = jwt
+						}
+						// A kept stale JWT makes every later page load refresh again.
+						// Skip the removal if another tab stored a fresh token meanwhile.
+						if (refreshFailureResponse(e)?.status === 401 && localStorage.getItem('token') === jwt) {
+							removeToken()
+						}
 					}
 				}
 			} catch (_) {
@@ -539,8 +570,7 @@ export const useAuthStore = defineStore('auth', () => {
 			// Only logout if the JWT has actually expired and we can't refresh.
 			// If the JWT is still valid, the proactive refresh failure is harmless
 			// — the 401 interceptor will handle it when the token really expires.
-			const nowInSeconds = Date.now() / MILLISECONDS_A_SECOND
-			const isExpired = !info.value?.exp || info.value.exp < nowInSeconds
+			const isExpired = !info.value?.exp || info.value.exp < serverNowSeconds()
 			if (isExpired && (e?.cause?.request?.status || e?.cause?.response?.status)) {
 				await logout()
 			}

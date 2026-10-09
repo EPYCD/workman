@@ -156,6 +156,7 @@
 			</template>
 			<template #text>
 				<p>{{ $t('project.share.userTeam.removeText', {type: shareTypeName, sharable: sharableName}) }}</p>
+				<ProjectAccessCleanupList :intro="$t('project.share.userTeam.removeCleanupText')" />
 			</template>
 		</Modal>
 	</div>
@@ -190,6 +191,7 @@ import {success} from '@/message'
 import {useAuthStore} from '@/stores/auth'
 import {useConfigStore} from '@/stores/config'
 import User from '@/components/misc/User.vue'
+import ProjectAccessCleanupList from '@/components/sharing/ProjectAccessCleanupList.vue'
 
 // FIXME: I think this whole thing can now only manage user/team sharing for projects? Maybe remove a little generalization?
 

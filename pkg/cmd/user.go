@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"code.vikunja.io/api/pkg/db"
+	"code.vikunja.io/api/pkg/events"
 	"code.vikunja.io/api/pkg/initialize"
 	"code.vikunja.io/api/pkg/license"
 	"code.vikunja.io/api/pkg/log"
@@ -379,7 +380,7 @@ var userChangeStatusCmd = &cobra.Command{
 		initialize.FullInit()
 	},
 	Args: cobra.ExactArgs(1),
-	Run: func(_ *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, args []string) {
 		s := db.NewSession()
 		defer s.Close()
 
@@ -397,15 +398,16 @@ var userChangeStatusCmd = &cobra.Command{
 				status = user.StatusActive
 			}
 		}
-		err := user.SetUserStatus(s, u, status)
-		if err != nil {
+		if err := models.ChangeUserStatus(s, nil, u, status); err != nil {
 			_ = s.Rollback()
-			log.Fatalf("Could not enable the user")
+			log.Fatalf("Could not change the user status: %s", err)
 		}
 
 		if err := s.Commit(); err != nil {
 			log.Fatalf("Error saving everything: %s", err)
 		}
+
+		events.DispatchPending(cmd.Context(), s)
 
 		fmt.Printf("User status successfully changed, status is now \"%s\"\n", status)
 	},
@@ -419,7 +421,7 @@ var userDeleteCmd = &cobra.Command{
 	PreRun: func(_ *cobra.Command, _ []string) {
 		initialize.FullInit()
 	},
-	Run: func(_ *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, args []string) {
 		if userFlagDeleteNow && !userFlagDeleteConfirm {
 			fmt.Println("You requested to delete the user immediately. Are you sure?")
 			fmt.Println(`To confirm, please type "yes, I confirm" in all uppercase:`)
@@ -468,6 +470,8 @@ var userDeleteCmd = &cobra.Command{
 		if err := s.Commit(); err != nil {
 			log.Fatalf("Error saving everything: %s", err)
 		}
+
+		events.DispatchPending(cmd.Context(), s)
 
 		if userFlagDeleteNow {
 			fmt.Println("User deleted successfully.")
