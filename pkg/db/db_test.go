@@ -18,9 +18,11 @@ package db
 
 import (
 	"errors"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetPostgreSQLConnectionString(t *testing.T) {
@@ -39,6 +41,18 @@ func TestGetPostgreSQLConnectionString(t *testing.T) {
 	t.Run("unix socket", func(t *testing.T) {
 		connStr := getPostgreSQLConnectionString("/var/run/postgresql", "vikunja", "secret", "vikunja", "public", "disable", "", "", "")
 		assert.Equal(t, "postgres://vikunja:secret@:5432/vikunja?sslmode=disable&sslcert=&sslkey=&sslrootcert=&host=/var/run/postgresql&search_path=%22public%22", connStr)
+	})
+	t.Run("special characters in credentials", func(t *testing.T) {
+		for _, host := range []string{"db:5432", "/var/run/postgresql"} {
+			connStr := getPostgreSQLConnectionString(host, "vi:k@user", "aa@-Dx!:%40/?#+ &", "vikunja", "", "disable", "", "", "")
+			// lib/pq parses the URL with net/url, so that is what has to read it back.
+			parsed, err := url.Parse(connStr)
+			require.NoError(t, err)
+			password, _ := parsed.User.Password()
+			assert.Equal(t, "vi:k@user", parsed.User.Username())
+			assert.Equal(t, "aa@-Dx!:%40/?#+ &", password)
+			assert.Equal(t, "/vikunja", parsed.Path)
+		}
 	})
 }
 

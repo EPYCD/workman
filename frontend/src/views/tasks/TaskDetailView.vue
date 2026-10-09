@@ -700,7 +700,7 @@
 </template>
 
 <script lang="ts" setup>
-import {ref, reactive, shallowReactive, computed, watch, nextTick, onMounted} from 'vue'
+import {ref, reactive, shallowReactive, computed, watch, nextTick, onBeforeUnmount, onMounted} from 'vue'
 import {useRouter, useRoute, type RouteLocation, onBeforeRouteLeave} from 'vue-router'
 import {useI18n} from 'vue-i18n'
 import {unrefElement, useDebounceFn, useElementSize, useIntersectionObserver, useMutationObserver} from '@vueuse/core'
@@ -917,7 +917,12 @@ const bottomMarkerVisible = ref(true)
 const isScrollable = ref(false)
 
 function resolveScrollContainer() {
-	let el = taskViewContainer.value
+	// Null after unmount; deferred callers must not fall back to `document` then.
+	if (!taskViewContainer.value) {
+		return
+	}
+
+	let el: HTMLElement | null = taskViewContainer.value
 
 	while (el) {
 		const overflowY = getComputedStyle(el).overflowY
@@ -976,6 +981,7 @@ useMutationObserver(
 	debouncedMutationHandler,
 	{subtree: true, childList: true},
 )
+onBeforeUnmount(() => debouncedMutationHandler.cancel())
 
 const {height: scrollContainerHeight} = useElementSize(scrollContainer)
 watch(scrollContainerHeight, () => updateScrollable())

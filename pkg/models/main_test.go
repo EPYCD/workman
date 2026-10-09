@@ -28,7 +28,17 @@ import (
 	"code.vikunja.io/api/pkg/i18n"
 	"code.vikunja.io/api/pkg/log"
 	"code.vikunja.io/api/pkg/user"
+
+	"github.com/stretchr/testify/require"
+	"xorm.io/xorm"
 )
+
+// Upstream's helper also fills project_ancestors, which Workman does not have.
+func insertTestProject(t testing.TB, s *xorm.Session, project *Project) {
+	t.Helper()
+	_, err := s.Insert(project)
+	require.NoError(t, err)
+}
 
 func setupTime() {
 	var err error

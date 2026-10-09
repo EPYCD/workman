@@ -26,4 +26,6 @@ export interface IUser extends IAbstract {
 	deletionScheduledAt: string | Date | null
 	isAdmin?: boolean
 	botOwnerId?: number
+	// 0 = active, 2 = disabled. Only sent for bots and in the admin user list.
+	status?: number
 }

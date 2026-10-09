@@ -1,5 +1,5 @@
 {
-	"total": 1616,
+	"total": 1606,
 	"files": {
 		"src/components/home/ContentAuth.vue": 2,
 		"src/components/home/ProjectsNavigation.vue": 4,
@@ -61,7 +61,7 @@
 		"src/helpers/filters.ts": 5,
 		"src/helpers/shortcut.test.ts": 4,
 		"src/helpers/shortcut.ts": 2,
-		"src/helpers/time/formatDate.ts": 8,
+		"src/helpers/time/formatDate.ts": 6,
 		"src/helpers/time/getDateWithTime.test.ts": 2,
 		"src/helpers/time/isoToKebabDate.ts": 2,
 		"src/helpers/time/parseDateProp.ts": 4,
@@ -170,7 +170,7 @@
 		"src/views/user/Register.vue": 2,
 		"src/views/user/settings/ApiTokens.vue": 1,
 		"src/views/user/settings/Avatar.vue": 12,
-		"src/views/user/settings/BotUsers.vue": 10,
+		"src/views/user/settings/BotUsers.vue": 2,
 		"src/views/user/settings/Caldav.vue": 4,
 		"src/views/user/settings/DataExport.vue": 4,
 		"src/views/user/settings/General.vue": 18,

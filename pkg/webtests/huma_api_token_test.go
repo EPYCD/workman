@@ -65,6 +65,17 @@ func TestHumaAPIToken(t *testing.T) {
 			assert.Equal(t, int64(3), apiTokenTotalFromReadAll(t, rec.Body.Bytes()))
 			assert.NotContains(t, ids, int64(3), "token #3 (owned by user2) must be hidden")
 		})
+		t.Run("Pagination - pages are ordered by id and disjoint", func(t *testing.T) {
+			// Workman's fixtures give user1 three tokens (1, 2, 9); upstream's have six.
+			rec := humaRequest(t, e, http.MethodGet, "/api/v2/tokens?page=1&per_page=2", "", user1Token, "")
+			require.Equal(t, http.StatusOK, rec.Code, "body: %s", rec.Body.String())
+			assert.Equal(t, []int64{1, 2}, apiTokenIDsFromReadAll(t, rec.Body.Bytes()))
+			assert.Equal(t, int64(3), apiTokenTotalFromReadAll(t, rec.Body.Bytes()))
+
+			rec = humaRequest(t, e, http.MethodGet, "/api/v2/tokens?page=2&per_page=2", "", user1Token, "")
+			require.Equal(t, http.StatusOK, rec.Code, "body: %s", rec.Body.String())
+			assert.Equal(t, []int64{9}, apiTokenIDsFromReadAll(t, rec.Body.Bytes()))
+		})
 		t.Run("Isolation - user2 sees only its own token", func(t *testing.T) {
 			rec := humaRequest(t, e, http.MethodGet, "/api/v2/tokens", "", user2Token, "")
 			require.Equal(t, http.StatusOK, rec.Code, "body: %s", rec.Body.String())
@@ -87,15 +98,15 @@ func TestHumaAPIToken(t *testing.T) {
 			ids := apiTokenIDsFromReadAll(t, rec.Body.Bytes())
 			assert.Empty(t, ids, "bot 23 has no tokens; list must be empty but authorized; body: %s", rec.Body.String())
 		})
-		t.Run("owner_id - forbidden when not the bot's owner", func(t *testing.T) {
+		t.Run("owner_id - not found when not the bot's owner", func(t *testing.T) {
 			// user1 is not the owner of bot 23 (owned by user21).
 			rec := humaRequest(t, e, http.MethodGet, "/api/v2/tokens?owner_id=23", "", user1Token, "")
-			assert.Equal(t, http.StatusForbidden, rec.Code, "body: %s", rec.Body.String())
+			assert.Equal(t, http.StatusNotFound, rec.Code, "body: %s", rec.Body.String())
 		})
-		t.Run("owner_id - forbidden when the target is not a bot", func(t *testing.T) {
+		t.Run("owner_id - not found when the target is not a bot", func(t *testing.T) {
 			// user2 is a real user, not a bot owned by user1.
 			rec := humaRequest(t, e, http.MethodGet, "/api/v2/tokens?owner_id=2", "", user1Token, "")
-			assert.Equal(t, http.StatusForbidden, rec.Code, "body: %s", rec.Body.String())
+			assert.Equal(t, http.StatusNotFound, rec.Code, "body: %s", rec.Body.String())
 		})
 	})
 
@@ -126,12 +137,12 @@ func TestHumaAPIToken(t *testing.T) {
 				user1Token, "")
 			assert.Equal(t, http.StatusUnprocessableEntity, rec.Code, "body: %s", rec.Body.String())
 		})
-		t.Run("owner_id - forbidden when the target is not a caller-owned bot", func(t *testing.T) {
+		t.Run("owner_id - not found when the target is not a caller-owned bot", func(t *testing.T) {
 			// user1 cannot mint a token for user2 (not a bot they own).
 			rec := humaRequest(t, e, http.MethodPost, "/api/v2/tokens",
 				`{"title":"sneaky","owner_id":2,"permissions":{"tasks":["read_all"]},"expires_at":"2099-01-01T00:00:00Z"}`,
 				user1Token, "")
-			assert.Equal(t, http.StatusForbidden, rec.Code, "body: %s", rec.Body.String())
+			assert.Equal(t, http.StatusNotFound, rec.Code, "body: %s", rec.Body.String())
 		})
 	})
 

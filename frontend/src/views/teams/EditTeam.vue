@@ -193,6 +193,10 @@
 					{{ $t('team.edit.leave.text1') }}<br>
 					{{ $t('team.edit.leave.text2') }}
 				</p>
+				<ProjectAccessCleanupList
+					:intro="$t('team.edit.leave.cleanupText')"
+					perspective="self"
+				/>
 			</template>
 		</Modal>
 
@@ -211,6 +215,7 @@
 					{{ $t('team.edit.delete.text1') }}<br>
 					{{ $t('team.edit.delete.text2') }}
 				</p>
+				<ProjectAccessCleanupList :intro="$t('team.edit.delete.cleanupText')" />
 			</template>
 		</Modal>
 
@@ -229,6 +234,7 @@
 					{{ $t('team.edit.deleteUser.text1') }}<br>
 					{{ $t('team.edit.deleteUser.text2') }}
 				</p>
+				<ProjectAccessCleanupList :intro="$t('team.edit.deleteUser.cleanupText')" />
 			</template>
 		</Modal>
 	</div>
@@ -244,6 +250,7 @@ import FancyCheckbox from '@/components/input/FancyCheckbox.vue'
 import FormField from '@/components/input/FormField.vue'
 import Multiselect from '@/components/input/Multiselect.vue'
 import User from '@/components/misc/User.vue'
+import ProjectAccessCleanupList from '@/components/sharing/ProjectAccessCleanupList.vue'
 
 import {getDisplayName} from '@/models/user'
 import TeamService from '@/services/team'

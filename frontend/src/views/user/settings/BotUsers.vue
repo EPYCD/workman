@@ -275,8 +275,14 @@ onMounted(loadBots)
 						</tbody>
 					</table>
 				</div>
+				<p
+					v-if="bot.status !== STATUS_ACTIVE"
+					class="help"
+				>
+					{{ $t('user.settings.bots.tokensInactive') }}
+				</p>
 				<ApiTokenForm
-					v-if="showTokenForm[bot.id]"
+					v-else-if="showTokenForm[bot.id]"
 					:owner-id="bot.id"
 					@created="(token: IApiToken) => onTokenCreated(bot, token)"
 					@cancel="showTokenForm[bot.id] = false"

@@ -1,5 +1,6 @@
 import {apiV2Url, HTTPFactory} from '@/helpers/fetcher'
 import {isDesktopApp, refreshDesktopToken} from '@/helpers/desktopAuth'
+import {clearServerClock, recordServerClock, serverNowSeconds} from '@/helpers/serverClock'
 
 let savedToken: string | null = null
 
@@ -12,6 +13,7 @@ export const saveToken = (token: string, persist: boolean) => {
 	if (persist) {
 		localStorage.setItem('token', token)
 	}
+	recordServerClock(getTokenPayload(token)?.iat, persist)
 }
 
 /**
@@ -41,6 +43,11 @@ export function getTokenType(token: string | null): number | null {
 	return typeof payload?.type === 'number' ? payload.type : null
 }
 
+export function isTokenExpired(token: string | null, marginSeconds = 0): boolean {
+	const exp = getTokenPayload(token)?.exp
+	return typeof exp !== 'number' || exp <= serverNowSeconds() + marginSeconds
+}
+
 export function getTokenIdentity(token: string | null): {id: number; type: number} | null {
 	const payload = getTokenPayload(token)
 	if (typeof payload?.id !== 'number' || typeof payload.type !== 'number') {
@@ -57,6 +64,7 @@ export const removeToken = () => {
 	savedToken = null
 	localStorage.removeItem('token')
 	localStorage.removeItem('desktopOAuthRefreshToken')
+	clearServerClock()
 
 	// Bump the epoch and drop the in-flight refresh so a refresh that started
 	// before this logout can't re-persist a token after we cleared it.
@@ -69,6 +77,24 @@ export const removeToken = () => {
 // without this guard, refreshes firing close together each spend the single-use
 // cookie and all but one get a 401.
 let inFlightRefresh: Promise<void> | null = null
+
+const refreshListeners: (() => void)[] = []
+
+export function onTokenRefreshed(listener: () => void) {
+	refreshListeners.push(listener)
+	return () => {
+		const index = refreshListeners.indexOf(listener)
+		if (index !== -1) {
+			refreshListeners.splice(index, 1)
+		}
+	}
+}
+
+// The server answered the refresh with a 401: the session is gone, not merely unreachable.
+export function isRefreshRejected(e: unknown): boolean {
+	const cause = (e as {cause?: {response?: {status?: number}}} | null)?.cause
+	return cause?.response?.status === 401
+}
 
 // Incremented on every removeToken()/logout. A refresh captures the epoch when
 // it starts and only persists its result if the epoch is unchanged, so a
@@ -97,6 +123,15 @@ export async function refreshToken(persist: boolean): Promise<void> {
 			inFlightRefresh = null
 		}
 	}).catch(() => {})
+	p.then(() => {
+		for (const listener of [...refreshListeners]) {
+			try {
+				listener()
+			} catch (e) {
+				console.error('Token refresh listener failed', e)
+			}
+		}
+	}, () => {})
 	return p
 }
 
@@ -157,21 +192,7 @@ async function doRefresh(persist: boolean): Promise<void> {
 		// We hold the lock and no one else refreshed — make the API call.
 		const HTTP = HTTPFactory()
 		try {
-			let response
-			try {
-				response = await HTTP.post(apiV2Url('user/token/refresh'))
-			} catch (e) {
-				if ((e as {response?: {status?: number}})?.response?.status === 429) {
-					throw e
-				}
-				if (loggedOutSinceStart()) {
-					return
-				}
-				// Pre-v2 browsers only hold the v1-path cookie, and some deployments
-				// can't reach v2 at all; v1 re-seeds both cookies.
-				// Drop this fallback once pre-v2 clients have cycled out.
-				response = await HTTP.post('user/token/refresh')
-			}
+			const response = await HTTP.post(apiV2Url('user/token/refresh'))
 			if (loggedOutSinceStart()) {
 				return
 			}
