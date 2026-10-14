@@ -2318,6 +2318,10 @@ func (t *Task) Delete(s *xorm.Session, a web.Auth) (err error) {
 
 	doer := doerFromAuth(s, a)
 
+	if err = stopRunningTimersOnTrashedTask(s, t.ID, doer); err != nil {
+		return err
+	}
+
 	_, err = s.ID(t.ID).Cols("deleted_by_id").NoAutoTime().Update(&Task{DeletedByID: doer.ID})
 	if err != nil {
 		return err
@@ -2447,6 +2451,14 @@ func hardDeleteTask(s *xorm.Session, t *Task) (err error) {
 	}
 
 	_, err = s.Where("task_id = ?", t.ID).Delete(&TaskScope{})
+	if err != nil {
+		return
+	}
+
+	// Tracked time outlives the task
+	_, err = s.Table("time_entries").
+		Where("task_id = ?", t.ID).
+		Update(map[string]any{"task_id": 0, "project_id": t.ProjectID})
 	if err != nil {
 		return
 	}
