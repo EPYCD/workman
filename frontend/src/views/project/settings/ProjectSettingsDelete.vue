@@ -1,6 +1,6 @@
 <template>
 	<Modal
-		@close="$router.back()"
+		@close="goBack()"
 		@submit="deleteProject()"
 	>
 		<template #header>
@@ -40,11 +40,13 @@ import {success} from '@/message'
 import Loading from '@/components/misc/Loading.vue'
 import {useProjectStore} from '@/stores/projects'
 import TaskService from '@/services/task'
+import {useGoBack} from '@/composables/useGoBack'
 
 const {t} = useI18n({useScope: 'global'})
 const projectStore = useProjectStore()
 const route = useRoute()
 const router = useRouter()
+const goBack = useGoBack()
 
 const totalTasks = ref<number | null>(null)
 

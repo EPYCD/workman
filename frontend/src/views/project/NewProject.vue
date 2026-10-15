@@ -16,7 +16,7 @@
 			name="projectTitle"
 			:error="showError && project.title === '' ? $t('project.create.addTitleRequired') : null"
 			@keyup.enter="createProject()"
-			@keyup.esc="$router.back()"
+			@keyup.esc="goBack()"
 		/>
 		<FormField
 			v-if="projectStore.hasProjects"
@@ -45,10 +45,13 @@ import {useTitle} from '@/composables/useTitle'
 import {useProjectStore} from '@/stores/projects'
 import ProjectSearch from '@/components/tasks/partials/ProjectSearch.vue'
 import type {IProject} from '@/modelTypes/IProject'
+import {useGoBack} from '@/composables/useGoBack'
 
 const props = defineProps<{
 	parentProjectId?: number,
 }>()
+
+const goBack = useGoBack()
 
 const {t} = useI18n({useScope: 'global'})
 

@@ -94,7 +94,6 @@
 
 <script setup lang="ts">
 import {computed, ref, watch} from 'vue'
-import {useRouter} from 'vue-router'
 import {useI18n} from 'vue-i18n'
 import {useQuery} from '@tanstack/vue-query'
 
@@ -114,6 +113,7 @@ import {useProject} from '@/stores/projects'
 
 import {useTitle} from '@/composables/useTitle'
 import {PERMISSIONS} from '@/constants/permissions'
+import {useGoBack} from '@/composables/useGoBack'
 
 const props = defineProps<{
 	projectId: IProject['id'],
@@ -121,7 +121,7 @@ const props = defineProps<{
 
 defineOptions({name: 'ProjectSettingEdit'})
 
-const router = useRouter()
+const goBack = useGoBack()
 const projectStore = useProjectStore()
 
 const {t} = useI18n({useScope: 'global'})
@@ -179,7 +179,7 @@ async function save() {
 		project.parentProjectId = parentProject.value === null ? 0 : (parentProject.value?.id ?? project.parentProjectId)
 		await saveProject()
 		await useBaseStore().handleSetCurrentProject({project})
-		router.back()
+		goBack()
 	} finally {
 		isSaving.value = false
 	}

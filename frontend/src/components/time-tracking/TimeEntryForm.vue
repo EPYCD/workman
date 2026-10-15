@@ -158,7 +158,19 @@ const isEditing = computed(() => props.entry != null)
 const formEl = ref<HTMLFormElement | null>(null)
 const selectedProject = ref<IProject | null>(null)
 const selectedTask = ref<ITask | null>(null)
-const from = ref<Date | null>(new Date())
+const start = ref<{date: Date | null, chosen: boolean}>({
+	date: new Date(),
+	chosen: false,
+})
+const from = computed({
+	get: () => start.value.date,
+	set: date => {
+		start.value = {
+			date,
+			chosen: true,
+		}
+	},
+})
 const to = ref<Date | null>(null)
 const comment = ref('')
 const isSaving = ref(false)
@@ -233,7 +245,10 @@ function reset() {
 	selectedTask.value = null
 	selectedProject.value = null
 	comment.value = ''
-	from.value = new Date()
+	start.value = {
+		date: new Date(),
+		chosen: false,
+	}
 	to.value = null
 }
 
@@ -272,8 +287,8 @@ async function submit(includeEnd: boolean) {
 	isSaving.value = true
 	try {
 		const payload = buildPayload(includeEnd)
-		// A started timer begins now (click time), not when the form first loaded.
-		if (!includeEnd) {
+		// An untouched start would otherwise be when the form loaded, not click time.
+		if (!includeEnd && !start.value.chosen) {
 			payload.startTime = new Date()
 		}
 		await timeTrackingStore.createEntry(payload)

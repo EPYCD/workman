@@ -1,5 +1,5 @@
 import {calculateDayInterval} from '@/helpers/time/calculateDayInterval'
-import {getDateWithTime} from '@/helpers/time/getDateWithTime'
+import {getDateWithTime, getUserDefaultTimeParts} from '@/helpers/time/getDateWithTime'
 import {replaceAll} from '@/helpers/replaceAll'
 
 export interface dateParseResult {
@@ -29,6 +29,11 @@ function matchDateAtBoundary(text: string, pattern: string): RegExpExecArray | n
 		const matchEnd = result.index + result[0].length
 		const isAtStart = result.index === 0
 		const isAtEnd = matchEnd >= text.length
+
+		// A range like "31.12.2026 - 01.01.2027" describes the task, it is not a due date
+		const isRangeStart = /^[-–—] ?[0-9]+[./-][0-9]/.test(text.substring(matchEnd))
+		const isRangeEnd = /[0-9][./-][0-9]+\.? [-–—]$/.test(text.substring(0, result.index))
+		if (isRangeStart || isRangeEnd) continue
 
 		if (isAtStart || isAtEnd) return result
 
@@ -87,13 +92,13 @@ export const parseDate = (text: string, now: Date = new Date()): dateParseResult
 
 	let parsed = getDateFromWeekday(text, now)
 	if (parsed.date !== null) {
-		return addTimeToDate(text, parsed.date, parsed.foundText)
+		return addTimeToDate(text, parsed.date, parsed.foundText, true)
 	}
 
 	parsed = getDayFromText(text, now)
 	if (parsed.date !== null) {
 		const month = getMonthFromText(text, parsed.date)
-		return addTimeToDate(month.newText, month.date, parsed.foundText)
+		return addTimeToDate(month.newText, month.date, parsed.foundText, true)
 	}
 
 	parsed = getDateFromTextIn(text, now)
@@ -116,10 +121,10 @@ export const parseDate = (text: string, now: Date = new Date()): dateParseResult
 		}
 	}
 
-	return addTimeToDate(text, parsed.date, parsed.foundText)
+	return addTimeToDate(text, parsed.date, parsed.foundText, true)
 }
 
-const addTimeToDate = (text: string, date: Date, previousMatch: string | null): dateParseResult => {
+const addTimeToDate = (text: string, date: Date, previousMatch: string | null, useDefaultTime = false): dateParseResult => {
 	previousMatch = previousMatch?.trim() || ''
 	text = replaceAll(text, previousMatch, '')
 	if (previousMatch === null) {
@@ -153,6 +158,12 @@ const addTimeToDate = (text: string, date: Date, previousMatch: string | null): 
 		date.setMinutes(minutes)
 		date.setSeconds(0)
 		date.setMilliseconds(0)
+	} else if (useDefaultTime) {
+		// Only a configured default applies, otherwise the time stays as parsed
+		const defaultTime = getUserDefaultTimeParts()
+		if (defaultTime !== null) {
+			date.setHours(defaultTime.hours, defaultTime.minutes, 0, 0)
+		}
 	}
 
 	const replace = results !== null ? results[0] : previousMatch

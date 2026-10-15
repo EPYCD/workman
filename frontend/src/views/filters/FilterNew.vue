@@ -1,7 +1,7 @@
 <template>
 	<Modal
 		variant="hint-modal"
-		@close="$router.back()"
+		@close="goBack()"
 	>
 		<Card
 			class="has-no-shadow"
@@ -63,6 +63,9 @@ import FormField from '@/components/input/FormField.vue'
 import Filters from '@/components/project/partials/Filters.vue'
 
 import {useSavedFilter} from '@/services/savedFilter'
+import {useGoBack} from '@/composables/useGoBack'
+
+const goBack = useGoBack()
 
 const {
 	filter,

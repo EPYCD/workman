@@ -276,7 +276,11 @@ async function maybeDownloadCoverImage() {
 	}
 
 	const attachmentService = new AttachmentService()
-	coverImageBlobUrl.value = await attachmentService.getBlobUrl(attachment, PREVIEW_SIZE.LG)
+	try {
+		coverImageBlobUrl.value = await attachmentService.getBlobUrl(attachment, PREVIEW_SIZE.LG)
+	} catch {
+		// the cover is decorative, the card works without it
+	}
 }
 
 watch(

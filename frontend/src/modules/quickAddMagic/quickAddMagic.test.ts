@@ -43,6 +43,42 @@ describe('Parse Task Text', () => {
 		expect(result.date?.getMinutes()).toBe(30)
 	})
 
+	it.each([
+		'Epic test task 2026-10-13',
+		'Epic test task 13.10.2026',
+		'Epic test task oct 13',
+		'Epic test task friday',
+		'Epic test task 17th',
+	])('uses the configured default due time for date-only text "%s"', text => {
+		setDefaultDueTime('23:59')
+		vi.setSystemTime(new Date(2026, 7, 4, 9, 15))
+
+		const result = parseDate(text)
+
+		expect(result.date).not.toBeNull()
+		expect(result.date?.getHours()).toBe(23)
+		expect(result.date?.getMinutes()).toBe(59)
+	})
+
+	it('prefers an explicit time over the configured default due time', () => {
+		setDefaultDueTime('23:59')
+		vi.setSystemTime(new Date(2026, 7, 4, 9, 15))
+
+		const result = parseDate('Epic test task 2026-10-13 at 15:00')
+
+		expect(result.date?.getHours()).toBe(15)
+		expect(result.date?.getMinutes()).toBe(0)
+	})
+
+	it('keeps midnight for explicit dates when no default due time is configured', () => {
+		vi.setSystemTime(new Date(2026, 7, 4, 9, 15))
+
+		const result = parseDate('Epic test task 2026-10-13')
+
+		expect(result.date?.getHours()).toBe(0)
+		expect(result.date?.getMinutes()).toBe(0)
+	})
+
 	it('falls back to the existing default due time when no user value is configured', () => {
 		vi.setSystemTime(new Date(2026, 7, 4, 10, 15))
 
@@ -480,6 +516,34 @@ describe('Parse Task Text', () => {
 
 				expect(result.text).toBe('The 1.2 formula')
 				expect(result.date).toBeNull()
+			})
+		})
+		describe('Should not parse dates which are part of a date range', () => {
+			const cases = [
+				'31.12.2026 - 01.01.2027 Happy new year',
+				'Happy new year 31.12.2026 - 01.01.2027',
+				'31.12.2026 – 01.01.2027 Happy new year',
+				'12/31/2026 - 01/01/2027 Happy new year',
+				'2026-12-31 - 2027-01-01 Happy new year',
+				'31.12 - 01.01 Happy new year',
+			]
+
+			cases.forEach(c => {
+				it(`should not parse a date from '${c}'`, () => {
+					const result = parseTaskText(c)
+
+					expect(result.text).toBe(c)
+					expect(result.date).toBeNull()
+				})
+			})
+
+			it('should still parse a date after a dash which is not a range', () => {
+				const result = parseTaskText('Meeting - 31.12.2026')
+
+				expect(result.text).toBe('Meeting -')
+				expect(result.date?.getFullYear()).toBe(2026)
+				expect(result.date?.getMonth()).toBe(11)
+				expect(result.date?.getDate()).toBe(31)
 			})
 		})
 		describe('Should still parse dates at text boundaries', () => {
