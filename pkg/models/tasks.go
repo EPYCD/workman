@@ -105,7 +105,7 @@ type Task struct {
 	// An array of labels which are associated with this task. This property is read-only, you must use the separate endpoint to add labels to a task.
 	Labels []*Label `xorm:"-" json:"labels" readOnly:"true" doc:"The labels on this task. Read-only here; use the label-task endpoints to add or remove labels."`
 	// The task color in hex
-	HexColor string `xorm:"varchar(6) null" json:"hex_color" valid:"runelength(0|7)" maxLength:"7" doc:"The task color as a hex string without the leading '#'."`
+	HexColor string `xorm:"varchar(6) null" json:"hex_color" valid:"hexcolor" maxLength:"7" doc:"The task color as a hex string without the leading '#'."`
 	// Determines how far a task is left from being done
 	PercentDone float64 `xorm:"DOUBLE null" json:"percent_done" doc:"How far the task is from done, between 0 and 1."`
 
@@ -174,6 +174,8 @@ type Task struct {
 	// Positions are always saved per view. They will automatically be set if you request the tasks through a view
 	// endpoint, otherwise they will always be 0. To update them, take a look at the Task Position endpoint.
 	Position float64 `xorm:"-" json:"position" readOnly:"true" doc:"The task's position, saved per view. 0 when the task was not fetched through a view endpoint, which means not applicable rather than first in the column; use the task-position endpoint to change it."`
+
+	Positions []*TaskPosition `xorm:"-" json:"positions,omitempty" readOnly:"true" doc:"The task's stored position in each view of its project. Only present in create and duplicate responses."`
 
 	// Reactions on that task.
 	Reactions ReactionMap `xorm:"-" json:"reactions" readOnly:"true" doc:"Reactions on this task. Only present when requested via the reactions expand option."`
@@ -1615,11 +1617,12 @@ func (t *Task) updateSingleTask(s *xorm.Session, a web.Auth, fields []string) (e
 	// For whatever reason, xorm dont detect if done is updated, so we need to update this every time by hand
 	// Which is why we merge the actual task struct with the one we got from the db
 	// The user struct overrides values in the actual one.
+	// Must happen before the merge, ot is what gets saved.
+	t.HexColor = utils.NormalizeHex(t.HexColor)
+
 	if err := mergo.Merge(&ot, t, mergo.WithOverride); err != nil {
 		return err
 	}
-
-	t.HexColor = utils.NormalizeHex(t.HexColor)
 
 	//////
 	// Mergo does ignore nil values. Because of that, we need to check all parameters and set the updated to

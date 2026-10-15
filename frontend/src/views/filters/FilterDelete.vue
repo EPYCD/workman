@@ -1,6 +1,6 @@
 <template>
 	<Modal
-		@close="$router.back()"
+		@close="goBack()"
 		@submit="deleteFilter()"
 	>
 		<template #header>
@@ -16,10 +16,13 @@
 <script setup lang="ts">
 import type {IProject} from '@/modelTypes/IProject'
 import {useSavedFilter} from '@/services/savedFilter'
+import {useGoBack} from '@/composables/useGoBack'
 
 const props = defineProps<{
 	projectId: IProject['id'],
 }>()
+
+const goBack = useGoBack()
 
 const {deleteFilter} = useSavedFilter(() => props.projectId)
 </script>

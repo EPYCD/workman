@@ -11,6 +11,8 @@
 
 If a task says "add an endpoint for X" without naming a version, it means v2.
 
+Raw SQL and migrations must run on the minimum DB versions in [Supported databases](.agents/docs/databases.md). Raising a minimum means updating that doc and flagging it as breaking.
+
 ## Skills
 
 Before writing code in these areas, invoke the matching skill with the `Skill` tool. They are short checklists derived from recurring review feedback — loading them up front avoids rework.
@@ -134,3 +136,5 @@ The license system in `pkg/license/` funds Vikunja's ongoing development. Vikunj
 - Frontend services must match backend model structure exactly
 - Permissions checking is mandatory for all CRUD operations, and is enforced at the model level via `CanRead`/`CanWrite`/`CanCreate`/`CanDelete` — not in routes
 - Event listeners in `pkg/*/listeners.go` must be registered properly
+
+Raw SQL and migrations must run on the minimum DB versions in [Supported databases](.agents/docs/databases.md). Raising a minimum means updating that doc and flagging it as breaking.

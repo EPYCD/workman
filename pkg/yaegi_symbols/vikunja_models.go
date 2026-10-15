@@ -13,6 +13,7 @@ func init() {
 	Symbols["code.vikunja.io/api/pkg/models/models"] = map[string]reflect.Value{
 		// function, constant and variable definitions
 		"APITokenPrefix":                                   reflect.ValueOf(constant.MakeFromLiteral("\"tk_\"", token.STRING, 0)),
+		"AddPositionsToTasks":                              reflect.ValueOf(models.AddPositionsToTasks),
 		"BucketConfigurationModeFilter":                    reflect.ValueOf(models.BucketConfigurationModeFilter),
 		"BucketConfigurationModeManual":                    reflect.ValueOf(models.BucketConfigurationModeManual),
 		"BucketConfigurationModeNone":                      reflect.ValueOf(models.BucketConfigurationModeNone),

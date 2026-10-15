@@ -97,7 +97,7 @@
 			</XButton>
 			<XButton
 				variant="secondary"
-				@click.prevent.stop="$router.back()"
+				@click.prevent.stop="goBack()"
 			>
 				{{ $t('misc.close') }}
 			</XButton>
@@ -109,7 +109,7 @@
 <script setup lang="ts">
 import {ref, computed, shallowReactive} from 'vue'
 import {useI18n} from 'vue-i18n'
-import {useRoute, useRouter} from 'vue-router'
+import {useRoute} from 'vue-router'
 import {useDebounceFn} from '@vueuse/core'
 
 import BaseButton from '@/components/base/BaseButton.vue'
@@ -129,6 +129,7 @@ import {useTitle} from '@/composables/useTitle'
 
 import CreateEdit from '@/components/misc/CreateEdit.vue'
 import {success} from '@/message'
+import {useGoBack} from '@/composables/useGoBack'
 
 defineOptions({name: 'ProjectSettingBackground'})
 
@@ -137,7 +138,7 @@ const SEARCH_DEBOUNCE = 300
 const {t} = useI18n({useScope: 'global'})
 const baseStore = useBaseStore()
 const route = useRoute()
-const router = useRouter()
+const goBack = useGoBack()
 
 useTitle(() => t('project.background.title'))
 
@@ -234,7 +235,7 @@ async function removeBackground() {
 	await baseStore.handleSetCurrentProject({project, forceUpdate: true})
 	projectStore.setProject(project)
 	success({message: t('project.background.removeSuccess')})
-	router.back()
+	goBack()
 }
 </script>
 

@@ -1,13 +1,13 @@
 <!-- eslint-disable vue/no-v-html -->
 <template>
 	<Modal
-		@close="$router.back()"
+		@close="goBack()"
 	>
 		<Card
 			:title="project?.title"
 			class="is-justify-content-start"
 			:show-close="true"
-			@close="$router.back()"
+			@close="goBack()"
 		>
 			<div
 				v-if="htmlDescription !== ''"
@@ -30,10 +30,13 @@ import {computed} from 'vue'
 import DOMPurify from 'dompurify'
 import {useProjectStore} from '@/stores/projects'
 import {useI18n} from 'vue-i18n'
+import {useGoBack} from '@/composables/useGoBack'
 
 const props = defineProps<{
 	projectId: number
 }>()
+
+const goBack = useGoBack()
 
 const {t} = useI18n()
 
