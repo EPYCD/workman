@@ -61,23 +61,29 @@ SELECT id FROM descendant_ids`, rootsArgs...).Find(&descendantIDs)
 	slices.Sort(candidates)
 	candidates = slices.Compact(candidates)
 
-	existing, err := GetProjectsMapByIDs(s, candidates)
-	if err != nil {
+	// Unscoped: trashed projects keep their access until they are purged.
+	existing := map[int64]*Project{}
+	if err := s.Unscoped().In("id", candidates).Find(&existing); err != nil {
 		return err
 	}
 
 	deletedIDs := make([]int64, 0, len(candidates))
-	existingIDs := make([]int64, 0, len(existing))
+	liveIDs := make([]int64, 0, len(existing))
+	trashedIDs := []int64{}
 	for _, id := range candidates {
-		if _, has := existing[id]; has {
-			existingIDs = append(existingIDs, id)
-			continue
+		project, has := existing[id]
+		switch {
+		case !has:
+			deletedIDs = append(deletedIDs, id)
+		case project.DeletedAt.IsZero():
+			liveIDs = append(liveIDs, id)
+		default:
+			trashedIDs = append(trashedIDs, id)
 		}
-		deletedIDs = append(deletedIDs, id)
 	}
 
 	for _, userID := range userIDs {
-		permissions, err := checkReadPermissionsForProjects(s, &user.User{ID: userID}, existingIDs)
+		permissions, err := checkReadPermissionsForProjects(s, &user.User{ID: userID}, liveIDs)
 		if err != nil {
 			return err
 		}
@@ -85,6 +91,18 @@ SELECT id FROM descendant_ids`, rootsArgs...).Find(&descendantIDs)
 		for id, permission := range permissions {
 			if !permission.canRead {
 				lost = append(lost, id)
+			}
+		}
+
+		if len(trashedIDs) > 0 {
+			access, err := getProjectAccessIncludingTrash(s, userID)
+			if err != nil {
+				return err
+			}
+			for _, id := range trashedIDs {
+				if _, has := access.permission(id); !has {
+					lost = append(lost, id)
+				}
 			}
 		}
 
