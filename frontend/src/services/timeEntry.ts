@@ -19,6 +19,7 @@ export function parseTimeEntry(raw: Record<string, unknown>): ITimeEntry {
 		// null end_time = a running timer.
 		endTime: end ? new Date(end) : null,
 		comment: e.comment ?? '',
+		inTrash: e.inTrash ?? false,
 		created: new Date(e.created),
 		updated: new Date(e.updated),
 		maxPermission: e.maxPermission ?? null,

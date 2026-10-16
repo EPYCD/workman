@@ -60,11 +60,18 @@
 						</td>
 						<td v-if="!hideLabelColumn">
 							<RouterLink
-								v-if="row.entry.taskId > 0"
+								v-if="row.entry.taskId > 0 && !row.entry.inTrash"
 								:to="{ name: 'task.detail', params: { id: row.entry.taskId } }"
 							>
 								{{ row.taskIdentifier }}{{ row.taskTitle ? ` - ${row.taskTitle}` : '' }}
 							</RouterLink>
+							<span
+								v-else-if="row.entry.inTrash"
+								v-cy="'timeEntryInTrash'"
+								class="tag"
+							>
+								{{ $t('trash.inTrash') }}
+							</span>
 						</td>
 						<td class="nowrap">
 							<User
@@ -84,7 +91,7 @@
 							{{ row.seconds === null ? '' : formatDuration(row.seconds) }}
 						</td>
 						<td class="nowrap has-text-right">
-							<template v-if="row.entry.userId === currentUserId">
+							<template v-if="row.entry.userId === currentUserId && !row.entry.inTrash">
 								<BaseButton
 									v-tooltip="$t('menu.edit')"
 									v-cy="'editTimeEntry'"
@@ -177,8 +184,9 @@ const currentUserId = computed(() => authStore.info?.id)
 const tasks = ref<Record<number, ITask>>({})
 
 watch(() => props.entries, entries => {
-	entries.forEach(({taskId}) => {
-		if (taskId === 0) {
+	entries.forEach(({taskId, inTrash}) => {
+		// Trashed tasks can't be loaded
+		if (taskId === 0 || inTrash) {
 			return
 		}
 		fetchTaskById(taskId).then(task => {
