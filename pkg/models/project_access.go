@@ -31,9 +31,10 @@ import (
 // projectAccess is every project a user can reach, with the effective permission.
 // Absent id = no access.
 type projectAccess struct {
-	userID      int64
-	permissions map[int64]Permission
-	sortedIDs   []int64
+	userID         int64
+	includeTrashed bool
+	permissions    map[int64]Permission
+	sortedIDs      []int64
 }
 
 func (pa *projectAccess) permission(projectID int64) (Permission, bool) {
@@ -76,41 +77,69 @@ tree (id, permission) AS (
     WHERE t.permission = 2 OR own.project_id IS NULL
 )`
 
+// Trashed projects never have live descendants, so dropping trashed targets is enough.
+const liveProjectTargetJoin = `
+INNER JOIN projects target ON target.id = tree.id AND target.deleted_at IS NULL`
+
 // Inherited admin is sticky (it could unshare the parent anyway); below that the nearest
 // grant wins. tree already holds exactly those rows, so MAX picks admin when present and
 // otherwise the single nearest grant.
-const projectAccessSelect = `
-SELECT id, MAX(permission) AS permission FROM tree GROUP BY id`
+func projectAccessSelect(includeTrashed bool) string {
+	targetJoin := liveProjectTargetJoin
+	if includeTrashed {
+		targetJoin = ""
+	}
+	return `
+SELECT tree.id AS id, MAX(tree.permission) AS permission FROM tree` + targetJoin + `
+GROUP BY tree.id`
+}
 
-const projectAccessQuery = projectAccessCTE + projectAccessSelect
+func projectAccessQuery(includeTrashed bool) string {
+	return projectAccessCTE + projectAccessSelect(includeTrashed)
+}
 
 // Binds the user id three times, then the permission bounds.
-const projectAccessMinPermissionIDsQuery = projectAccessCTE + `
-SELECT id FROM (` + projectAccessSelect + `) effective
+func projectAccessMinPermissionIDsQuery(includeTrashed bool) string {
+	return projectAccessCTE + `
+SELECT id FROM (` + projectAccessSelect(includeTrashed) + `) effective
 WHERE permission BETWEEN ? AND ?`
+}
 
 type projectAccessRow struct {
 	ID         int64 `xorm:"id"`
 	Permission int64 `xorm:"permission"`
 }
 
-// Resolves the whole reachable tree in one query, memoized per session.
+// Resolves the whole reachable tree in one query, memoized per session. Trashed projects are left out.
 func getProjectAccessForUser(s *xorm.Session, userID int64) (*projectAccess, error) {
+	return getProjectAccess(s, userID, false)
+}
+
+// Only for trash operations, which act on projects nobody can otherwise reach.
+func getProjectAccessIncludingTrash(s *xorm.Session, userID int64) (*projectAccess, error) {
+	return getProjectAccess(s, userID, true)
+}
+
+func getProjectAccess(s *xorm.Session, userID int64, includeTrashed bool) (*projectAccess, error) {
 	cacheKey := "project-access-" + strconv.FormatInt(userID, 10)
+	if includeTrashed {
+		cacheKey = "project-access-with-trash-" + strconv.FormatInt(userID, 10)
+	}
 	if pa, has := db.GetCached[*projectAccess](s, cacheKey); has {
 		return pa, nil
 	}
 
 	rows := []*projectAccessRow{}
-	err := s.SQL(projectAccessQuery, userID, userID, userID).Find(&rows)
+	err := s.SQL(projectAccessQuery(includeTrashed), userID, userID, userID).Find(&rows)
 	if err != nil {
 		return nil, err
 	}
 
 	pa := &projectAccess{
-		userID:      userID,
-		permissions: make(map[int64]Permission, len(rows)),
-		sortedIDs:   make([]int64, 0, len(rows)),
+		userID:         userID,
+		includeTrashed: includeTrashed,
+		permissions:    make(map[int64]Permission, len(rows)),
+		sortedIDs:      make([]int64, 0, len(rows)),
 	}
 	for _, r := range rows {
 		permission := Permission(r.Permission)
@@ -146,7 +175,7 @@ func (pa *projectAccess) cond(column string, minPermission Permission) builder.C
 
 // The upper bound drops out-of-enum grants, like getProjectAccessForUser does.
 func (pa *projectAccess) condViaSubquery(column string, minPermission Permission) builder.Cond {
-	return builder.In(column, builder.Expr(projectAccessMinPermissionIDsQuery, pa.userID, pa.userID, pa.userID, int(minPermission), int(PermissionAdmin)))
+	return builder.In(column, builder.Expr(projectAccessMinPermissionIDsQuery(pa.includeTrashed), pa.userID, pa.userID, pa.userID, int(minPermission), int(PermissionAdmin)))
 }
 
 // Includes projects inherited through a shared parent.
