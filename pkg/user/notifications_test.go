@@ -70,7 +70,7 @@ func TestShouldNotify(t *testing.T) {
 			s := db.NewSession()
 			defer s.Close()
 
-			u, err := loadUser(s, &User{ID: tt.userID}, false)
+			u, err := getUser(s, &User{ID: tt.userID}, false)
 			require.NoError(t, err)
 
 			got, err := u.ShouldNotify(tt.notification, s)

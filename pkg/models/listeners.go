@@ -32,7 +32,6 @@ import (
 	"code.vikunja.io/api/pkg/user"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"xorm.io/builder"
 	"xorm.io/xorm"
 )
 
@@ -1546,13 +1545,20 @@ func reloadEventData(s *xorm.Session, event map[string]interface{}, projectID in
 	return event, doerID, nil
 }
 
-// Uses the closure table, not the parent walk, so a trashed tree's ancestors see project.deleted.
+// Workman has no closure table: walk parent_project_id in raw SQL, which unlike the ORM
+// doesn't skip trashed projects, so a trashed tree's ancestors still see project.deleted.
+// UNION, not UNION ALL: deduplicating ids terminates on a parent_project_id cycle.
 func webhookProjectIDs(s *xorm.Session, projectID int64) ([]int64, error) {
 	ancestorIDs := []int64{}
-	err := s.Table(&ProjectAncestor{}).
-		Where(builder.Eq{"project_id": projectID}).
-		Cols("ancestor_id").
-		Find(&ancestorIDs)
+	err := s.SQL(`
+WITH RECURSIVE ancestors (id) AS (
+    SELECT parent_project_id FROM projects
+    WHERE id = ? AND parent_project_id IS NOT NULL AND parent_project_id <> 0
+    UNION
+    SELECT p.parent_project_id FROM projects p INNER JOIN ancestors a ON p.id = a.id
+    WHERE p.parent_project_id IS NOT NULL AND p.parent_project_id <> 0
+)
+SELECT id FROM ancestors`, projectID).Find(&ancestorIDs)
 	if err != nil {
 		return nil, err
 	}

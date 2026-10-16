@@ -5,7 +5,7 @@
 	>
 		<div
 			ref="taskRoot"
-			:class="{'is-loading': taskService.loading}"
+			:class="{'is-loading': taskService.loading, 'is-readonly': readonly}"
 			class="task loader-container single-task"
 			tabindex="-1"
 			:data-is-overdue="isOverdue || undefined"
@@ -13,6 +13,7 @@
 			@keyup.enter="openTaskDetail"
 		>
 			<span
+				v-if="!readonly"
 				v-tooltip="!canMarkAsDone ? $t('task.readOnlyCheckbox') : ''"
 				class="is-inline-flex is-align-items-center"
 			>
@@ -59,7 +60,16 @@
 						class="pis-2 mie-1"
 					/>
 
-					<TaskGlanceTooltip :task="task">
+					<span
+						v-if="readonly"
+						class="task-link"
+					>
+						{{ task.title }}
+					</span>
+					<TaskGlanceTooltip
+						v-else
+						:task="task"
+					>
 						<RouterLink
 							ref="taskLinkRef"
 							:to="taskDetailRoute"
@@ -84,8 +94,15 @@
 					:inline="true"
 				/>
 
+				<time
+					v-if="readonly && +new Date(task.dueDate) > 0"
+					:datetime="formatISO(task.dueDate)"
+					class="dueDate is-italic"
+				>
+					– {{ $t('task.detail.due', {at: dueDateFormatted}) }}
+				</time>
 				<Popup
-					v-if="+new Date(task.dueDate) > 0"
+					v-else-if="+new Date(task.dueDate) > 0"
 				>
 					<template #trigger="{toggle, isOpen}">
 						<BaseButton
@@ -167,6 +184,7 @@
 			</RouterLink>
 
 			<BaseButton
+				v-if="!readonly"
 				:class="{'is-favorite': task.isFavorite}"
 				class="favorite"
 				@click.stop="toggleFavorite"
@@ -251,12 +269,15 @@ const props = withDefaults(defineProps<{
 	disabled?: boolean,
 	canMarkAsDone?: boolean,
 	allTasks?: ITask[],
+	// No links or inline edits, e.g. for trashed tasks
+	readonly?: boolean,
 }>(), {
 	isArchived: false,
 	showProject: false,
 	disabled: false,
 	canMarkAsDone: true,
 	allTasks: () => [],
+	readonly: false,
 })
 
 const emit = defineEmits<{
@@ -422,6 +443,9 @@ function hasTextSelected() {
 }
 
 function openTaskDetail(event: MouseEvent | KeyboardEvent) {
+	if (props.readonly) {
+		return
+	}
 	if (event.target instanceof HTMLElement) {
 		const isInteractiveElement = event.target.closest('a, button, label, input[type="checkbox"], .favorite, [role="button"]')
 		if (isInteractiveElement || hasTextSelected()) {
@@ -462,6 +486,10 @@ defineExpose({
 	&:has(*:focus-visible), &:focus, &:focus-within {
 		background-color: var(--wm-accent-wash);
 		border-inline-start-color: var(--wm-accent);
+	}
+
+	&.is-readonly {
+		cursor: default;
 	}
 
 	&:has(*:focus-visible), &:focus {
