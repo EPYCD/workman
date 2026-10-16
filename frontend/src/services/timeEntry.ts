@@ -25,6 +25,11 @@ export function parseTimeEntry(raw: Record<string, unknown>): ITimeEntry {
 	}
 }
 
+// Entries without task and project are only visible to their author.
+export function isPrivateEntry(entry: Pick<ITimeEntry, 'taskId' | 'projectId'>): boolean {
+	return entry.taskId === 0 && entry.projectId === 0
+}
+
 export interface TimeEntryListParams {
 	filter?: string
 	filterTimezone?: string

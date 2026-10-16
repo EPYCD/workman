@@ -38,6 +38,13 @@
 						v-cy="'timeEntry'"
 					>
 						<td v-if="!hideLabelColumn">
+							<span
+								v-if="isPrivateEntry(row.entry)"
+								v-cy="'timeEntryNoProject'"
+								class="has-text-grey is-italic"
+							>
+								{{ $t('timeTracking.noProject') }}
+							</span>
 							<template
 								v-for="(project, i) in row.projectChain"
 								:key="project.id"
@@ -132,6 +139,7 @@ import {fetchTaskById} from '@/helpers/fetchTaskById'
 import {getProjectTitle} from '@/helpers/getProjectTitle'
 import {formatTimeRange} from '@/helpers/time/formatTimeRange'
 import {useTimeFormat} from '@/composables/useTimeFormat'
+import {isPrivateEntry} from '@/services/timeEntry'
 
 import type {ITimeEntry} from '@/modelTypes/ITimeEntry'
 import type {ITask} from '@/modelTypes/ITask'

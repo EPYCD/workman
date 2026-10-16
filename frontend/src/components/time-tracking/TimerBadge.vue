@@ -10,6 +10,12 @@
 			:title="$t('timeTracking.title')"
 		>
 			{{ elapsed }}
+			<span
+				v-if="timeTrackingStore.activeTimer && isPrivateEntry(timeTrackingStore.activeTimer)"
+				class="timer-badge__label"
+			>
+				{{ $t('timeTracking.noProject') }}
+			</span>
 		</RouterLink>
 		<BaseButton
 			v-tooltip="$t('timeTracking.stop')"
@@ -31,6 +37,7 @@ import {useTimeTrackingStore} from '@/stores/timeTracking'
 import {useConfigStore} from '@/stores/config'
 import {PRO_FEATURE} from '@/constants/proFeatures'
 import {useElapsed} from '@/composables/useElapsed'
+import {isPrivateEntry} from '@/services/timeEntry'
 
 const timeTrackingStore = useTimeTrackingStore()
 const configStore = useConfigStore()
@@ -80,6 +87,12 @@ onUnmounted(() => {
 	font-size: var(--wm-text-xs);
 	font-variant-numeric: tabular-nums;
 	font-weight: 500;
+}
+
+.timer-badge__label {
+	margin-inline-start: .25rem;
+	color: var(--grey-600);
+	font-weight: normal;
 }
 
 .timer-badge__stop {

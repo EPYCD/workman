@@ -30,6 +30,13 @@
 				</Multiselect>
 			</div>
 		</div>
+		<p
+			v-if="showPrivateHint"
+			v-cy="'timeEntryPrivateHint'"
+			class="help mbe-3"
+		>
+			{{ $t('timeTracking.form.privateHint') }}
+		</p>
 
 		<div class="field">
 			<label class="label">{{ $t('timeTracking.commentLabel') }}</label>
@@ -75,7 +82,6 @@
 			<template v-if="isEditing">
 				<XButton
 					v-cy="'updateTimeEntry'"
-					:disabled="!canSubmit"
 					:loading="isSaving"
 					@click="saveEntry"
 				>
@@ -92,7 +98,6 @@
 			<template v-else>
 				<XButton
 					v-cy="'saveTimeEntry'"
-					:disabled="!canSubmit"
 					:loading="isSaving"
 					@click="saveEntry"
 				>
@@ -101,7 +106,6 @@
 				<XButton
 					v-cy="'startTimer'"
 					variant="secondary"
-					:disabled="!canSubmit"
 					:loading="isSaving"
 					@click="startTimer"
 				>
@@ -194,8 +198,7 @@ const backdatedStopAt = computed(() => {
 const comment = ref('')
 const isSaving = ref(false)
 
-// Task and project are mutually exclusive (XOR) — selecting one clears the other,
-// so applyTarget never picks a stale target the user has since changed.
+// Mutually exclusive so applyTarget never picks a stale target.
 watch(selectedTask, task => {
 	if (task !== null) {
 		selectedProject.value = null
@@ -220,11 +223,12 @@ async function findTasks(query: string) {
 		: result.filter(task => task.projectId === selectedProject.value?.id)
 }
 
-const canSubmit = computed(() =>
-	// In edit mode the entry already has a valid container; an update that sends
-	// neither keeps it, so don't block submit if the prefill lookup failed.
-	isEditing.value || props.taskId !== undefined || selectedTask.value !== null || selectedProject.value !== null,
-)
+// False until the edited entry's container is in the pickers; a failed lookup must not read as "detach".
+const containerLoaded = ref(false)
+const showPrivateHint = computed(() => props.taskId === undefined
+	&& selectedTask.value === null
+	&& selectedProject.value === null
+	&& (!isEditing.value || containerLoaded.value))
 
 function smartFill() {
 	from.value = smartFillStart(
@@ -235,7 +239,6 @@ function smartFill() {
 	to.value = new Date()
 }
 
-// Whichever of task / project is set lands on the payload (XOR — enforced by canSubmit).
 function applyTarget(payload: Partial<ITimeEntry>) {
 	if (props.taskId !== undefined) {
 		payload.taskId = props.taskId
@@ -273,6 +276,7 @@ function reset() {
 
 // Prefill from the entry being edited; a null entry returns the form to create mode.
 watch(() => props.entry, async entry => {
+	containerLoaded.value = false
 	if (entry == null) {
 		reset()
 		return
@@ -290,17 +294,38 @@ watch(() => props.entry, async entry => {
 		selectedProject.value = null
 		try {
 			selectedTask.value = await taskService.get(new TaskModel({id: entry.taskId})) as ITask
+			containerLoaded.value = true
 		} catch {
 			selectedTask.value = null
 		}
 	} else if (entry.projectId > 0) {
 		selectedTask.value = null
 		selectedProject.value = (projectStore.projects[entry.projectId] as IProject) ?? null
+		containerLoaded.value = selectedProject.value !== null
+	} else {
+		selectedTask.value = null
+		selectedProject.value = null
+		containerLoaded.value = true
 	}
 }, {immediate: true})
 
+// Omitting both keys keeps the server-side container; sending 0 for both detaches it.
+function applyContainerChange(payload: Partial<ITimeEntry>, entry: ITimeEntry) {
+	if (props.taskId !== undefined) {
+		return
+	}
+	const taskId = selectedTask.value?.id ?? 0
+	const projectId = selectedProject.value?.id ?? 0
+	const unchanged = taskId === entry.taskId && projectId === entry.projectId
+	if (unchanged || (!containerLoaded.value && taskId === 0 && projectId === 0)) {
+		return
+	}
+	payload.taskId = taskId
+	payload.projectId = projectId
+}
+
 async function submit(includeEnd: boolean) {
-	if (!canSubmit.value) {
+	if (isSaving.value) {
 		return
 	}
 	isSaving.value = true
@@ -320,7 +345,7 @@ async function submit(includeEnd: boolean) {
 
 async function submitUpdate() {
 	const entry = props.entry
-	if (!canSubmit.value || entry == null) {
+	if (isSaving.value || entry == null) {
 		return
 	}
 	isSaving.value = true
@@ -332,10 +357,8 @@ async function submitUpdate() {
 			// A running entry stays running (null); a completed one can't be reopened,
 			// so keep its end if "To" was cleared (the API rejects clearing it).
 			endTime: entry.endTime === null ? to.value : (to.value ?? entry.endTime),
-			taskId: 0,
-			projectId: 0,
 		}
-		applyTarget(payload)
+		applyContainerChange(payload, entry)
 		await timeTrackingStore.updateEntry(payload)
 		emit('saved')
 	} finally {
