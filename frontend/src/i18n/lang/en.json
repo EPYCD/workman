@@ -1859,5 +1859,10 @@
       "reassignedSuccess": "Project owner reassigned.",
       "newOwnerLabel": "New owner"
     }
+  },
+  "trash": {
+    "restoreSuccess": "The task has been restored.",
+    "deleteForeverSuccess": "The task has been deleted permanently.",
+    "emptySuccess": "The trash has been emptied."
   }
 }
