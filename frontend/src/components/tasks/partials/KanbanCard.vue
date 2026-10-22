@@ -1,5 +1,6 @@
 <template>
 	<div
+		ref="card"
 		class="task loader-container draggable"
 		:class="{
 			'is-loading': loadingInternal || loading,
@@ -147,7 +148,7 @@
 </template>
 
 <script lang="ts" setup>
-import {computed, ref, watch} from 'vue'
+import {computed, onBeforeUnmount, onMounted, ref, useTemplateRef, watch} from 'vue'
 import {useRouter} from 'vue-router'
 
 import {useGlobalNow} from '@/composables/useGlobalNow'
@@ -163,7 +164,7 @@ import {getHexColor, getTaskIdentifier} from '@/models/task'
 import type {ITask} from '@/modelTypes/ITask'
 import {READINESS_REASON, type TaskReadinessWithRank} from '@/client/queries/taskScope'
 import type {IProject} from '@/modelTypes/IProject'
-import {SUPPORTED_IMAGE_SUFFIX} from '@/models/attachment'
+import {canPreviewImage} from '@/models/attachment'
 import AttachmentService, {PREVIEW_SIZE} from '@/services/attachment'
 
 import {formatDateLong, formatDisplayDate, formatISO} from '@/helpers/time/formatDate'
@@ -264,30 +265,89 @@ function openTaskDetail() {
 
 const coverImageBlobUrl = ref<string | null>(null)
 
-async function maybeDownloadCoverImage() {
+function showCoverImage(url: string | null) {
+	if (coverImageBlobUrl.value?.startsWith('blob:')) {
+		URL.revokeObjectURL(coverImageBlobUrl.value)
+	}
+	coverImageBlobUrl.value = url
+}
+
+let coverRequest = 0
+let coverRetry: ReturnType<typeof setTimeout> | undefined
+// the server answers 503 while its preview queue is full
+const COVER_RETRY_DELAY = 5000
+
+async function maybeDownloadCoverImage(retryWhenBusy = true) {
+	clearTimeout(coverRetry)
+	const request = ++coverRequest
 	if (!props.task.coverImageAttachmentId) {
-		coverImageBlobUrl.value = null
+		showCoverImage(null)
 		return
 	}
 
 	const attachment = props.task.attachments.find(a => a.id === props.task.coverImageAttachmentId)
-	if (!attachment || !SUPPORTED_IMAGE_SUFFIX.some((suffix) => attachment.file.name.toLowerCase().endsWith(suffix))) {
+	if (!attachment || !canPreviewImage(attachment)) {
 		return
 	}
 
 	const attachmentService = new AttachmentService()
 	try {
-		coverImageBlobUrl.value = await attachmentService.getBlobUrl(attachment, PREVIEW_SIZE.LG)
-	} catch {
+		const url = await attachmentService.getBlobUrl(attachment, PREVIEW_SIZE.LG)
+		if (request !== coverRequest) {
+			if (url.startsWith('blob:')) {
+				URL.revokeObjectURL(url)
+			}
+			return
+		}
+		showCoverImage(url)
+	} catch (error) {
 		// the cover is decorative, the card works without it
+		const status = (error as {response?: {status?: number}})?.response?.status
+		if (retryWhenBusy && request === coverRequest && status === 503) {
+			coverRetry = setTimeout(() => maybeDownloadCoverImage(false), COVER_RETRY_DELAY)
+		}
 	}
 }
 
+const card = useTemplateRef<HTMLElement>('card')
+const hasBeenVisible = ref(false)
+let visibilityObserver: IntersectionObserver | undefined
+
+// rootMargin only grows the viewport; buckets scroll on their own and need scrollMargin
+const COVER_PRELOAD_MARGIN = '200px'
+
+onMounted(() => {
+	visibilityObserver = new IntersectionObserver(
+		entries => {
+			if (!entries.some(entry => entry.isIntersecting)) {
+				return
+			}
+			hasBeenVisible.value = true
+			visibilityObserver?.disconnect()
+		},
+		{
+			rootMargin: COVER_PRELOAD_MARGIN,
+			scrollMargin: COVER_PRELOAD_MARGIN,
+		} as IntersectionObserverInit,
+	)
+	visibilityObserver.observe(card.value!)
+})
+
 watch(
-	() => props.task.coverImageAttachmentId,
-	maybeDownloadCoverImage,
-	{immediate: true},
+	[hasBeenVisible, () => props.task.coverImageAttachmentId],
+	([visible]) => {
+		if (visible) {
+			maybeDownloadCoverImage()
+		}
+	},
 )
+
+onBeforeUnmount(() => {
+	visibilityObserver?.disconnect()
+	clearTimeout(coverRetry)
+	coverRequest++
+	showCoverImage(null)
+})
 </script>
 
 <style lang="scss" scoped>

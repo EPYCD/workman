@@ -137,7 +137,7 @@ func exchangeAuthorizationCode(ctx context.Context, req *TokenRequest, deviceInf
 		return nil, err
 	}
 
-	u, err := user.GetUserByID(s, oauthCode.UserID)
+	u, err := user.GetUserByIDForAuth(s, oauthCode.UserID)
 	if err != nil {
 		_ = s.Rollback()
 		return nil, err

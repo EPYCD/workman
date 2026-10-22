@@ -1332,11 +1332,6 @@ func (t *Task) updateSingleTask(s *xorm.Session, a web.Auth, fields []string) (e
 	// Old task has the stored reminders
 	ot.Reminders = reminders
 
-	// Update the assignees
-	if err := ot.updateTaskAssignees(s, t.Assignees, a); err != nil {
-		return err
-	}
-
 	// All columns to update in a separate variable to be able to add to them
 	colsToUpdate := []string{
 		"title",
@@ -1362,12 +1357,20 @@ func (t *Task) updateSingleTask(s *xorm.Session, a web.Auth, fields []string) (e
 		for _, c := range colsToUpdate {
 			allowed[c] = true
 		}
+		// Not task columns; written separately below.
+		relationFields := map[string]bool{
+			"assignees":   true,
+			"reminders":   true,
+			"is_favorite": true,
+		}
 		cols := []string{}
 		for _, f := range fields {
-			if !allowed[f] {
+			if !allowed[f] && !relationFields[f] {
 				return ErrInvalidTaskColumn{Column: f}
 			}
-			cols = append(cols, f)
+			if !relationFields[f] {
+				cols = append(cols, f)
+			}
 			fieldSet[f] = true
 		}
 		colsToUpdate = cols
@@ -1415,10 +1418,19 @@ func (t *Task) updateSingleTask(s *xorm.Session, a web.Auth, fields []string) (e
 		if !fieldSet["cover_image_attachment_id"] {
 			t.CoverImageAttachmentID = ot.CoverImageAttachmentID
 		}
+		if !fieldSet["reminders"] {
+			t.Reminders = ot.Reminders
+		}
 	}
 
 	if t.Done && !ot.Done {
 		if err := checkDoneAllowed(s, a, &ot, nil); err != nil {
+			return err
+		}
+	}
+
+	if len(fields) == 0 || fieldSet["assignees"] {
+		if err := ot.updateTaskAssignees(s, t.Assignees, a); err != nil {
 			return err
 		}
 	}
@@ -1585,6 +1597,9 @@ func (t *Task) updateSingleTask(s *xorm.Session, a web.Auth, fields []string) (e
 	if err != nil {
 		return
 	}
+	if len(fields) > 0 && !fieldSet["is_favorite"] {
+		t.IsFavorite = wasFavorite
+	}
 	if t.IsFavorite && !wasFavorite {
 		if err := addToFavorites(s, t.ID, a, FavoriteKindTask); err != nil {
 			return err
@@ -1705,6 +1720,17 @@ func (t *Task) updateSingleTask(s *xorm.Session, a web.Auth, fields []string) (e
 // updateTasks updates multiple tasks with the same payload.
 // If fields is nil, it updates the default set of columns.
 func updateTasks(s *xorm.Session, a web.Auth, t *Task, ids []int64, fields []string) (tasks []*Task, err error) {
+	seen := make(map[int64]struct{}, len(ids))
+	uniqueIDs := make([]int64, 0, len(ids))
+	for _, id := range ids {
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		uniqueIDs = append(uniqueIDs, id)
+	}
+	ids = uniqueIDs
+
 	// Ids may span projects; per-task locking would follow caller order, not view order.
 	existing := []*Task{}
 	err = s.Table(&Task{}).Where(builder.In("id", ids)).Distinct("project_id").Find(&existing)
@@ -1897,7 +1923,12 @@ func (t *Task) moveTaskToDefaultBuckets(s *xorm.Session, a web.Auth, views []*Pr
 }
 
 func addOneMonthToDate(d time.Time) time.Time {
-	return time.Date(d.Year(), d.Month()+1, d.Day(), d.Hour(), d.Minute(), d.Second(), d.Nanosecond(), config.GetTimeZone())
+	// Clamp, otherwise time.Date rolls Feb 31 into March.
+	day := d.Day()
+	if lastDay := time.Date(d.Year(), d.Month()+2, 0, 0, 0, 0, 0, time.UTC).Day(); day > lastDay {
+		day = lastDay
+	}
+	return time.Date(d.Year(), d.Month()+1, day, d.Hour(), d.Minute(), d.Second(), d.Nanosecond(), config.GetTimeZone())
 }
 
 // addRepeatIntervalToTime advances t by whole multiples of duration until

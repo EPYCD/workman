@@ -3,13 +3,23 @@
 		v-if="totpEnabled && isLocalUser"
 		:title="$t('user.settings.totp.title')"
 	>
-		<XButton
-			v-if="!totp.enabled && totp.secret === ''"
-			:loading="totpService.loading"
-			@click="totpEnroll()"
-		>
-			{{ $t('user.settings.totp.enroll') }}
-		</XButton>
+		<template v-if="!totp.enabled && totp.secret === ''">
+			<FormField
+				id="totpEnrollPassword"
+				v-model="totpPassword"
+				:label="$t('user.settings.totp.enterPassword')"
+				:placeholder="$t('user.settings.currentPasswordPlaceholder')"
+				autocomplete="current-password"
+				type="password"
+				@keyup.enter="totpEnroll"
+			/>
+			<XButton
+				:loading="totpService.loading"
+				@click="totpEnroll"
+			>
+				{{ $t('user.settings.totp.enroll') }}
+			</XButton>
+		</template>
 		<template v-else-if="totp.secret !== '' && !totp.enabled">
 			<p>
 				{{ $t('user.settings.totp.finishSetupPart1') }}
@@ -26,6 +36,15 @@
 			<p>
 				{{ $t('user.settings.totp.confirmNotice') }}
 			</p>
+			<FormField
+				id="totpConfirmPassword"
+				v-model="totpPassword"
+				:label="$t('user.settings.totp.enterPassword')"
+				:placeholder="$t('user.settings.currentPasswordPlaceholder')"
+				autocomplete="current-password"
+				type="password"
+				@keyup.enter="totpConfirm"
+			/>
 			<FormField
 				id="totpConfirmPasscode"
 				v-model="totpConfirmPasscode"
@@ -60,6 +79,16 @@
 					:label="$t('user.settings.totp.enterPassword')"
 					:placeholder="$t('user.settings.currentPasswordPlaceholder')"
 					type="password"
+					@keyup.enter="totpDisable"
+				/>
+				<FormField
+					id="totpDisablePasscode"
+					v-model="totpDisablePasscode"
+					:label="$t('user.settings.totp.passcode')"
+					autocomplete="one-time-code"
+					:placeholder="$t('user.settings.totp.passcodePlaceholder')"
+					type="text"
+					inputmode="numeric"
 					@keyup.enter="totpDisable"
 				/>
 				<XButton
@@ -105,8 +134,10 @@ const totpService = shallowReactive(new TotpService())
 const totp = ref<ITotp>(new TotpModel())
 const totpQR = ref('')
 const totpConfirmPasscode = ref('')
+const totpPassword = ref('')
 const totpDisableForm = ref(false)
 const totpDisablePassword = ref('')
+const totpDisablePasscode = ref('')
 
 const configStore = useConfigStore()
 const authStore = useAuthStore()
@@ -143,18 +174,28 @@ async function totpSetQrCode() {
 }
 
 async function totpEnroll() {
-	totp.value = await totpService.enroll()
+	totp.value = await totpService.enroll(totpPassword.value)
 	totpSetQrCode()
 }
 
 async function totpConfirm() {
-	await totpService.enable({passcode: totpConfirmPasscode.value})
+	await totpService.enable({
+		passcode: totpConfirmPasscode.value,
+		password: totpPassword.value,
+	})
+	totpPassword.value = ''
 	success({message: t('user.settings.totp.confirmSuccess')})
 	await authStore.logout()
 }
 
 async function totpDisable() {
-	await totpService.disable({password: totpDisablePassword.value})
+	await totpService.disable({
+		password: totpDisablePassword.value,
+		totp_passcode: totpDisablePasscode.value,
+	})
+	totpDisableForm.value = false
+	totpDisablePassword.value = ''
+	totpDisablePasscode.value = ''
 	totp.value = new TotpModel()
 	success({message: t('user.settings.totp.disableSuccess')})
 }

@@ -7,6 +7,7 @@ function entry(startTime: Date, endTime: Date | null): ITimeEntry {
 	return {
 		id: 1,
 		userId: 1,
+		user: null,
 		taskId: 0,
 		projectId: 0,
 		startTime,

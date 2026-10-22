@@ -31,6 +31,7 @@ function entry(id: number, endTime: Date | null): ITimeEntry {
 	return {
 		id,
 		userId: 1,
+		user: null,
 		taskId: 1,
 		projectId: 0,
 		startTime: new Date(),

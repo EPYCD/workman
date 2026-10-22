@@ -42,7 +42,7 @@
 
 <script lang="ts" setup>
 import {computed, watch} from 'vue'
-import {useRoute} from 'vue-router'
+import {useRoute, useRouter} from 'vue-router'
 import {useI18n} from 'vue-i18n'
 import isTouchDevice from 'is-touch-device'
 
@@ -72,6 +72,7 @@ import {useQuickAddMode} from '@/composables/useQuickAddMode'
 
 const importAccountDeleteService = () => import('@/services/accountDelete')
 import {success} from '@/message'
+import {getSensitiveParam} from '@/helpers/sensitiveQueryParams'
 
 const authStore = useAuthStore()
 const baseStore = useBaseStore()
@@ -91,6 +92,7 @@ if (isQuickAddMode) {
 }
 
 const route = useRoute()
+const router = useRouter()
 
 const showAuthLayout = computed(() => authStore.authUser && typeof route.name === 'string' && !AUTH_ROUTE_NAMES.has(route.name))
 
@@ -105,19 +107,27 @@ const keyboardShortcutsActive = computed(() => baseStore.keyboardShortcutsActive
 
 const {t} = useI18n({useScope: 'global'})
 
-// setup account deletion verification
-const accountDeletionConfirm = computed(() => route.query?.accountDeletionConfirm as (string | undefined))
-watch(accountDeletionConfirm, async (accountDeletionConfirm) => {
-	if (accountDeletionConfirm === undefined) {
-		return
-	}
+// Without a session the token would burn on an unauthenticated request, so keep it in the URL until login lands.
+const accountDeletionToken = computed(() => {
+	const token = getSensitiveParam(route, 'accountDeletionConfirm')
+	return authStore.authUser && token ? token : ''
+})
+
+watch(accountDeletionToken, async token => {
+	if (!token) return
+	// The URL reaches lastVisited, so drop the single-use token before spending it.
+	const query = {...route.query}
+	delete query.accountDeletionConfirm
+	const hash = new URLSearchParams(route.hash.slice(1)).has('accountDeletionConfirm') ? '' : route.hash
+	// A failed strip must not skip spending the token.
+	await router.replace({path: route.path, query, hash}).catch(() => {})
 
 	const AccountDeleteService = (await importAccountDeleteService()).default
 	const accountDeletionService = new AccountDeleteService()
-	await accountDeletionService.confirm(accountDeletionConfirm)
+	await accountDeletionService.confirm(token)
 	success({message: t('user.deletion.confirmSuccess')})
 	authStore.refreshUserInfo()
-}, { immediate: true })
+}, {immediate: true})
 
 setLanguage(authStore.settings.language ?? DEFAULT_LANGUAGE)
 useColorScheme()

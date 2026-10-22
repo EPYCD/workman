@@ -69,7 +69,12 @@ const isVideo = computed(() => props.modelValue && canPreviewVideo(props.modelVa
 
 watchEffect(async () => {
 	if (props.modelValue && canPreviewImage(props.modelValue)) {
-		blobUrl.value = await attachmentService.getBlobUrl(props.modelValue, PREVIEW_SIZE.MD)
+		try {
+			blobUrl.value = await attachmentService.getBlobUrl(props.modelValue, PREVIEW_SIZE.MD)
+		} catch {
+			// no preview (too large, undecodable, server busy): show the file icon
+			blobUrl.value = undefined
+		}
 	}
 })
 </script>

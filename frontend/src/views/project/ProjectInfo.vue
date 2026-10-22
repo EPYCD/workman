@@ -27,10 +27,10 @@
 
 <script lang="ts" setup>
 import {computed} from 'vue'
-import DOMPurify from 'dompurify'
 import {useProjectStore} from '@/stores/projects'
 import {useI18n} from 'vue-i18n'
 import {useGoBack} from '@/composables/useGoBack'
+import {sanitizeProjectDescription} from '@/helpers/sanitizeProjectDescription'
 
 const props = defineProps<{
 	projectId: number
@@ -39,15 +39,6 @@ const props = defineProps<{
 const goBack = useGoBack()
 
 const {t} = useI18n()
-
-// ADD_ATTR re-permits target, which lets a link hand the opened page a live
-// window.opener back to this tab. rel must be forced here rather than allowed,
-// so a description carrying its own rel can't drop noopener.
-DOMPurify.addHook('afterSanitizeAttributes', node => {
-	if (node.hasAttribute('target')) {
-		node.setAttribute('rel', 'noopener noreferrer')
-	}
-})
 
 const projectStore = useProjectStore()
 const project = computed(() => projectStore.projects[props.projectId])
@@ -61,6 +52,6 @@ const htmlDescription = computed(() => {
 		return t('project.favoriteDescription')
 	}
 
-	return DOMPurify.sanitize(description, {ADD_ATTR: ['target']})
+	return sanitizeProjectDescription(description)
 })
 </script>

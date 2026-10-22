@@ -153,6 +153,7 @@ import {getErrorText} from '@/message'
 const props = defineProps<{
 	service: string,
 	code?: string,
+	state?: string,
 }>()
 
 const PROGRESS_DOTS_COUNT = 8
@@ -232,7 +233,7 @@ initMigration()
 const uploadInput = ref<HTMLInputElement | null>(null)
 
 async function migrate(credentialsConfig?: MigrationConfig) {
-	let migrationConfig: MigrationConfig | File = credentialsConfig ?? {code: migratorAuthCode.value}
+	let migrationConfig: MigrationConfig | File = credentialsConfig ?? {code: migratorAuthCode.value, state: props.state}
 
 	isMigrating.value = true
 	lastMigrationFinishedAt.value = null

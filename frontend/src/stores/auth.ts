@@ -21,7 +21,7 @@ import {
 import {AUTH_TYPES, type IUser} from '@/modelTypes/IUser'
 import type {IUserSettings} from '@/modelTypes/IUserSettings'
 import router from '@/router'
-import {useConfigStore} from '@/stores/config'
+import {navigableUrl, useConfigStore} from '@/stores/config'
 import UserSettingsModel from '@/models/userSettings'
 import {PrefixMode} from '@/modules/quickAddMagic'
 import {DATE_DISPLAY} from '@/constants/dateDisplay'
@@ -587,7 +587,7 @@ export const useAuthStore = defineStore('auth', () => {
 		try {
 			const HTTP = AuthenticatedHTTPFactory()
 			const {data} = await HTTP.post('user/logout')
-			oidcLogoutUrl = data?.oidc_logout_url ?? ''
+			oidcLogoutUrl = navigableUrl(data?.oidc_logout_url)
 		} catch (_e) {
 			// Ignore — session will expire naturally
 		}

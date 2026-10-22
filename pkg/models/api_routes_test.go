@@ -27,9 +27,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCanDoAPIRoute_BulkLabelTask(t *testing.T) {
-	// Reset apiTokenRoutes to isolate this test
+func resetAPITokenRoutes(t *testing.T) {
+	t.Helper()
+	previous, previousV2, previousNonCRUD := apiTokenRoutes, apiTokenRoutesV2, nonCRUDRoutes
+	t.Cleanup(func() { apiTokenRoutes, apiTokenRoutesV2, nonCRUDRoutes = previous, previousV2, previousNonCRUD })
 	apiTokenRoutes = make(map[string]APITokenRoute)
+	apiTokenRoutesV2 = make(map[string]APITokenRoute)
+	nonCRUDRoutes = make(map[string]map[string][]*RouteDetail)
+}
+
+func TestCanDoAPIRoute_BulkLabelTask(t *testing.T) {
+	resetAPITokenRoutes(t)
 
 	// Register the standard CRUD routes for tasks_labels first
 	CollectRoutesForAPITokenUsage(echo.RouteInfo{
@@ -98,8 +106,7 @@ func TestStripAPIVersion(t *testing.T) {
 // would use. This is what lets a token scoped on `labels.read_one` authorise
 // both /api/v1/labels/{id} and /api/v2/labels/{id}.
 func TestCollectRoutesV2(t *testing.T) {
-	apiTokenRoutes = make(map[string]APITokenRoute)
-	apiTokenRoutesV2 = make(map[string]APITokenRoute)
+	resetAPITokenRoutes(t)
 
 	CollectRoutesForAPITokenUsage(echo.RouteInfo{Method: "GET", Path: "/api/v2/labels"}, true)
 	CollectRoutesForAPITokenUsage(echo.RouteInfo{Method: "GET", Path: "/api/v2/labels/:id"}, true)
@@ -127,8 +134,7 @@ func TestCollectRoutesV2(t *testing.T) {
 // snake_case "time_entries" group (not the "other" catch-all, not a hyphenated
 // key the frontend's snake_case transform would mangle on save).
 func TestCollectRoutes_TimeEntriesV2(t *testing.T) {
-	apiTokenRoutes = make(map[string]APITokenRoute)
-	apiTokenRoutesV2 = make(map[string]APITokenRoute)
+	resetAPITokenRoutes(t)
 
 	CollectRoutesForAPITokenUsage(echo.RouteInfo{Method: "GET", Path: "/api/v2/time-entries"}, true)
 	CollectRoutesForAPITokenUsage(echo.RouteInfo{Method: "GET", Path: "/api/v2/time-entries/:id"}, true)
@@ -156,8 +162,7 @@ func TestCollectRoutes_TimeEntriesV2(t *testing.T) {
 // v2-only groups (time_entries has no v1 counterpart) so token clients can
 // discover and grant them, without mutating the v1 table itself.
 func TestGetAPITokenRoutes_ExposesV2Only(t *testing.T) {
-	apiTokenRoutes = make(map[string]APITokenRoute)
-	apiTokenRoutesV2 = make(map[string]APITokenRoute)
+	resetAPITokenRoutes(t)
 	license.SetForTests([]license.Feature{license.FeatureTimeTracking})
 	defer license.ResetForTests()
 
@@ -182,8 +187,7 @@ func TestGetAPITokenRoutes_ExposesV2Only(t *testing.T) {
 // inside always-available groups (tasks.time_entries) — while validation and
 // authorisation of existing tokens stay unfiltered.
 func TestGetAPITokenRoutes_LicenseFilter(t *testing.T) {
-	apiTokenRoutes = make(map[string]APITokenRoute)
-	apiTokenRoutesV2 = make(map[string]APITokenRoute)
+	resetAPITokenRoutes(t)
 
 	CollectRoutesForAPITokenUsage(echo.RouteInfo{Method: "GET", Path: "/api/v1/labels"}, true)
 	CollectRoutesForAPITokenUsage(echo.RouteInfo{Method: "GET", Path: "/api/v1/admin/users"}, true)
@@ -224,8 +228,7 @@ func TestGetAPITokenRoutes_LicenseFilter(t *testing.T) {
 // TestCanDoAPIRoute_TimeEntriesHyphenLegacy proves a token stored under the old
 // hyphenated "time-entries" key still validates and authorises — no migration.
 func TestCanDoAPIRoute_TimeEntriesHyphenLegacy(t *testing.T) {
-	apiTokenRoutes = make(map[string]APITokenRoute)
-	apiTokenRoutesV2 = make(map[string]APITokenRoute)
+	resetAPITokenRoutes(t)
 
 	CollectRoutesForAPITokenUsage(echo.RouteInfo{Method: "GET", Path: "/api/v2/time-entries"}, true)
 
@@ -270,8 +273,7 @@ func TestGetRouteDetail_V2Verbs(t *testing.T) {
 // PATCH for every PUT — the matcher accepts it as an alias so token
 // holders aren't forced to use PUT exclusively.
 func TestCanDoAPIRoute_V2PatchAliasesPut(t *testing.T) {
-	apiTokenRoutes = make(map[string]APITokenRoute)
-	apiTokenRoutesV2 = make(map[string]APITokenRoute)
+	resetAPITokenRoutes(t)
 	apiTokenRoutes["caldav"] = APITokenRoute{
 		"access": &RouteDetail{Path: "/dav/*", Method: "ANY"},
 	}
@@ -324,8 +326,7 @@ func TestCanDoAPIRoute_V2PatchAliasesPut(t *testing.T) {
 // one RouteDetail survives in the map — the special case in CanDoAPIRoute must
 // accept either path.
 func TestCanDoAPIRoute_V2TasksReadAll(t *testing.T) {
-	apiTokenRoutes = make(map[string]APITokenRoute)
-	apiTokenRoutesV2 = make(map[string]APITokenRoute)
+	resetAPITokenRoutes(t)
 	apiTokenRoutes["caldav"] = APITokenRoute{
 		"access": &RouteDetail{Path: "/dav/*", Method: "ANY"},
 	}
@@ -354,8 +355,7 @@ func TestCanDoAPIRoute_V2TasksReadAll(t *testing.T) {
 
 // TestCollectRoutes_V2TasksBulkCreate pins the bulk create route to tasks.create_bulk instead of projects.tasks_bulk.
 func TestCollectRoutes_V2TasksBulkCreate(t *testing.T) {
-	apiTokenRoutes = make(map[string]APITokenRoute)
-	apiTokenRoutesV2 = make(map[string]APITokenRoute)
+	resetAPITokenRoutes(t)
 
 	CollectRoutesForAPITokenUsage(echo.RouteInfo{
 		Method: "POST",
@@ -376,8 +376,7 @@ func TestCollectRoutes_V2TasksBulkCreate(t *testing.T) {
 
 // TestCanDoAPIRoute_V2TasksBulkCreate verifies that tasks.create_bulk, not tasks.create, authorises the bulk create route.
 func TestCanDoAPIRoute_V2TasksBulkCreate(t *testing.T) {
-	apiTokenRoutes = make(map[string]APITokenRoute)
-	apiTokenRoutesV2 = make(map[string]APITokenRoute)
+	resetAPITokenRoutes(t)
 
 	CollectRoutesForAPITokenUsage(echo.RouteInfo{
 		Method: "POST",
@@ -411,8 +410,7 @@ func TestCanDoAPIRoute_V2TasksBulkCreate(t *testing.T) {
 
 // Guards cross-group expansions (GHSA-9rg3-v78m-26q8).
 func TestCanDoAPIRoute_ExpandScopes(t *testing.T) {
-	apiTokenRoutes = make(map[string]APITokenRoute)
-	apiTokenRoutesV2 = make(map[string]APITokenRoute)
+	resetAPITokenRoutes(t)
 
 	for _, r := range []echo.RouteInfo{
 		{Method: "GET", Path: "/api/v1/tasks"},
@@ -507,5 +505,59 @@ func TestCanDoAPIRoute_ExpandScopes(t *testing.T) {
 		projectsToken := &APIToken{APIPermissions: APIPermissions{"projects": []string{"read_all"}}}
 		assert.True(t, do(t, "/api/v1/projects?expand=comments", projectsToken),
 			"expand on a route which does not consume it must not require any scope")
+	})
+}
+
+// GHSA-j5v7-qcwp-5g32
+func TestCollectRoutes_NonCRUDKeysIgnoreOrder(t *testing.T) {
+	routes := []echo.RouteInfo{
+		{Method: "GET", Path: "/api/v1/projects/:project/background"},
+		{Method: "DELETE", Path: "/api/v1/projects/:project/background"},
+		{Method: "DELETE", Path: "/api/v2/projects/:project/background"},
+		{Method: "GET", Path: "/api/v2/projects/:project/background"},
+	}
+	for name, order := range map[string][]int{"v1 first": {0, 1, 2, 3}, "v2 first": {2, 3, 1, 0}} {
+		t.Run(name, func(t *testing.T) {
+			resetAPITokenRoutes(t)
+			for _, i := range order {
+				CollectRoutesForAPITokenUsage(routes[i], true)
+			}
+			for _, table := range []map[string]APITokenRoute{apiTokenRoutes, apiTokenRoutesV2} {
+				require.Contains(t, table["projects"], "background")
+				require.Contains(t, table["projects"], "background_delete")
+				assert.Equal(t, "GET", table["projects"]["background"].Method)
+				assert.Equal(t, "DELETE", table["projects"]["background_delete"].Method)
+			}
+		})
+	}
+}
+
+// Plugin routes collide once params are stripped; that must not crash startup.
+func TestCollectRoutes_PluginKeyCollisionSkipsRoute(t *testing.T) {
+	routes := []echo.RouteInfo{
+		{Method: "GET", Path: "/api/v1/plugins/foo/items"},
+		{Method: "GET", Path: "/api/v1/plugins/foo/items/:id"},
+	}
+	for name, order := range map[string][]int{"list first": {0, 1}, "detail first": {1, 0}} {
+		t.Run(name, func(t *testing.T) {
+			resetAPITokenRoutes(t)
+			require.NotPanics(t, func() {
+				for _, i := range order {
+					CollectRoutesForAPITokenUsage(routes[i], true)
+				}
+			})
+			assert.Equal(t, APITokenRoute{
+				"foo_items": {Method: "GET", Path: "/api/v1/plugins/foo/items"},
+			}, apiTokenRoutes["plugins"])
+			assert.Empty(t, apiTokenRoutesV2)
+		})
+	}
+}
+
+func TestCollectRoutes_CoreKeyCollisionPanics(t *testing.T) {
+	resetAPITokenRoutes(t)
+	CollectRoutesForAPITokenUsage(echo.RouteInfo{Method: "GET", Path: "/api/v1/projects/:project/background"}, true)
+	assert.Panics(t, func() {
+		CollectRoutesForAPITokenUsage(echo.RouteInfo{Method: "GET", Path: "/api/v1/projects/background/:project"}, true)
 	})
 }

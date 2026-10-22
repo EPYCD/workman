@@ -15,8 +15,8 @@ export default class TotpService extends AbstractService<ITotp> {
 		return new TotpModel(data)
 	}
 
-	enroll() {
-		return this.post(`${this.urlPrefix}/enroll`, {})
+	enroll(password: string) {
+		return this.post(`${this.urlPrefix}/enroll`, {password})
 	}
 
 	enable(model) {
