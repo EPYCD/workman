@@ -1,14 +1,18 @@
 import {AuthenticatedHTTPFactory, apiV2Url} from '@/helpers/fetcher'
 import {objectToCamelCase, objectToSnakeCase} from '@/helpers/case'
 
+import UserModel from '@/models/user'
+
 import type {ITimeEntry} from '@/modelTypes/ITimeEntry'
 
 export function parseTimeEntry(raw: Record<string, unknown>): ITimeEntry {
 	const e = objectToCamelCase(raw)
 	const end = e.endTime as string | null | undefined
+	const user = e.user ? new UserModel(e.user) : null
 	return {
 		id: e.id,
-		userId: e.userId,
+		userId: user?.id ?? e.userId ?? 0,
+		user,
 		taskId: e.taskId ?? 0,
 		projectId: e.projectId ?? 0,
 		startTime: new Date(e.startTime),

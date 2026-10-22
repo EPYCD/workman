@@ -20,6 +20,7 @@
 						<th v-if="!hideLabelColumn">
 							{{ $t('timeTracking.form.task') }}
 						</th>
+						<th>{{ $t('misc.user') }}</th>
 						<th>{{ $t('task.comment.comment') }}</th>
 						<th class="nowrap">
 							{{ $t('timeTracking.list.time') }}
@@ -58,6 +59,14 @@
 								{{ row.taskIdentifier }}{{ row.taskTitle ? ` - ${row.taskTitle}` : '' }}
 							</RouterLink>
 						</td>
+						<td class="nowrap">
+							<User
+								v-if="row.entry.user"
+								:user="row.entry.user"
+								:avatar-size="20"
+								is-inline
+							/>
+						</td>
 						<td class="has-text-grey">
 							{{ row.entry.comment }}
 						</td>
@@ -94,7 +103,7 @@
 				<tfoot>
 					<tr>
 						<td
-							:colspan="hideLabelColumn ? 2 : 4"
+							:colspan="hideLabelColumn ? 3 : 5"
 							class="has-text-weight-bold"
 						>
 							{{ $t('timeTracking.list.total') }}
@@ -115,14 +124,14 @@ import {ref, computed, watch} from 'vue'
 
 import Card from '@/components/misc/Card.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
+import User from '@/components/misc/User.vue'
 
 import {useProjectStore} from '@/stores/projects'
 import {useAuthStore} from '@/stores/auth'
 import {fetchTaskById} from '@/helpers/fetchTaskById'
 import {getProjectTitle} from '@/helpers/getProjectTitle'
-import {formatDate} from '@/helpers/time/formatDate'
+import {formatTimeRange} from '@/helpers/time/formatTimeRange'
 import {useTimeFormat} from '@/composables/useTimeFormat'
-import {TIME_FORMAT} from '@/constants/timeFormat'
 
 import type {ITimeEntry} from '@/modelTypes/ITimeEntry'
 import type {ITask} from '@/modelTypes/ITask'
@@ -200,16 +209,8 @@ function formatDuration(seconds: number): string {
 	return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`
 }
 
-function formatTime(date: Date): string {
-	return formatDate(date, timeFormat.value === TIME_FORMAT.HOURS_24 ? 'HH:mm' : 'hh:mm A')
-}
-
 function timeRange(entry: ITimeEntry): string {
-	const start = formatTime(entry.startTime)
-	if (entry.endTime === null) {
-		return `${start} – …`
-	}
-	return `${start} – ${formatTime(entry.endTime)}`
+	return formatTimeRange(entry.startTime, entry.endTime, timeFormat.value)
 }
 </script>
 

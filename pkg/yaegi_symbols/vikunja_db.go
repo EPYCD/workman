@@ -31,6 +31,7 @@ func init() {
 		"MultiFieldSearch":               reflect.ValueOf(db.MultiFieldSearch),
 		"MultiFieldSearchWithBoosts":     reflect.ValueOf(db.MultiFieldSearchWithBoosts),
 		"MultiFieldSearchWithTableAlias": reflect.ValueOf(db.MultiFieldSearchWithTableAlias),
+		"NewAutocommitSession":           reflect.ValueOf(db.NewAutocommitSession),
 		"NewSession":                     reflect.ValueOf(db.NewSession),
 		"ParadeDBAvailable":              reflect.ValueOf(db.ParadeDBAvailable),
 		"RegisterConnectionPoolMetrics":  reflect.ValueOf(db.RegisterConnectionPoolMetrics),
@@ -39,9 +40,11 @@ func init() {
 		"ResolvedDatabasePath":           reflect.ValueOf(db.ResolvedDatabasePath),
 		"Restore":                        reflect.ValueOf(db.Restore),
 		"RestoreAndTruncate":             reflect.ValueOf(db.RestoreAndTruncate),
+		"SearchRelevanceOrder":           reflect.ValueOf(db.SearchRelevanceOrder),
 		"SetSessionContext":              reflect.ValueOf(db.SetSessionContext),
 		"TruncateAllTables":              reflect.ValueOf(db.TruncateAllTables),
 		"Type":                           reflect.ValueOf(db.Type),
+		"UnaccentAvailable":              reflect.ValueOf(db.UnaccentAvailable),
 		"WipeEverything":                 reflect.ValueOf(db.WipeEverything),
 
 		// type definitions

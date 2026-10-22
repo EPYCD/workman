@@ -2,7 +2,7 @@ import AbstractService from '../abstractService'
 import {apiV2Url} from '@/helpers/fetcher'
 
 export type MigrationConfig =
-	| { code: string }
+	| { code: string, state?: string }
 	| { url: string, token: string }
 	| { url: string, username: string, password: string }
 

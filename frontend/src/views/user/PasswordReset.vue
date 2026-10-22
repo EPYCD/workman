@@ -61,6 +61,7 @@ import PasswordResetService from '@/services/passwordReset'
 import Message from '@/components/misc/Message.vue'
 import {getErrorText} from '@/message'
 import Password from '@/components/input/Password.vue'
+import {getSensitiveParam} from '@/helpers/sensitiveQueryParams'
 
 const credentials = reactive({
 	password: '',
@@ -75,7 +76,7 @@ const successMessage = ref('')
 
 async function resetPassword() {
 	errorMsg.value = ''
-	const token = route.query.userPasswordReset as string
+	const token = getSensitiveParam(route, 'userPasswordReset')
 
 	if (!token) {
 		errorMsg.value = t('user.auth.passwordResetTokenMissing')

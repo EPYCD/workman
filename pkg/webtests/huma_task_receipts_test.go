@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
+	"time"
 
 	"code.vikunja.io/api/pkg/db"
 	"code.vikunja.io/api/pkg/models"
@@ -40,6 +41,9 @@ func TestTaskReceiptsV2(t *testing.T) {
 		defer s.Close()
 		bot := &user.User{Username: "bot-ci", Name: "CI", BotOwnerID: 1, Status: user.StatusActive}
 		_, err := s.Insert(bot)
+		require.NoError(t, err)
+		// User JWTs are refused without a live session row.
+		_, err = s.Insert(&models.Session{ID: testSessionID(bot), UserID: bot.ID, TokenHash: testSessionID(bot), LastActive: time.Now()})
 		require.NoError(t, err)
 		_, err = s.ID(1).Cols("receipt_bot_id").Update(&models.Project{ReceiptBotID: bot.ID})
 		require.NoError(t, err)

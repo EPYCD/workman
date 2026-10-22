@@ -50,7 +50,7 @@
 		<template #default>
 			<div class="kanban-view">
 				<div
-					:class="{ 'is-loading': loading && !oneTaskUpdating}"
+					:class="{ 'is-loading': loading && !oneTaskUpdating, 'is-dragging': drag || dragBucket }"
 					class="kanban kanban-bucket-container loader-container"
 				>
 					<draggable
@@ -458,6 +458,9 @@ const DRAG_OPTIONS = {
 	dragClass: 'task-dragging',
 	delayOnTouchOnly: true,
 	delay: 1000,
+	// With native drag sortable leaves the board to the browser's auto-scroll: Chrome's edge zone is ~20px, Firefox has none.
+	forceAutoScrollFallback: true,
+	scrollSensitivity: 100,
 } as const
 
 const MIN_SCROLL_HEIGHT_PERCENT = 0.25
@@ -1226,6 +1229,11 @@ $filter-container-height: '1rem - #{$switch-view-height}';
 		block-size: calc(#{$crazy-height-calculation} - #{$filter-container-height} + 9px);
 		scroll-snap-type: x mandatory;
 		margin: 0 -0.5rem;
+
+		// Snapping undoes sortable's small auto-scroll steps, so the board never scrolls while dragging.
+		&.is-dragging {
+			scroll-snap-type: none;
+		}
 	}
 
 	&-bucket-container {

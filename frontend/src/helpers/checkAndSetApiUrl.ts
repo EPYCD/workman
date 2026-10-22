@@ -1,4 +1,6 @@
 import {useConfigStore} from '@/stores/config'
+import {useAuthStore} from '@/stores/auth'
+import {removeToken} from '@/helpers/auth'
 import {configureApiClient} from '@/client/http'
 import {queryClient} from '@/client/queryClient'
 
@@ -38,6 +40,19 @@ function joinPath(base: string, suffix: string): string {
 function hasApiPath(pathname: string): boolean {
 	const clean = pathname.endsWith('/') ? pathname.slice(0, -1) : pathname
 	return clean.endsWith(API_PATH_SUFFIX)
+}
+
+// The fork stores the url with /api/v1, so servers are compared without it.
+function normalizeApiUrl(url: string): string {
+	return url.replace(/\/+$/, '').replace(/\/api\/v[12]$/, '')
+}
+
+function resolveApiRoot(url: string): string | null {
+	try {
+		return new URL(normalizeApiUrl(url) || '/', window.location.href).href
+	} catch {
+		return null
+	}
 }
 
 export const checkAndSetApiUrl = (pUrl: string | undefined | null): Promise<string> => {
@@ -123,6 +138,14 @@ export const checkAndSetApiUrl = (pUrl: string | undefined | null): Promise<stri
 				if (window.API_URL !== oldUrl) {
 					configureApiClient()
 					queryClient.clear()
+				}
+				// Tokens belong to the stored server. Not oldUrl: boot starts from index.html's value.
+				const storedUrl = localStorage.getItem('API_URL')
+				if (storedUrl !== null && resolveApiRoot(storedUrl) !== resolveApiRoot(window.API_URL)) {
+					removeToken()
+					const authStore = useAuthStore()
+					authStore.setAuthenticated(false)
+					authStore.setUser(null, false)
 				}
 				localStorage.setItem('API_URL', window.API_URL)
 				return window.API_URL

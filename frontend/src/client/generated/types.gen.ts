@@ -419,7 +419,7 @@ export type BulkTask = {
      */
     readonly $schema?: string;
     /**
-     * The names of the task fields to apply from values; only these fields are written, the rest of each task is left untouched.
+     * The names of the task fields to apply from values; only these fields are written, the rest of each task is left untouched. Besides the task columns, assignees, reminders and is_favorite may be named. At least one field is required.
      */
     fields?: Array<string> | null;
     /**
@@ -1198,6 +1198,10 @@ export type MigrationMigrateBody = {
      * The OAuth code obtained after authorizing against the auth url.
      */
     code?: string;
+    /**
+     * The state the service handed back to the callback. It is single-use, expires after 10 minutes and only works for the user who requested the auth url.
+     */
+    state?: string;
 };
 
 export type MigrationStartedBodyBody = {
@@ -2008,7 +2012,7 @@ export type ProjectView = {
      */
     done_bucket_id?: number;
     /**
-     * The filter query used to match tasks shown in this view. See https://vikunja.io/docs/filters.
+     * The filter query used to match tasks shown in this view. Combine conditions with && or || (not and/or) and group them with parentheses. Operators: =, !=, >, >=, <, <=, like, in, not in. See https://vikunja.io/docs/filters.
      */
     filter?: TaskCollection;
     /**
@@ -2039,7 +2043,7 @@ export type ProjectView = {
 
 export type ProjectViewBucketConfiguration = {
     /**
-     * The filter query that decides which tasks land in this bucket. See https://vikunja.io/docs/filters.
+     * The filter query that decides which tasks land in this bucket. Combine conditions with && or || (not and/or) and group them with parentheses. Operators: =, !=, >, >=, <, <=, like, in, not in. See https://vikunja.io/docs/filters.
      */
     filter?: TaskCollection;
     /**
@@ -2078,7 +2082,7 @@ export type ProjectViewReadBody = {
      */
     done_bucket_id?: number;
     /**
-     * The filter query used to match tasks shown in this view. See https://vikunja.io/docs/filters.
+     * The filter query used to match tasks shown in this view. Combine conditions with && or || (not and/or) and group them with parentheses. Operators: =, !=, >, >=, <, <=, like, in, not in. See https://vikunja.io/docs/filters.
      */
     filter?: TaskCollection;
     /**
@@ -2671,7 +2675,7 @@ export type TaskClaim = {
 
 export type TaskCollection = {
     /**
-     * The filter query to match tasks by. See https://vikunja.io/docs/filters.
+     * The filter query to match tasks by, e.g. "done = false && due_date < now+7d". Combine conditions with && or || (not and/or) and group them with parentheses. Operators: =, !=, >, >=, <, <=, like, in, not in. See https://vikunja.io/docs/filters.
      */
     filter?: string;
     /**
@@ -3474,9 +3478,9 @@ export type TimeEntry = {
      */
     readonly updated?: string;
     /**
-     * The id of the user who logged this time entry. Set by the server.
+     * The user who logged this time entry. Set by the server.
      */
-    readonly user_id?: number;
+    readonly user?: User;
 };
 
 export type TimeEntryReadBody = {
@@ -3521,9 +3525,9 @@ export type TimeEntryReadBody = {
      */
     readonly updated?: string;
     /**
-     * The id of the user who logged this time entry. Set by the server.
+     * The user who logged this time entry. Set by the server.
      */
-    readonly user_id?: number;
+    readonly user?: User;
 };
 
 export type Token = {
@@ -3589,6 +3593,10 @@ export type TotpDisableBodyBody = {
      * The current user's password, required to disable totp.
      */
     password?: string;
+    /**
+     * A current passcode from the user's authenticator, required to disable totp.
+     */
+    totp_passcode?: string;
 };
 
 export type TotpEnableBodyBody = {
@@ -3600,6 +3608,21 @@ export type TotpEnableBodyBody = {
      * The current totp passcode, used to confirm the authenticator is set up correctly.
      */
     passcode?: string;
+    /**
+     * The current user's password, required to enable totp.
+     */
+    password?: string;
+};
+
+export type TotpEnrollBodyBody = {
+    /**
+     * A URL to the JSON Schema for this object.
+     */
+    readonly $schema?: string;
+    /**
+     * The current user's password, required to enroll into totp.
+     */
+    password?: string;
 };
 
 export type User = {
@@ -4072,7 +4095,7 @@ export type Webhook = {
      */
     readonly id?: number;
     /**
-     * The id of the project this webhook target belongs to. Set from the URL, not the body.
+     * The id of the project this webhook target belongs to.
      */
     readonly project_id?: number;
     /**
@@ -4084,7 +4107,7 @@ export type Webhook = {
      */
     readonly updated?: string;
     /**
-     * The id of the user if this is a user-level webhook (mutually exclusive with project_id).
+     * The id of the user if this is a user-level webhook (mutually exclusive with project_id). Set from the route, not the body.
      */
     readonly user_id?: number;
 };
@@ -4296,7 +4319,7 @@ export type BulkAssigneesWritable = {
 
 export type BulkTaskWritable = {
     /**
-     * The names of the task fields to apply from values; only these fields are written, the rest of each task is left untouched.
+     * The names of the task fields to apply from values; only these fields are written, the rest of each task is left untouched. Besides the task columns, assignees, reminders and is_favorite may be named. At least one field is required.
      */
     fields?: Array<string> | null;
     /**
@@ -4560,6 +4583,10 @@ export type MigrationMigrateBodyWritable = {
      * The OAuth code obtained after authorizing against the auth url.
      */
     code?: string;
+    /**
+     * The state the service handed back to the callback. It is single-use, expires after 10 minutes and only works for the user who requested the auth url.
+     */
+    state?: string;
 };
 
 export type OverviewWritable = {
@@ -4999,7 +5026,7 @@ export type ProjectViewWritable = {
      */
     done_bucket_id?: number;
     /**
-     * The filter query used to match tasks shown in this view. See https://vikunja.io/docs/filters.
+     * The filter query used to match tasks shown in this view. Combine conditions with && or || (not and/or) and group them with parentheses. Operators: =, !=, >, >=, <, <=, like, in, not in. See https://vikunja.io/docs/filters.
      */
     filter?: TaskCollection;
     /**
@@ -5038,7 +5065,7 @@ export type ProjectViewReadBodyWritable = {
      */
     done_bucket_id?: number;
     /**
-     * The filter query used to match tasks shown in this view. See https://vikunja.io/docs/filters.
+     * The filter query used to match tasks shown in this view. Combine conditions with && or || (not and/or) and group them with parentheses. Operators: =, !=, >, >=, <, <=, like, in, not in. See https://vikunja.io/docs/filters.
      */
     filter?: TaskCollection;
     /**
@@ -5591,6 +5618,10 @@ export type TotpDisableBodyBodyWritable = {
      * The current user's password, required to disable totp.
      */
     password?: string;
+    /**
+     * A current passcode from the user's authenticator, required to disable totp.
+     */
+    totp_passcode?: string;
 };
 
 export type TotpEnableBodyBodyWritable = {
@@ -5598,6 +5629,17 @@ export type TotpEnableBodyBodyWritable = {
      * The current totp passcode, used to confirm the authenticator is set up correctly.
      */
     passcode?: string;
+    /**
+     * The current user's password, required to enable totp.
+     */
+    password?: string;
+};
+
+export type TotpEnrollBodyBodyWritable = {
+    /**
+     * The current user's password, required to enroll into totp.
+     */
+    password?: string;
 };
 
 export type UserWritable = {
@@ -6267,7 +6309,7 @@ export type AvatarGetData = {
     };
     query?: {
         /**
-         * Desired avatar edge length in pixels. Clamped to the server's configured maximum if larger; providers that render fixed-size images may ignore it.
+         * Desired avatar edge length in pixels. Rounded up to 16, 32, 48, 64, 128, 256, 512 or 1024 and capped at the server's configured maximum; providers that render fixed-size images may ignore it.
          */
         size?: number;
     };
@@ -8313,7 +8355,7 @@ export type ProjectTasksListData = {
          */
         q?: string;
         /**
-         * Filter query to match tasks by. See https://vikunja.io/docs/filters.
+         * Filter query to match tasks by, e.g. "done = false && due_date < now+7d". Combine conditions with && or || (not and/or) and group them with parentheses. Operators: =, !=, >, >=, <, <=, like, in, not in. See https://vikunja.io/docs/filters.
          */
         filter?: string;
         /**
@@ -9097,7 +9139,7 @@ export type ProjectViewBucketsTasksListData = {
          */
         q?: string;
         /**
-         * Filter query to match tasks by. See https://vikunja.io/docs/filters.
+         * Filter query to match tasks by, e.g. "done = false && due_date < now+7d". Combine conditions with && or || (not and/or) and group them with parentheses. Operators: =, !=, >, >=, <, <=, like, in, not in. See https://vikunja.io/docs/filters.
          */
         filter?: string;
         /**
@@ -9298,7 +9340,7 @@ export type ProjectViewTasksListData = {
          */
         q?: string;
         /**
-         * Filter query to match tasks by. See https://vikunja.io/docs/filters.
+         * Filter query to match tasks by, e.g. "done = false && due_date < now+7d". Combine conditions with && or || (not and/or) and group them with parentheses. Operators: =, !=, >, >=, <, <=, like, in, not in. See https://vikunja.io/docs/filters.
          */
         filter?: string;
         /**
@@ -9639,7 +9681,7 @@ export type TasksListData = {
          */
         q?: string;
         /**
-         * Filter query to match tasks by. See https://vikunja.io/docs/filters.
+         * Filter query to match tasks by, e.g. "done = false && due_date < now+7d". Combine conditions with && or || (not and/or) and group them with parentheses. Operators: =, !=, >, >=, <, <=, like, in, not in. See https://vikunja.io/docs/filters.
          */
         filter?: string;
         /**
@@ -10726,12 +10768,7 @@ export type TaskAttachmentsDownloadData = {
          */
         attachment: number;
     };
-    query?: {
-        /**
-         * If set and the attachment is an image, return a downscaled PNG preview instead of the original: sm=100px, md=200px, lg=400px, xl=800px. Ignored for non-image attachments.
-         */
-        preview_size?: 'sm' | 'md' | 'lg' | 'xl';
-    };
+    query?: never;
     url: '/tasks/{task}/attachments/{attachment}';
 };
 
@@ -10752,6 +10789,49 @@ export type TaskAttachmentsDownloadResponses = {
 };
 
 export type TaskAttachmentsDownloadResponse = TaskAttachmentsDownloadResponses[keyof TaskAttachmentsDownloadResponses];
+
+export type TaskAttachmentsPreviewData = {
+    body?: never;
+    path: {
+        /**
+         * The id of the task the attachment belongs to.
+         */
+        task: number;
+        /**
+         * The id of the attachment to preview.
+         */
+        attachment: number;
+    };
+    query: {
+        /**
+         * The width of the preview: sm=100px, md=200px, lg=400px, xl=800px. Smaller images are not upscaled.
+         */
+        size: 'sm' | 'md' | 'lg' | 'xl';
+    };
+    url: '/tasks/{task}/attachments/{attachment}/preview';
+};
+
+export type TaskAttachmentsPreviewErrors = {
+    /**
+     * The attachment has no preview (code 4049), or size is missing or invalid.
+     */
+    422: VikunjaErrorModel;
+    /**
+     * Error
+     */
+    default: VikunjaErrorModel;
+};
+
+export type TaskAttachmentsPreviewError = TaskAttachmentsPreviewErrors[keyof TaskAttachmentsPreviewErrors];
+
+export type TaskAttachmentsPreviewResponses = {
+    /**
+     * The preview image bytes.
+     */
+    200: Blob | File;
+};
+
+export type TaskAttachmentsPreviewResponse = TaskAttachmentsPreviewResponses[keyof TaskAttachmentsPreviewResponses];
 
 export type TaskCommentsListData = {
     body?: never;
@@ -12694,7 +12774,7 @@ export type TotpEnableResponses = {
 export type TotpEnableResponse = TotpEnableResponses[keyof TotpEnableResponses];
 
 export type TotpEnrollData = {
-    body?: never;
+    body: TotpEnrollBodyBodyWritable;
     path?: never;
     query?: never;
     url: '/user/settings/totp/enroll';

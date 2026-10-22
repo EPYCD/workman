@@ -51,6 +51,24 @@ export interface ConfigState {
 	concurrentWrites: boolean,
 }
 
+// These reach window.location.href (redirectToProvider) and :href, where a javascript: value
+// would run on our own origin.
+const NAVIGABLE_URL_SCHEMES = [
+	'http:',
+	'https:',
+]
+
+export function navigableUrl(url: string | undefined): string {
+	if (!url) {
+		return ''
+	}
+	try {
+		return NAVIGABLE_URL_SCHEMES.includes(new URL(url, window.location.origin).protocol) ? url : ''
+	} catch {
+		return ''
+	}
+}
+
 export const useConfigStore = defineStore('config', () => {
 	const state: ConfigState = reactive({
 		// These are the api defaults.
@@ -121,7 +139,16 @@ export const useConfigStore = defineStore('config', () => {
 			throw new InvalidApiUrlProvidedError()
 		}
 
-		setConfig(objectToCamelCase(config) as ConfigState)
+		const camelConfig = objectToCamelCase(config) as ConfigState
+		if (camelConfig.legal) {
+			camelConfig.legal.imprintUrl = navigableUrl(camelConfig.legal.imprintUrl)
+			camelConfig.legal.privacyPolicyUrl = navigableUrl(camelConfig.legal.privacyPolicyUrl)
+		}
+		camelConfig.auth?.openidConnect?.providers?.forEach(provider => {
+			provider.authUrl = navigableUrl(provider.authUrl)
+			provider.logoutUrl = navigableUrl(provider.logoutUrl)
+		})
+		setConfig(camelConfig)
 		return !!config
 	}
 

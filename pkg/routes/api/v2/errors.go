@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"reflect"
 	"strings"
 
 	"code.vikunja.io/api/pkg/log"
@@ -108,6 +109,19 @@ type vikunjaErrorModel struct {
 	huma.ErrorModel
 	Code       int               `json:"code,omitempty" readOnly:"true" doc:"Vikunja numeric error code; see https://vikunja.io/docs/errors/"`
 	I18nParams map[string]string `json:"i18n_params,omitempty" readOnly:"true" doc:"Dynamic values referenced by the error message, keyed by translation placeholder name, for client-side localisation."`
+}
+
+// defaultErrorResponse documents the Vikunja error body as an operation's
+// default response, for operations that spell out their own Responses map.
+func defaultErrorResponse(api huma.API) *huma.Response {
+	return &huma.Response{
+		Description: "Error",
+		Content: map[string]*huma.MediaType{
+			"application/problem+json": {
+				Schema: api.OpenAPI().Components.Schemas.Schema(reflect.TypeOf(vikunjaErrorModel{}), true, "Error"),
+			},
+		},
+	}
 }
 
 func init() {
