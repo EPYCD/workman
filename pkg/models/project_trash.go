@@ -32,29 +32,30 @@ import (
 	"xorm.io/xorm"
 )
 
-// subtreeIDs returns the project and its descendants; trashed narrows them to live (false) or trashed (true) ones.
-func subtreeIDs(s *xorm.Session, projectID int64, trashed bool) (ids []int64, err error) {
-	deletedCond := "projects.deleted_at IS NULL"
-	if trashed {
-		deletedCond = "projects.deleted_at IS NOT NULL"
-	}
+// Includes the project itself.
+func subtreeIDs(s *xorm.Session, projectID int64, cond builder.Cond) (ids []int64, err error) {
 	ids = []int64{}
 	// Workman has no project_ancestors table: walk parent_project_id instead.
 	// UNION, not UNION ALL: deduplicating ids terminates on a parent_project_id cycle.
+	condSQL, condArgs, err := builder.ToSQL(cond)
+	if err != nil {
+		return nil, err
+	}
 	err = s.SQL(`
 WITH RECURSIVE subtree (id) AS (
     SELECT id FROM projects WHERE id = ?
     UNION
     SELECT p.id FROM projects p INNER JOIN subtree st ON p.parent_project_id = st.id
 )
-SELECT projects.id FROM subtree INNER JOIN projects ON projects.id = subtree.id AND `+deletedCond, projectID).
+SELECT projects.id FROM subtree INNER JOIN projects ON projects.id = subtree.id
+WHERE `+condSQL, append([]any{projectID}, condArgs...)...).
 		Find(&ids)
 	return
 }
 
 // trashProject moves the project and all its live descendants to the trash in one go.
 func trashProject(s *xorm.Session, project *Project, a web.Auth) error {
-	ids, err := subtreeIDs(s, project.ID, false)
+	ids, err := subtreeIDs(s, project.ID, builder.IsNull{"projects.deleted_at"})
 	if err != nil {
 		return err
 	}
@@ -108,7 +109,6 @@ func trashProject(s *xorm.Session, project *Project, a web.Auth) error {
 	return nil
 }
 
-// hardDeleteProject permanently removes a project, its sub-projects and everything in them.
 // Time entries survive without a container, kept by their authors.
 func hardDeleteProject(s *xorm.Session, p *Project) (err error) {
 	// Lock first: the task loop below deletes task_positions rows before the views are dropped further down.
@@ -372,7 +372,7 @@ func (p *Project) Restore(s *xorm.Session, a web.Auth) error {
 		return blocker
 	}
 
-	ids, err := subtreeIDs(s, p.ID, true)
+	ids, err := subtreeIDs(s, p.ID, builder.NotNull{"projects.deleted_at"})
 	if err != nil {
 		return err
 	}
@@ -661,7 +661,7 @@ func GetProjectCount(s *xorm.Session, a web.Auth, projectID int64) (*ProjectCoun
 		return nil, ErrGenericForbidden{}
 	}
 
-	ids, err := subtreeIDs(s, projectID, false)
+	ids, err := subtreeIDs(s, projectID, builder.IsNull{"projects.deleted_at"})
 	if err != nil {
 		return nil, err
 	}
