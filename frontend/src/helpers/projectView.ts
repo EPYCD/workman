@@ -1,8 +1,15 @@
 import type {IProject} from '@/modelTypes/IProject'
+import {DEFAULT_PROJECT_VIEW_SETTINGS, type DefaultProjectViewKind, type IProjectView} from '@/modelTypes/IProjectView'
 
 export type ProjectViewSettings = Record<IProject['id'], number>
 
 const SETTINGS_KEY_PROJECT_VIEW = 'projectView'
+
+export function getDefaultProjectView(views: readonly IProjectView[], preferredKind: DefaultProjectViewKind | undefined) {
+	return (preferredKind !== DEFAULT_PROJECT_VIEW_SETTINGS.FIRST
+		? views.find(view => view.viewKind === preferredKind)
+		: undefined) ?? views[0]
+}
 
 /**
  * Save the current project view to local storage

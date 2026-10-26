@@ -6,7 +6,7 @@ import {useBaseStore} from '@/stores/base'
 import {useProjectStore} from '@/stores/projects'
 import {useAuthStore} from '@/stores/auth'
 
-import {saveProjectView} from '@/helpers/projectView'
+import {getDefaultProjectView, saveProjectView} from '@/helpers/projectView'
 import ProjectService from '@/services/project'
 
 import ProjectList from '@/components/project/views/ProjectList.vue'
@@ -14,7 +14,6 @@ import ProjectGantt from '@/components/project/views/ProjectGantt.vue'
 import ProjectTable from '@/components/project/views/ProjectTable.vue'
 import ProjectKanban from '@/components/project/views/ProjectKanban.vue'
 
-import {DEFAULT_PROJECT_VIEW_SETTINGS} from '@/modelTypes/IProjectView'
 import {saveProjectToHistory} from '@/modules/projectHistory'
 
 const props = defineProps<{
@@ -83,20 +82,11 @@ watch(
 
 function redirectToDefaultViewIfNecessary() {
 	if (props.viewId === 0 || !currentView.value) {
-		// Ideally, we would do that in the router redirect, but the projects (and therefore, the views) 
-		// are not always loaded then.
-
-		const defaultView  = authStore.settings.frontendSettings.defaultView
-
-		let view
-		if (defaultView !== DEFAULT_PROJECT_VIEW_SETTINGS.FIRST) {
-			view = currentProject.value?.views.find(v => v.viewKind === defaultView)
-		}
-
-		// Use the first view as fallback if the default view is not available
-		if (view === undefined && currentProject.value?.views?.length > 0) {
-			view = currentProject.value?.views[0]
-		}
+		// Project views may arrive after the router resolves.
+		const view = getDefaultProjectView(
+			currentProject.value?.views ?? [],
+			authStore.settings.frontendSettings.defaultView,
+		)
 
 		if (view) {
 			router.replace({
