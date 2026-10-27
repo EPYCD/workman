@@ -75,7 +75,8 @@ test.describe('Keyboard layouts', () => {
 		await expect(doneButton).toBeVisible()
 		await doneButton.focus()
 		const saved = page.waitForResponse(response =>
-			response.url().endsWith(`/api/v2/tasks/${task.id}`) && response.request().method() === 'PATCH',
+			// The fork's task service still saves through v1 (POST), not upstream's v2 PATCH.
+			response.url().endsWith(`/api/v1/tasks/${task.id}`) && response.request().method() === 'POST',
 		)
 		await pressLayoutKey(page, {
 			key: 't',
@@ -84,7 +85,7 @@ test.describe('Keyboard layouts', () => {
 		expect((await saved).ok()).toBe(true)
 		await page.reload()
 		await expect(doneButton).not.toHaveClass(/is-pending/)
-		const response = await apiContext.get(`${apiRootUrl(process.env.API_URL || 'http://localhost:3456')}/api/v2/tasks/${task.id}`, {
+		const response = await apiContext.get(`${apiRootUrl(process.env.API_URL || 'http://localhost:3456')}/api/v1/tasks/${task.id}`, {
 			headers: {Authorization: `Bearer ${userToken}`},
 		})
 		expect(response.ok()).toBe(true)

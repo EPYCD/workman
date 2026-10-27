@@ -356,6 +356,7 @@
 						v-if="canWrite"
 						class="table-view__add-task d-print-none"
 						:autofocus="false"
+						@tasksAdded="taskList.loadTasks()"
 					/>
 
 					<Pagination
