@@ -558,6 +558,7 @@ export const useTaskStore = defineStore('task', () => {
 		bucketId,
 		projectId,
 		position,
+		description,
 	} :
 		Partial<ITask>,
 	) {
@@ -569,6 +570,9 @@ export const useTaskStore = defineStore('task', () => {
 				projectId,
 				position,
 			})
+			if (description !== undefined) {
+				task.description = description
+			}
 
 			const taskService = new TaskService()
 			const createdTask = await taskService.create(task)

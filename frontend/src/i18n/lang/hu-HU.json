@@ -9,40 +9,41 @@
 		"welcomeDay": "Szia {username}!",
 		"welcomeEvening": "Jó estét {username}!",
 		"lastViewed": "Utoljára megtekintve",
-		"addToHomeScreen": "Adja hozzá ezt az alkalmazást a kezdőképernyőhöz a gyorsabb hozzáférés és a jobb élmény érdekében.",
+		"addToHomeScreen": "Alkalmazás hozzáadása a kezdőképernyőhöz, gyorsabb hozzáférés és jobb élmény érdekében.",
 		"goToOverview": "Tovább az áttekintéshez",
 		"project": {
-			"importText": "Importálja projektjeit és feladatait más szolgáltatásokból a Vikunjába:",
-			"import": "Importálja adatait a Vikunjába"
-		}
+			"importText": "Projektjeid és feladataid importálása más szolgáltatásokból Vikunjába:",
+			"import": "Adataid importálása Vikunjába"
+		},
+		"welcomeThursday": "Ez már kispéntek, {username}"
 	},
 	"demo": {
-		"title": "Ez a példány demo módban van. Ne használja ezt valós adatokhoz!",
+		"title": "Ez a példány demo módban van. Ne használd valós adatokhoz!",
 		"everythingWillBeDeleted": "Minden törlésre kerül rendszeres időközönként!",
-		"accountWillBeDeleted": "Fiókja törlésre kerül, beleértve az esetlegesen létrehozott projekteket, feladatokat és mellékleteket."
+		"accountWillBeDeleted": "Fiókod törlésre kerül, beleértve az esetlegesen létrehozott projekteket, feladatokat és mellékleteket."
 	},
 	"ready": {
 		"loading": "A Workman betöltődik…",
 		"errorOccured": "Hiba lépett fel:",
-		"checkApiUrl": "Kérjük, ellenőrizze, hogy az API url helyes-e.",
-		"noApiUrlConfigured": "Nincs API url beállítva. Kérjük, állítson be egyet alább:"
+		"checkApiUrl": "Kérlek, ellenőrizd, hogy az API URL helyes-e!",
+		"noApiUrlConfigured": "Nincs API URL beállítva. Kélek, állíts be egyet alább:"
 	},
 	"offline": {
 		"title": "Offline vagy.",
-		"text": "Kérjük, ellenőrizze a hálózati kapcsolatot, és próbálja újra."
+		"text": "Kérlek, ellenőrizd a hálózati kapcsolatot, és próbáld újra!"
 	},
 	"user": {
 		"auth": {
 			"username": "Felhasználónév",
 			"usernameEmail": "Felhasználónév vagy E-mail cím",
-			"usernamePlaceholder": "Például: Frigyes",
+			"usernamePlaceholder": "Például: frigyes",
 			"email": "E-mail cím",
 			"emailPlaceholder": "Például: frigyes{'@'}vikunja.io",
 			"password": "Jelszó",
-			"forgotPassword": "Elfelejtette a jelszavát?",
+			"forgotPassword": "Elfelejtetted a jelszad?",
 			"resetPassword": "Jelszó visszaállítása",
 			"resetPasswordAction": "Jelszó-visszaállítási linket kérek",
-			"confirmEmailSuccess": "Sikeresen megerősítette e-mail címét! Most már bejelentkezhet.",
+			"confirmEmailSuccess": "Sikeresen megerősítetted e-mail címed! Most már bejelentkezhetsz.",
 			"totpTitle": "Kétlépcsős hitelesítő kód",
 			"totpPlaceholder": "Például: 123456",
 			"login": "Bejelentkezés",
@@ -51,52 +52,56 @@
 			"authenticating": "Hitelesítés…",
 			"openIdStateError": "Állapot nem egyezik, nem lehet folytatni!",
 			"logout": "Kijelentkezés",
-			"emailInvalid": "Kérjük, adjon meg egy valós email címet!",
-			"usernameRequired": "Kérjük adjon meg egy felhasználónevet.",
+			"emailInvalid": "Kérlek, adj meg egy valós email címet!",
+			"usernameRequired": "Kérlek, adj meg egy felhasználónevet!",
 			"usernameMustNotContainSpace": "A felhasználónév nem tartalmazhat szóközt.",
 			"usernameMustNotLookLikeUrl": "A felhasználónév nem nézhet ki URL-nek.",
-			"passwordRequired": "Kérjük, adjon meg új jelszót.",
+			"passwordRequired": "Kérlek, adj meg egy jelszót!",
 			"passwordNotMin": "A jelszónak legalább 8 karakterből kell állnia.",
 			"showPassword": "Jelszó megjelenítése",
 			"hidePassword": "A jelszó elrejtése",
-			"noAccountYet": "Még nincs fiókja?",
-			"alreadyHaveAnAccount": "Már rendelkezik fiókkal?",
-			"remember": "Maradjon bejelentkezve"
+			"noAccountYet": "Még nincs fiókod?",
+			"alreadyHaveAnAccount": "Már rendelkezel fiókkal?",
+			"remember": "Maradjon bejelentkezve",
+			"registrationConfirmEmail": "A fiókod sikeresen létrehozva! Kérlek, ellenőrizd a postaládádat és a bejelentkezés előtt kattints a megerősítő e-mailben található linkre!",
+			"inviteLoadFailed": "Nem sikerült betölteni ezt a meghívót. Kérlek, próbáld meg újra!"
 		},
 		"settings": {
 			"title": "Beállítások",
 			"newPasswordTitle": "Jelszó módosítása",
-			"currentPasswordPlaceholder": "Az Ön aktuális jelszava",
+			"currentPasswordPlaceholder": "Aktuális jelszavad",
 			"passwordUpdateSuccess": "A jelszó módosítása megtörtént.",
 			"updateEmailTitle": "E-mail cím módosítása",
 			"general": {
 				"title": "Általános beállítások",
 				"savedSuccess": "Beállítások sikeresen frissítve.",
-				"overdueReminders": "Minden nap küldjön nekem egy összefoglalót az elmaradt, késedelmes feladataimról",
-				"discoverableByName": "Engedélyezze a többi felhasználónak, hogy tagként vegyen fel csapatokba vagy projektekbe, amikor a nevemre keresnek",
-				"discoverableByEmail": "Engedélyezze a többi felhasználónak, hogy tagként vegyen fel csapatokhoz vagy projektekhez, amikor a teljes e-mailemet keresik",
-				"playSoundWhenDone": "Hang lejátszása, amikor a feladatokat készként jelöli meg",
+				"overdueReminders": "Napi összegzés küldése elmaradt feladataimról",
+				"discoverableByName": "Engedély a többi felhasználónak, hogy név alapján felvegyen tagként csapatokba vagy projektekbe",
+				"discoverableByEmail": "Engedély a többi felhasználónak, hogy teljes e-mail cím alapján felvegyen tagként csapatokhoz vagy projektekhez",
+				"playSoundWhenDone": "Hang lejátszása feladatok készre jelölésekor",
 				"weekStart": "A hét kezdőnapja",
 				"weekStartSunday": "Vasárnap",
 				"weekStartMonday": "Hétfő",
 				"language": "Nyelv",
-				"overdueTasksRemindersTime": "Esedékes feladatokra emlékeztető e-mail küldésének ideje",
-				"filterUsedOnOverview": "Az áttekintő oldalon használt mentett szűrő"
+				"overdueTasksRemindersTime": "Elmaradt feladatokra emlékeztető e-mail küldésének ideje",
+				"filterUsedOnOverview": "Áttekintő oldalon használt mentett szűrő",
+				"emailReminders": "Emlékeztető küldése feladataimról E-mailben",
+				"defaultDueTimeDescription": "Alapértelmezett időként szolgál, amikor egy feladat határidejét időpont megadása nélkül állítod be,\nbeleértve a dátumválasztóban történő kiválasztást és a Quick Add Magic-et is."
 			},
 			"totp": {
 				"title": "Kétlépcsős azonosítás",
 				"enroll": "Csatlakozás",
-				"finishSetupPart2": "Ezután írjon be egy kódot az alkalmazásból alább.",
-				"scanQR": "Alternatív megoldásként beolvashatja ezt a QR-kódot:",
+				"finishSetupPart2": "Ezután írj be egy kódot az alkalmazásból alább!",
+				"scanQR": "Vagy beolvashatod ezt a QR-kódot:",
 				"passcode": "Jelkód",
-				"setupSuccess": "Két-faktoros azonosítás sikeresen bekapcsolva!",
-				"enterPassword": "Kérjük, írja be jelszavát",
-				"disable": "Kétlépcsős hitelesítés kikapcsolása",
+				"setupSuccess": "Kétlépcsős azonosítás sikeresen bekapcsolva!",
+				"enterPassword": "Kérlek, írd be jelszavad!",
+				"disable": "Kétlépcsős azonosítás kikapcsolása",
 				"disableSuccess": "A kétlépcsős azonosítást sikeresen kikapcsoltuk."
 			},
 			"caldav": {
 				"title": "CalDAV",
-				"more": "További információ a CalDAV-ról a Vikunjában",
+				"more": "További információ a CalDAV-ról Vikunjában",
 				"tokens": "CalDAV Tokenek"
 			},
 			"avatar": {
@@ -126,25 +131,25 @@
 			"apiTokens": {
 				"title": "API Tokenek",
 				"general": "Az API tokenek lehetővé teszik a Workman API használatát felhasználói hitelesítő adatok nélkül.",
-				"apiDocs": "Nézze meg az API dokumentációt",
+				"apiDocs": "Nézd meg az API dokumentációt",
 				"createAToken": "Token létrehozása",
 				"createToken": "Token létrehozása",
 				"30d": "30 nap",
 				"60d": "60 nap",
 				"90d": "90 nap",
-				"permissionExplanation": "Az engedélyek lehetővé teszik annak hatókörét, hogy egy API Token mire jogosult.",
+				"permissionExplanation": "Az engedélyekkel beállíthatod, hogy egy API Token mire jogosult.",
 				"titleRequired": "A cím kötelező",
-				"expired": "Ez a token lejárt {ago}.",
-				"tokenCreatedSuccess": "Íme az új API tokenje: {token}",
-				"tokenCreatedNotSeeAgain": "Tárolja el biztonságos helyen, többé nem fogja látni!",
+				"expired": "Ez a token {ago} lejárt.",
+				"tokenCreatedSuccess": "Íme az új API tokened: {token}",
+				"tokenCreatedNotSeeAgain": "Tárold el biztonságos helyen, többé nem láthatod itt!",
 				"delete": {
 					"header": "Token törlése",
-					"text1": "Biztos benne, hogy törölni akarja ezt a tokent \"{token}\"?",
-					"text2": "Ezzel megvonja a hozzáférést az összes ezt használó alkalmazáshoz vagy integrációhoz. Ezt nem tudod visszavonni."
+					"text1": "Biztos vagy benne, hogy törölni akarod ezt a tokent \"{token}\"?",
+					"text2": "Ez megvonja a hozzáférést az összes ezt használó alkalmazás vagy integráció számára. Ezt nem tudod visszavonni."
 				},
 				"attributes": {
 					"title": "Cím",
-					"titlePlaceholder": "Adjon meg egy címet, amelyet később felismer",
+					"titlePlaceholder": "Adj meg egy címet, amelyet később felismersz!",
 					"expiresAt": "Lejárat ekkor",
 					"permissions": "Jogosultságok"
 				}
@@ -152,31 +157,31 @@
 		},
 		"deletion": {
 			"title": "Törölje Workman fiókját",
-			"text1": "Fiókjának törlése végleges, és nem vonható vissza. Töröljük az összes projektjét, feladatát és minden, ami ehhez kapcsolódik.",
-			"text2": "A folytatáshoz adja meg jelszavát. Kapni fog egy e-mailt a további utasításokkal.",
-			"text3": "A folytatáshoz kattintson az alábbi gombra. Kapni fog egy e-mailt a további utasításokkal.",
+			"text1": "Fiókod törlése végleges, és nem vonható vissza. Töröljük az összes projekted, feladatod és mindent, ami hozzájuk kapcsolódik.",
+			"text2": "A folytatáshoz add meg jelszavad! Kapni fogsz egy e-mailt a további utasításokkal.",
+			"text3": "A folytatáshoz klikkelj az alábbi gombra! Kapni fogsz egy e-mailt a további utasításokkal.",
 			"confirm": "Fiókom törlése",
-			"requestSuccess": "A kérés sikeres volt. Kapni fog egy e-mailt a további utasításokkal.",
-			"passwordRequired": "Kérjük, írja be jelszavát.",
-			"confirmSuccess": "Sikeresen megerősítette fiókja törlését. Három napon belül töröljük fiókját.",
-			"scheduled": "Workman fiókját a következő időpontban töröljük: {date} ({dateSince}).",
-			"scheduledCancel": "A fiók törlésének megszakításához kattintson ide.",
-			"scheduledCancelText": "Fiókja törlésének megszakításához adja meg jelszavát alább:",
-			"scheduledCancelButton": "Fiókja törlésének megszakításához kattintson az alábbi gombra:",
+			"requestSuccess": "A kérés sikeres volt. Kapni fogsz egy e-mailt a további utasításokkal.",
+			"passwordRequired": "Kérlek, írjd be jelszavad!",
+			"confirmSuccess": "Sikeresen megerősítetted fiókod törlését. Három napon belül töröljük fiókod.",
+			"scheduled": "Vikunja fiókod a következő időpontban töröljük: {date} ({dateSince}).",
+			"scheduledCancel": "A fiók törlésének megszakításához klikkelj ide!",
+			"scheduledCancelText": "Fiókod törlésének megszakításához add meg jelszavad alább:",
+			"scheduledCancelButton": "Fiókod törlésének megszakításához klikkelj az alábbi gombra:",
 			"scheduledCancelConfirm": "Fiókom törlésének megszakítása",
-			"scheduledCancelSuccess": "Fiókját nem töröljük."
+			"scheduledCancelSuccess": "Fiókod nem töröljük."
 		},
 		"export": {
-			"title": "Exportálja a Workman adatait",
-			"description": "Kérhet másolatot az összes Workman adatáról. Ez magában foglalja a projekteket, feladatokat és mindent, ami ezekhez kapcsolódik. Ezeket az adatokat bármely Workman példányba importálhatja a migrációs felületen keresztül.",
-			"descriptionPasswordRequired": "Kérjük, adja meg jelszavát a folytatáshoz:",
-			"request": "Másolatot kérek a Workman-ban lévő adataimról",
-			"success": "Sikeresen lekérte Workman adatait! Amint készen áll a letöltésre, e-mailt küldünk.",
-			"downloadTitle": "Töltse le az exportált Workman adatait"
+			"title": "Exportálás (Vikunja Export)",
+			"description": "Kérhetsz másolatot az összes Vikunja-adatodról. Ez magában foglalja a projekteket, feladatokat és mindent, ami ezekhez kapcsolódik. Ezeket az adatokat bármely Vikunja példányba importálhatod a migrációs felületen keresztül.",
+			"descriptionPasswordRequired": "Kérlek, add meg jelszavad a folytatáshoz:",
+			"request": "Másolatot kérek a Vikunjában lévő adataimról",
+			"success": "Sikeresen lekérted Vikunja-adataid! Amint készen áll a letöltésre, e-mailt küldünk.",
+			"downloadTitle": "Exportált Vikunja-adataid letöltése"
 		}
 	},
 	"project": {
-		"archivedMessage": "Ez a projekt archiválva van. Nem lehet hozzá új feladatokat létrehozni vagy szerkeszteni.",
+		"archivedMessage": "Ez a projekt archiválva van. Nem lehet hozzá új feladatokat létrehozni, vagy szerkeszteni.",
 		"archived": "Archivált",
 		"showArchived": "Archív megjelenítése",
 		"color": "Szín",
@@ -189,20 +194,20 @@
 		"inboxTitle": "Beérkezett feladatok",
 		"create": {
 			"header": "Új projekt",
-			"titlePlaceholder": "Írja be a projekt címét…",
-			"addTitleRequired": "Kérjük, adjon meg egy címet.",
+			"titlePlaceholder": "Írd be a projekt címét…",
+			"addTitleRequired": "Kérlek, adj meg egy címet!",
 			"createdSuccess": "A projekt sikeresen létrehozva.",
 			"addProjectRequired": "Adjon meg egy projektet, vagy állítson be egy alapértelmezett projektet a beállításokban."
 		},
 		"archive": {
 			"title": "\"{project}\" archiválása.",
-			"archive": "Archiválja ezt a projektet",
-			"unarchive": "Projekt archiválásának visszaállítása",
+			"archive": "Projekt archiválása",
+			"unarchive": "Projekt visszaállítása archívumból",
 			"success": "A projekt sikeresen archiválva."
 		},
 		"background": {
-			"title": "Projekt háttérkép beállítása",
-			"remove": "Háttérkép eltávolítása",
+			"title": "Háttérkép beállítása projekthez",
+			"remove": "Háttér eltávolítása",
 			"upload": "Válasszon hátteret a számítógépéről",
 			"searchPlaceholder": "Háttérkép keresése…",
 			"poweredByUnsplash": "Unsplash által hajtva",
@@ -216,7 +221,7 @@
 			"text1": "Biztosan törölni szeretnéd ezt a projektet és annak összes tartalmát?",
 			"text2": "Ez magában foglalja az összes feladatot és NEM VISSZAVONHATÓ!",
 			"success": "A projekt sikeresen törölve.",
-			"tasksToDelete": "Ezzel visszavonhatatlanul eltávolítjuk kb. {count} feladatát.",
+			"tasksToDelete": "Ezzel visszavonhatatlanul eltávolítunk kb. {count} feladatot.",
 			"tasksAndChildProjectsToDelete": "Ezzel visszavonhatatlanul eltávolítunk kb. {tasks} feladatot és {projects} projektet.",
 			"noTasksToDelete": "Ez a projekt nem tartalmaz feladatokat, biztonságosan törölhető."
 		},
@@ -224,10 +229,10 @@
 			"title": "Duplikálja a projektet",
 			"label": "Duplikálás",
 			"text": "Válasszon ki egy szülőprojektet, amely tartalmazza a duplikált projektet:",
-			"success": "A projekt sikeresen duplikálva."
+			"success": "Projekt sikeresen duplikálva."
 		},
 		"edit": {
-			"header": "A projekt szerkesztése",
+			"header": "Projekt szerkesztése",
 			"title": "\"{project}\" szerkesztése",
 			"titlePlaceholder": "Írja be a projekt címét...",
 			"identifierTooltip": "A projektazonosító használható egy feladat egyedi azonosítására a projektek között. A letiltáshoz üresre állíthatja.",
@@ -236,7 +241,7 @@
 			"description": "Leírás",
 			"descriptionPlaceholder": "Adja meg a projekt leírását, a további lehetőségekért nyomja meg a „/” gombot…",
 			"color": "Szín",
-			"success": "A projekt sikeresen frissítve."
+			"success": "Projekt sikeresen frissítve."
 		},
 		"share": {
 			"header": "Projekt megosztása",
@@ -247,29 +252,30 @@
 				"what": "Mi az a megosztási link?",
 				"explanation": "A Linkek megosztása segítségével egyszerűen megoszthat egy projektet más felhasználókkal, akik nem rendelkeznek fiókkal a Vikunján.",
 				"name": "Név (nem kötelező)",
-				"namePlaceholder": "Például: Kis Géza",
-				"nameExplanation": "A link megosztása által végzett összes művelet a névvel együtt fog megjelenni.",
+				"namePlaceholder": "pl.: tükörfúró",
+				"nameExplanation": "A megosztási linken keresztül végzett műveletek ezen a néven jelennek meg.",
 				"password": "Jelszó (nem kötelező)",
-				"passwordExplanation": "Bejelentkezéskor a felhasználónak meg kell adnia ezt a jelszót.",
+				"passwordExplanation": "Megnyitáskor a felhasználónak meg kell adnia ezt a jelszót.",
 				"noName": "Nincs név beállítva",
-				"remove": "Linkmegosztás eltávolítása",
+				"remove": "Megosztási link törlése",
 				"removeText": "Biztosan eltávolítja ezt a linkmegosztást? A továbbiakban nem lesz elérhető a projekt ezzel a linkmegosztással. Ezt nem lehet visszacsinálni!",
-				"createSuccess": "A linkmegosztás sikeresen létrejött.",
-				"deleteSuccess": "A linkmegosztás sikeresen törlődött",
+				"createSuccess": "Megosztási link sikeresen létrehozva.",
+				"deleteSuccess": "Megosztási link sikeresen törölve",
 				"view": "Nézet",
-				"sharedBy": "Megosztva tőle: {0}"
+				"sharedBy": "{0} osztotta meg"
 			},
 			"userTeam": {
 				"typeUser": "felhasználó | felhasználók",
 				"typeTeam": "csapat | csapatok",
-				"shared": "Megosztva a következőkkel: {type}",
+				"shared": "Megosztás {type}kal",
 				"you": "Ön",
-				"notShared": "Még nincs megosztva egyik {type} felhasználóval sem.",
-				"removeHeader": "Távolítson el egy {type} elemet a {sharable} közül",
-				"removeText": "Biztosan eltávolítja ezt a(z) {sharable} elemet a(z) {type} közül? Ezt nem lehet visszacsinálni!",
-				"removeSuccess": "A {sharable} sikeresen eltávolítva a következőből: {type}.",
-				"addedSuccess": "A {type} sikeresen hozzá lett adva.",
-				"updatedSuccess": "A {type} sikeresen hozzá lett adva."
+				"notShared": "Még nincs megosztva {type}kal.",
+				"removeHeader": "{type} eltávolítása innen: {sharable}",
+				"removeText": "A {sharable} biztosan ne legyen többé elérhető a {type} számára? Nem visszavonható!",
+				"removeSuccess": "{type} sikeresen levéve innen: {sharable}",
+				"addedSuccess": "A {type} sikeresen hozzáadva.",
+				"updatedSuccess": "A {type} sikeresen hozzáadva.",
+				"removeCleanupText": "Aki elveszti a hozzáférést ehhez a projekthez,\nvagy az alá tartozó projektekhez,\naz alábbiakat is bukja:"
 			},
 			"attributes": {
 				"link": "Hivatkozás",
@@ -278,7 +284,7 @@
 		},
 		"list": {
 			"title": "Lista",
-			"add": "Új hozzáadása",
+			"add": "Hozzáadás",
 			"empty": "Ez a projekt jelenleg üres.",
 			"editTask": "Feladat szerkesztése."
 		},
@@ -297,9 +303,9 @@
 		"kanban": {
 			"title": "Kanban",
 			"limit": "Korlát: {limit}",
-			"doneBucket": "Kész vödör",
-			"doneBucketHint": "Az ebbe a csoportba helyezett összes feladat automatikusan készként lesz megjelölve.",
-			"doneBucketHintExtended": "A kész csoportba áthelyezett összes feladat automatikusan készként lesz megjelölve. A máshonnan elvégzettként megjelölt összes feladat is átkerül.",
+			"doneBucket": "'Kész' vödör",
+			"doneBucketHint": "Ebbe a vödörbe helyezett feladatok meg lesznek jelölve befejezettként.",
+			"doneBucketHintExtended": "A 'kész' vödörbe áthelyezett feladatok automatikusan meg lesznek jelölve befejezettként. A máshol befejezettként megjelölt feladatok is átkerülnek a 'kész' vödörbe.",
 			"doneBucketSavedSuccess": "Az elkészült vödör sikeresen elmentve.",
 			"defaultBucket": "Alapértelmezett vödör",
 			"defaultBucketHint": "Mikor feladatokat hoz létre a vödör kiválasztása nélkül, a rendszer hozzáadja őket ehhez a vödörhöz.",
@@ -308,14 +314,14 @@
 			"addTaskPlaceholder": "Adja meg az új feladatcímet…",
 			"addTask": "Feladat hozzáadása",
 			"addAnotherTask": "Adjon hozzá egy másik feladatot",
-			"addBucketPlaceholder": "Adja meg az új vödör címét…",
+			"addBucketPlaceholder": "Add meg az új vödör címét…",
 			"deleteHeaderBucket": "Vödör törlése",
 			"deleteBucketText1": "Biztosan törli ezt az vödröt?",
 			"deleteBucketText2": "Ez nem törli a feladatokat, hanem áthelyezi őket az alapértelmezett vödörbe.",
 			"deleteBucketSuccess": "A vödör sikeresen törölve.",
 			"bucketTitleSavedSuccess": "A vödör címe sikeresen elmentve.",
 			"bucketLimitSavedSuccess": "A vödör limit sikeresen elmentve.",
-			"collapse": "Zárd össze ezt a vödröt"
+			"collapse": "Összecsukás"
 		},
 		"pseudo": {
 			"favorites": {
@@ -325,7 +331,7 @@
 		"webhooks": {
 			"title": "Webhookok",
 			"targetUrl": "Cél URL",
-			"targetUrlInvalid": "Kérjük adjon meg egy érvényes URL-t.",
+			"targetUrlInvalid": "Kérlek, adj meg egy érvényes URL-t!",
 			"events": "Események",
 			"mustSelectEvents": "Legalább egy eseményt ki kell választania.",
 			"delete": "Webhook törlése",
@@ -334,23 +340,24 @@
 			"create": "Webhook létrehozása",
 			"secret": "Kulcs",
 			"secretHint": "Amennyiben meg van adva, a webhook cél URL-címére irányuló összes kérés HMAC használatával lesz aláírva.",
-			"secretDocs": "Tekintse meg a dokumentációt a titkok használatának további részleteiért."
+			"secretDocs": "Tekintsd meg a dokumentációt a titkok használatának további részleteiért."
 		},
 		"views": {
 			"header": "Nézetek szerkesztése",
 			"title": "Cím",
 			"actions": "Műveletek",
 			"kind": "Fajta",
-			"bucketConfigMode": "Vödör konfigurációs mód",
-			"bucketConfig": "Vödör konfiguráció",
+			"bucketConfigMode": "Vödörkonfigurációs-mód",
+			"bucketConfig": "Vödörkonfiguráció",
 			"bucketConfigManual": "Manuális",
 			"filter": "Szűrő",
 			"create": "Nézet létrehozása",
-			"createSuccess": "A nézet létrehozása sikeres volt.",
+			"createSuccess": "Nézet létrehozva.",
 			"titleRequired": "Kérjük, adjon meg egy címet.",
-			"delete": "Törölje ezt a nézetet",
-			"deleteText": "Biztosan eltávolítja ezt a nézetet? A továbbiakban nem lesz használható a projektben szereplő feladatok megtekintésére. Ez a művelet nem töröl semmilyen feladatot. Ezt nem lehet visszacsinálni!"
-		}
+			"delete": "Nézet törlése",
+			"deleteText": "Biztosan eltávolítod ezt a nézetet? Feladatok nem törlődnek, a kiválasztott nézet viszont a továbbiakban nem lesz használható a megtekintésükhöz. Nem visszavonható!"
+		},
+		"title": "Projektek"
 	},
 	"filters": {
 		"title": "Szűrők",
@@ -361,15 +368,15 @@
 			"titlePlaceholder": "A mentett szűrő címe ide kerül…",
 			"description": "Leírás",
 			"descriptionPlaceholder": "Adjon hozzá leírást ehhez a szűrőhöz, nyomja meg a „/” gombot a további lehetőségekért…",
-			"includeNulls": "Tartalmazza az olyan feladatokat, amelyeknek nincs beállított értéke"
+			"includeNulls": "Tartalmazza a beállított érték nélküli feladatokat"
 		},
 		"create": {
 			"title": "Új mentett szűrő",
-			"description": "A mentett szűrő egy virtuális projekt, amely szűrőkészletből kerül kiszámításra minden alkalommal, amikor hozzáfér.",
+			"description": "A mentett szűrő egy virtuális projekt, amely szűrőkészletből kerül kiszámításra minden megnyitás alkalmával.",
 			"titleRequired": "Adja meg a szűrő címét."
 		},
 		"delete": {
-			"header": "Törölje ezt a mentett szűrőt",
+			"header": "Mentett szűrő törlése",
 			"text": "Biztosan törölni akarja ezt a mentett szűrőt?",
 			"success": "A szűrő sikeresen törölve."
 		},
@@ -412,17 +419,18 @@
 				},
 				"examples": {
 					"intro": "Íme néhány példa a szűrőlekérdezésekre:",
-					"priorityEqual": "4. prioritási szintű feladatokat egyezteti",
-					"dueDatePast": "A múltbeli esedékességgel rendelkező feladatokat egyezteti",
-					"undoneHighPriority": "Megfelel a 3-as, vagy magasabb prioritási szintű még nem elvégzett feladatoknak",
+					"priorityEqual": "4. prioritási szintű feladatokra szűr",
+					"dueDatePast": "A lejárt határidejű feladatokra szűr",
+					"undoneHighPriority": "3-as vagy magasabb prioritású, még el nem végzett feladatokra szűr",
 					"assigneesIn": "Megfelel a \"felhasználó1\", vagy a \"felhasználó2\"-nek rendelt feladatoknak",
 					"priorityOneOrTwoPastDue": "Megfelel az 1-es, vagy 2-es prioritási szinttel és a múltbeli esedékességgel rendelkező feladatoknak"
-				}
+				},
+				"canUseDatemath": "Függvényt használhatsz relatív dátumok beállításához. Kattints a dátumértékre a lekérdezésben a részletekért."
 			}
 		}
 	},
 	"migrate": {
-		"title": "Importálás egy másik szolgáltatásból",
+		"title": "Importálás",
 		"titleService": "Importálja adatait a {name} - ból Vikunjába",
 		"description": "A kezdéshez kattintson az alábbi, harmadik féltől származó szolgáltatások egyikének logójára.",
 		"descriptionDo": "A Workman importálja az összes listát, feladatot, jegyzetet, emlékeztetőt és fájlt, amelyhez Ön hozzáfér.",
@@ -435,7 +443,7 @@
 		"importUpload": "Ha adatokat szeretne importálni a(z) {name} webhelyről a Vikunjába, kattintson az alábbi gombra a fájl kiválasztásához.",
 		"upload": "Fájl feltöltése",
 		"migrationStartedWillReciveEmail": "A Workman mostantól importálja listáit/projektjeit, feladatait, jegyzeteit, emlékeztetőit és fájljait a {service} szolgáltatásból. Mivel ez eltart egy ideig, amint elkészült, küldünk Önnek egy e-mailt. Most bezárhatja ezt az ablakot.",
-		"migrationInProgress": "A migráció folyamatban van. Kérjük várjon, amíg elkészül."
+		"migrationInProgress": "Egy átvezetés folyamatban van. Kérlek várj, amíg elkészül!"
 	},
 	"label": {
 		"title": "Címkék",
@@ -461,7 +469,7 @@
 	},
 	"sharing": {
 		"authenticating": "Hitelesítés…",
-		"passwordRequired": "Ehhez a megosztott projekthez jelszó szükséges. Kérjük, írja be alább:",
+		"passwordRequired": "Ez a megosztott projekt jelszót kér.\nKérlek, írd be alább:",
 		"invalidPassword": "A jelszó érvénytelen."
 	},
 	"navigation": {
@@ -479,7 +487,7 @@
 		"cancel": "Mégse",
 		"disable": "Letiltás",
 		"copy": "Másolás a vágólapra",
-		"copyError": "A vágólapra másolás nem sikerült",
+		"copyError": "Másolás a vágólapra nem sikerült",
 		"searchPlaceholder": "Írja be a kereséshez…",
 		"previous": "Előző",
 		"next": "Következő",
@@ -516,35 +524,35 @@
 		"editor": {
 			"edit": "Szerkesztés",
 			"heading1": "Címsor 1",
-			"heading1Tooltip": "Nagy szakasz címsora.",
+			"heading1Tooltip": "Nagy szakaszcímsor.",
 			"heading2": "Címsor 2",
-			"heading2Tooltip": "Közepes szakasz címsora.",
+			"heading2Tooltip": "Közepes szakaszcímsor.",
 			"heading3": "Címsor 3",
-			"heading3Tooltip": "Kisebb szakasz címsora.",
+			"heading3Tooltip": "Kisebb szakaszcímsor.",
 			"bold": "Félkövér",
 			"italic": "Dőlt",
 			"strikethrough": "Áthúzott",
 			"underline": "Aláhúzott",
 			"code": "Kód",
-			"codeTooltip": "Rögzítsen egy kódrészletet.",
+			"codeTooltip": "Kódrészlet rögzítése.",
 			"quote": "Idézet",
-			"quoteTooltip": "Rögzítsen egy idézetet.",
+			"quoteTooltip": "Idézet rögzítése.",
 			"bulletList": "Felsorolásos lista",
-			"bulletListTooltip": "Hozzon létre egy egyszerű felsoroláslistát.",
+			"bulletListTooltip": "Sima felsorolás létrehozása.",
 			"orderedList": "Rendezett lista",
-			"orderedListTooltip": "Készítsen listát számozással.",
+			"orderedListTooltip": "Számozott lista létrehozása.",
 			"link": "Hivatkozás",
 			"image": "Kép",
 			"imageTooltip": "Fájl feltöltése a számítógépről.",
 			"horizontalRule": "Vízszintes vonal",
-			"horizontalRuleTooltip": "Egy szakasz felosztása.",
+			"horizontalRuleTooltip": "Szakasz kettéosztása.",
 			"text": "Szöveg",
-			"textTooltip": "Csak kezdje el a gépelést egyszerű szöveggel.",
+			"textTooltip": "Csak gépelj eygszerű szövegként.",
 			"taskList": "Feladatlista",
-			"taskListTooltip": "Kövesse nyomon a feladatokat egy teendőlistával.",
+			"taskListTooltip": "Feladat követése teendőlistával.",
 			"undo": "Visszavonás",
 			"redo": "Újra",
-			"placeholder": "Írjon be egy szöveget, vagy nyomja meg a „/” gombot a további lehetőségek megtekintéséhez…",
+			"placeholder": "Írj be egy szöveget, vagy nyomj „/”-t a további lehetőségekért…",
 			"table": {
 				"title": "Táblázat",
 				"insert": "Táblázat beszúrása",
@@ -557,15 +565,15 @@
 				"deleteTable": "Táblázat törlése",
 				"mergeCells": "Cellák egyesítése",
 				"splitCell": "Cellák szétválasztása",
-				"toggleHeaderColumn": "A fejléc oszlopának váltása",
-				"toggleHeaderRow": "Váltás a fejlécsorra",
-				"toggleHeaderCell": "Kapcsolja be a fejléccellát",
-				"mergeOrSplit": "Egyesítés vagy felosztás",
+				"toggleHeaderColumn": "Címoszlop ki/be",
+				"toggleHeaderRow": "Címsor ki/be",
+				"toggleHeaderCell": "Címcella ki/be",
+				"mergeOrSplit": "Egyesítés/felosztás",
 				"fixTables": "Táblázatok javítása"
 			}
 		},
 		"multiselect": {
-			"selectPlaceholder": "Kattintson, vagy nyomja meg az Enter billentyűt a kiválasztáshoz"
+			"selectPlaceholder": "Kiválasztáshoz klikkelj, vagy nyomj entert"
 		},
 		"datepickerRange": {
 			"to": "Eddig",
@@ -610,25 +618,25 @@
 			}
 		},
 		"datemathHelp": {
-			"canuse": "A függvény segítségével szűrheti a relatív dátumokat.",
-			"learnhow": "Nézze meg, hogyan működik",
+			"canuse": "Függvény segítségével szűrhetsz a relatív dátumokra.",
+			"learnhow": "Nézd meg, hogyan működik",
 			"title": "Függvény",
-			"intro": "Adjon meg relatív dátumokat, amelyeket a Workman menet közben old meg a szűrő alkalmazásakor.",
+			"intro": "Relatív dátumok megadása, melyeket a Vikunja menet közben old meg a szűrő alkalmazásakor.",
 			"expression": "Minden függvény egy horgonydátummal kezdődik, amely lehet {0}, vagy egy {1}-re végződő dátumkarakterlánc. Ezt a rögzítési dátumot opcionálisan követheti egy vagy több matematikai kifejezés.",
 			"similar": "Ezek a kifejezések hasonlóak a {0} és {1} által biztosított kifejezésekhez.",
-			"add1Day": "Adjon hozzá egy napot",
+			"add1Day": "Egy nap hozzáadása",
 			"minus1Day": "Egy nap kivonása",
-			"roundDay": "Lefelé kerekítés a legközelebbi napra",
+			"roundDay": "Lefelé kerekítés legközelebbi napra",
 			"supportedUnits": "Támogatott időegységek",
 			"someExamples": "Példák időkifejezésekre",
 			"units": {
-				"seconds": "Másodpercek",
-				"minutes": "Percek",
-				"hours": "Órák",
-				"days": "Napok",
-				"weeks": "Hetek",
-				"months": "Hónapok",
-				"years": "Évek"
+				"seconds": "Másodperc",
+				"minutes": "Perc",
+				"hours": "Óra",
+				"days": "Nap",
+				"weeks": "Hét",
+				"months": "Hónap",
+				"years": "Év"
 			},
 			"examples": {
 				"now": "Épp most",
@@ -637,20 +645,20 @@
 				"beginningOfThisWeek": "A hét elején éjfélkor",
 				"endOfThisWeek": "Hétvégén",
 				"in30Days": "30 napon belül",
-				"datePlusMonth": "{0} plusz egy hónap a jelenlegi naphoz éjfélkor"
+				"datePlusMonth": "{0} plusz egy hónap a megadott naphoz éjfélkor"
 			}
 		}
 	},
 	"task": {
-		"createSuccess": "A feladat sikeresen létrehozva.",
-		"doneSuccess": "A feladat sikeresen meg lett jelölve elkészültként.",
-		"undoneSuccess": "A feladat sikeresen meg lett jelölve nem elkészültként.",
+		"createSuccess": "Feladat létrehozva.",
+		"doneSuccess": "Feladat megjelölve befejezettként.",
+		"undoneSuccess": "Feladat megjelölve be nem fejezettként.",
 		"undo": "Visszavonás",
 		"checklistTotal": "{checked} / {total} feladatok",
-		"checklistAllDone": "{total} feladatok",
+		"checklistAllDone": "{total} feladat",
 		"show": {
 			"titleCurrent": "Jelenlegi feladatok",
-			"overdue": "A lejárt feladatok megjelenítése",
+			"overdue": "Elmaradt feladatok megjelenítése",
 			"fromuntil": "Feladatok {from} és {until} között",
 			"select": "Dátumtartomány kiválasztása",
 			"noTasks": "Nincs tennivalója – Szép napot!"
@@ -662,7 +670,7 @@
 			"move": "A feladat áthelyezése egy másik projektbe",
 			"done": "Megjelölés befejezettként",
 			"undone": "Megjelölés nem befejezettként",
-			"created": "Létrehozva {0} , {1} által",
+			"created": "{1} hozta létre, {0}",
 			"updated": "Frissítve: {0}",
 			"doneAt": "Befejezve: {0}",
 			"updateSuccess": "A feladat mentése sikeres volt.",
@@ -687,7 +695,7 @@
 				"reminders": "Emlékeztető beállítása",
 				"repeatAfter": "Állítsa be az ismétlési intervallumot",
 				"percentDone": "Előrehaladás beállítása",
-				"attachments": "Mellékletek hozzáadása",
+				"attachments": "Melléklet hozzáadása",
 				"relatedTasks": "Kapcsolat hozzáadása",
 				"moveProject": "Áthelyezés",
 				"color": "Szín beállítása",
@@ -724,13 +732,13 @@
 			"subscribe": "Feliratkozás",
 			"unsubscribe": "Leiratkozás",
 			"subscribeSuccessProject": "Ön feliratkozott erre a projektre",
-			"unsubscribeSuccessProject": "Ön leiratkozott erről a projektről",
+			"unsubscribeSuccessProject": "Leiratkoztál erről a projektről",
 			"subscribeSuccessTask": "Ön feliratkozott erre a feladatra",
-			"unsubscribeSuccessTask": "Ön leiratkozott erről a feladatról"
+			"unsubscribeSuccessTask": "Leiratkoztál erről a feladatról"
 		},
 		"attachment": {
 			"title": "Mellékletek",
-			"createdBy": "Létrehozva {0}, {1} által",
+			"createdBy": "{1} töltötte fel, ekkor: {0}",
 			"downloadTooltip": "Melléklet letöltése",
 			"upload": "Melléklet feltöltése",
 			"drop": "Húzza a file(oka)t ide a feltöltéshez",
@@ -767,8 +775,8 @@
 		"assignee": {
 			"placeholder": "Gépelje be a felhasználót a hozzárendeléséhez…",
 			"selectPlaceholder": "Felhasználó hozzárendelése",
-			"assignSuccess": "A felhasználó sikeresen hozzárendelve!",
-			"unassignSuccess": "A felhasználó sikeresen leiratkozott!"
+			"assignSuccess": "Felhasználó hozzárendelve a feladathoz.",
+			"unassignSuccess": "Felhasználó levéve a feladatról."
 		},
 		"label": {
 			"createPlaceholder": "Adja hozzá ezt új címkeként",
@@ -797,7 +805,7 @@
 			"delete": "Feladatkapcsolat törlése",
 			"deleteText1": "Biztosan törli ezt a feladatkapcsolatot?",
 			"select": "Válasszon kapcsolattípust",
-			"taskRequired": "Kérjük, válasszon egy feladatot, vagy írjon be egy új feladatcímet.",
+			"taskRequired": "Kérlek, válassz egy feladatot, vagy írj be egy új feladatcímet!",
 			"kinds": {
 				"subtask": "Részfeladat | Részfeladatok",
 				"parenttask": "Szülői feladat | Szülői feladatok",
@@ -834,7 +842,7 @@
 			"hours": "Órák",
 			"days": "Napok",
 			"weeks": "Hetek",
-			"invalidAmount": "Kérjük, adjon meg 0-nál többet."
+			"invalidAmount": "Kérlek, 0-nál többet adj meg!"
 		},
 		"quickAddMagic": {
 			"hint": "Használjon mágikus előtagokat a határidők, a megbízottak és más feladattulajdonságok meghatározásához.",
@@ -901,7 +909,7 @@
 		"attributes": {
 			"name": "Csapatnév",
 			"namePlaceholder": "A csapat nevét ide írja…",
-			"nameRequired": "Kérjük, adjon meg egy nevet.",
+			"nameRequired": "Kérlek, adj meg egy nevet!",
 			"description": "Leírás",
 			"descriptionPlaceholder": "Jellemezze a csapatot itt, kattintson a '/' gombra a további lehetőségekért…",
 			"admin": "Adminisztrátor",
@@ -934,7 +942,8 @@
 			"delete": "Feladat törlése",
 			"priority": "Módosítsa ennek a feladatnak a prioritását",
 			"favorite": "Jelölje meg ezt a feladatot kedvencként / nem kedvencként",
-			"save": "Mentse el az aktuális feladatot"
+			"save": "Mentse el az aktuális feladatot",
+			"doneAndBack": "Feladat befejezettnek jelölése és visszalépés"
 		},
 		"project": {
 			"title": "Projektnézetek",
@@ -961,7 +970,7 @@
 		"archive": "Archiválás",
 		"duplicate": "Duplikálás",
 		"delete": "Törlés",
-		"unarchive": "Archiválás visszavonása",
+		"unarchive": "Visszaállítás archívumból",
 		"share": "Megosztás",
 		"createProject": "Projekt létrehozása",
 		"cantArchiveIsDefault": "Ezt nem archiválhatja, mert ez az alapértelmezett projektje.",
@@ -973,12 +982,12 @@
 		"urlPlaceholder": "Például: https://localhost:3456",
 		"change": "csere",
 		"use": "A Workman telepítés használata itt: {0}",
-		"error": "Nem található, vagy nem használható a Workman telepítése a(z) \"{domain}\" címen. Kérjük, ellenőrizze, hogy az url formátuma megfelelő-e, és közvetlenül elérheti-e, majd próbálja újra.",
+		"error": "Nem található, vagy nem használható a Vikunja a(z) \"{domain}\" címen. Kérlek, ellenőrizd, hogy az URL formátuma megfelelő-e, és közvetlenül elérhető-e, majd próbáld újra!",
 		"success": "A Workman telepítés használata itt: {domain}",
 		"urlRequired": "Az URL megadása kötelező."
 	},
 	"loadingError": {
-		"failed": "A betöltés nem sikerült, kérjük {0}. Ha a hiba továbbra is fennáll, kérjük {1}.",
+		"failed": "A betöltés nem sikerült. Kérlek, {0}! Ha a hiba továbbra is fennáll, {1}!",
 		"tryAgain": "próbálja meg újra",
 		"contact": "lépjen velünk kapcsolatba"
 	},
@@ -1005,7 +1014,8 @@
 			"newTask": "Új feladat",
 			"newProject": "Új projekt",
 			"newTeam": "Új csapat"
-		}
+		},
+		"removePrefillDescription": "Leírás eltávolítása"
 	},
 	"date": {
 		"altFormatShort": "j M Y"
@@ -1079,7 +1089,9 @@
 		"13001": "A linkmegosztáshoz jelszó szükséges a hitelesítéshez, de nem adták meg.",
 		"error": "Hiba",
 		"success": "Siker",
-		"0001": "Nincs jogosultsága ehhez."
+		"0001": "Nincs jogosultsága ehhez.",
+		"14010": "A megadott fájlt nem lehet feldolgozni. Kérlek, győződj meg róla, hogy érvényes exportfájl!",
+		"14205": "A Planka URL privát vagy helyi webcímre mutat, amit a Vikunja alapból blokkol. Egy rendszergazda enegedélyezheti az 'outgoingrequests.allownonroutableips' igazra állításával."
 	},
 	"about": {
 		"title": "Névjegy",

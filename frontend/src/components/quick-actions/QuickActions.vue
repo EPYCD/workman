@@ -49,6 +49,21 @@
 			</div>
 
 			<div
+				v-if="isNewTaskCommand && prefillDescription !== null"
+				class="prefill-description"
+			>
+				<Icon icon="link" />
+				<span class="prefill-description-title">{{ prefillDescription.url || prefillDescription.description }}</span>
+				<BaseButton
+					:aria-label="$t('quickActions.removePrefillDescription')"
+					class="prefill-description-remove"
+					@click="removePrefillDescription"
+				>
+					<Icon icon="times" />
+				</BaseButton>
+			</div>
+
+			<div
 				v-if="hintText !== '' && !isNewTaskCommand"
 				class="help quick-actions-hint"
 			>
@@ -141,6 +156,7 @@ import {useProjectStore} from '@/stores/projects'
 import {useTaskStore} from '@/stores/tasks'
 import {useAuthStore} from '@/stores/auth'
 import {useLabels} from '@/composables/useLabels'
+import {quickAddPrefillDescription, type QuickAddPrefill} from '@/helpers/quickAddPrefill'
 
 import {getHistory} from '@/modules/projectHistory'
 import {parseTaskText, PREFIXES, PrefixMode} from '@/modules/quickAddMagic'
@@ -189,6 +205,7 @@ enum SEARCH_MODE {
 
 const query = ref('')
 const selectedCmd = ref<Command | null>(null)
+const prefillDescription = ref<Pick<QuickAddPrefill, 'url' | 'description'> | null>(null)
 
 const foundTasks = ref<DoAction<ITask>[]>([])
 const taskService = shallowReactive(new TaskService())
@@ -242,6 +259,11 @@ watchEffect(() => {
 
 function closeQuickActions() {
 	baseStore.setQuickActionsActive(false)
+}
+
+function removePrefillDescription() {
+	prefillDescription.value = null
+	searchInput.value?.focus()
 }
 
 const foundProjects = computed(() => {
@@ -367,6 +389,17 @@ const commands = computed<{ [key in COMMAND_TYPE]: Command }>(() => ({
 }))
 
 const placeholder = computed(() => selectedCmd.value?.placeholder || t('quickActions.placeholder'))
+
+watch(active, isActive => {
+	const prefill = baseStore.quickAddPrefill
+	if (!isActive || prefill === null) {
+		return
+	}
+	selectedCmd.value = commands.value.newTask
+	// Quoted so quick add magic leaves a page title like "Plan for tomorrow" alone.
+	query.value = prefill.title === '' ? '' : `"${prefill.title}"`
+	prefillDescription.value = prefill.url === '' && prefill.description === '' ? null : {url: prefill.url, description: prefill.description}
+}, {immediate: true})
 
 const currentProject = computed(() => {
 	const project = baseStore.currentProject
@@ -627,7 +660,7 @@ function onEnter(event: KeyboardEvent) {
 }
 
 async function doCmd() {
-	if (results.value.length === 1 && results.value[0].items.length === 1) {
+	if (selectedCmd.value === null && results.value.length === 1 && results.value[0].items.length === 1) {
 		const result = results.value[0]
 		doAction(result.type, result.items[0])
 		openTaskAfterCreate = false
@@ -653,6 +686,7 @@ async function newTask() {
 	const task = await taskStore.createNewTask({
 		title: query.value,
 		projectId,
+		description: prefillDescription.value === null ? undefined : quickAddPrefillDescription(prefillDescription.value),
 	})
 	success({message: t('task.createSuccess')})
 
@@ -740,6 +774,7 @@ function unselectCmd() {
 function reset() {
 	query.value = ''
 	selectedCmd.value = null
+	prefillDescription.value = null
 }
 
 const resultCount = computed(() => results.value.reduce((total, group) => total + group.items.length, 0))
@@ -874,6 +909,27 @@ onBeforeUnmount(() => {
 	padding-block: var(--wm-space-2);
 	padding-inline: var(--wm-space-4);
 	border-block-end: 1px solid var(--wm-line-faint);
+}
+
+.prefill-description {
+	display: flex;
+	align-items: center;
+	gap: .5rem;
+	padding: .25rem .5rem .5rem 1rem;
+	color: var(--grey-600);
+	font-size: .9rem;
+}
+
+.prefill-description-title {
+	flex: 1;
+	min-inline-size: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.prefill-description-remove {
+	padding: 0 .5rem;
 }
 
 .results {

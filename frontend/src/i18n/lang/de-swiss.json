@@ -1324,6 +1324,7 @@
 		"task": {
 			"title": "Uufgabesiite",
 			"done": "Aufgabe als erledigt / unerledigt markieren",
+			"doneAndBack": "Aufgabe markieren und zurückgehen",
 			"assign": "Diese Aufgabe jemandem zuweisen",
 			"labels": "Labels ennere Uufgab hinzuefüege",
 			"dueDate": "S'Fälligkeitsdatum für die Uufgab ändere",
@@ -1442,7 +1443,8 @@
 			"newTask": "Neui Uufgab",
 			"newProject": "Neues Projekt",
 			"newTeam": "Neus Team"
-		}
+		},
+		"removePrefillDescription": "Beschreibung entfernen"
 	},
 	"date": {
 		"altFormatLong": "j M Y, H:i",
@@ -1549,7 +1551,12 @@
 		"14204": "Die Planka-API konnte unter der angegebenen URL nicht erreicht werden. Prüfe die URL und ob Workman die Instanz erreichen kann.",
 		"error": "Fähler",
 		"success": "Erfolg",
-		"0001": "Du komsch hier ned rein."
+		"0001": "Du komsch hier ned rein.",
+		"1041": "Zu viele fehlgeschlagene Versuche. Bitte warte einen Moment und probiere es nochmal.",
+		"10007": "Eine Projektansicht kann maximal 100 Spalten haben.",
+		"14018": "Der Import enthält mehr Elemente als erlaubt sind.",
+		"14019": "Der Migrationsstatus ist ungültig oder abgelaufen. Bitte starte die Migration erneut.",
+		"14205": "Die Planka-URL zeigt auf eine private oder lokale Netzwerkadresse, die Vikunja standardmäßig blockiert. Ein Admin kann das ändern, indem outgoingrequests.allownonroutableips eingeschaltet werden."
 	},
 	"about": {
 		"title": "Über",
