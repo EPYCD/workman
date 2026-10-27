@@ -18,7 +18,7 @@
 					:id="textareaId"
 					ref="newTaskInput"
 					v-model="newTaskTitle"
-					v-focus
+					v-focus="autofocus"
 					class="add-task-textarea input"
 					:class="{'textarea-empty': newTaskTitle === ''}"
 					:placeholder="$t('project.list.addPlaceholder')"
@@ -80,6 +80,10 @@ import {useConfigStore} from '@/stores/config'
 import {useTaskStore} from '@/stores/tasks'
 
 import {useAutoHeightTextarea} from '@/composables/useAutoHeightTextarea'
+
+const {autofocus = true} = defineProps<{
+	autofocus?: boolean,
+}>()
 
 const emit = defineEmits<{
 	tasksAdded: [tasks: ITask[]],

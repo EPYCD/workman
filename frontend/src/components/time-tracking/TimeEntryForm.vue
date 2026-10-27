@@ -109,6 +109,13 @@
 				</XButton>
 			</template>
 		</div>
+		<p
+			v-if="backdatedStopAt !== null"
+			v-cy="'backdatedStopHint'"
+			class="help"
+		>
+			{{ $t('timeTracking.form.stopsRunningTimerAt', {time: formatDayTime(backdatedStopAt, timeFormat)}) }}
+		</p>
 	</form>
 </template>
 
@@ -124,6 +131,9 @@ import TaskService from '@/services/task'
 import TaskModel from '@/models/task'
 import {smartFillStart} from '@/helpers/time/smartFillStart'
 import {useTimeTrackingStore} from '@/stores/timeTracking'
+import {backdatedStop} from '@/helpers/time/backdatedStop'
+import {formatDayTime} from '@/helpers/time/formatTimeRange'
+import {useTimeFormat} from '@/composables/useTimeFormat'
 import {useAuthStore} from '@/stores/auth'
 import {useProjectStore} from '@/stores/projects'
 
@@ -152,6 +162,7 @@ const emit = defineEmits<{
 const timeTrackingStore = useTimeTrackingStore()
 const authStore = useAuthStore()
 const projectStore = useProjectStore()
+const {store: timeFormat} = useTimeFormat()
 
 const isEditing = computed(() => props.entry != null)
 
@@ -172,6 +183,14 @@ const from = computed({
 	},
 })
 const to = ref<Date | null>(null)
+
+const backdatedStopAt = computed(() => {
+	const runningStart = timeTrackingStore.activeTimer?.startTime ?? null
+	if (isEditing.value || !start.value.chosen || start.value.date === null || runningStart === null) {
+		return null
+	}
+	return backdatedStop(runningStart, start.value.date, new Date())
+})
 const comment = ref('')
 const isSaving = ref(false)
 

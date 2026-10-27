@@ -8,6 +8,7 @@ import ProjectModel from '@/models/project'
 import ProjectService from '@/services/project'
 import {checkAndSetApiUrl, ERROR_NO_API_URL, InvalidApiUrlProvidedError, NoApiUrlProvidedError} from '@/helpers/checkAndSetApiUrl'
 import {isDesktopApp} from '@/helpers/desktopAuth'
+import type {QuickAddPrefill} from '@/helpers/quickAddPrefill'
 
 import {useMenuActive} from '@/composables/useMenuActive'
 
@@ -38,6 +39,7 @@ export const useBaseStore = defineStore('base', () => {
 	const hasTasks = ref(false)
 	const keyboardShortcutsActive = ref(false)
 	const quickActionsActive = ref(false)
+	const quickAddPrefill = ref<QuickAddPrefill | null>(null)
 	const logoVisible = ref(true)
 	const updateAvailable = ref(false)
 
@@ -79,8 +81,9 @@ export const useBaseStore = defineStore('base', () => {
 		keyboardShortcutsActive.value = value
 	}
 
-	function setQuickActionsActive(value: boolean) {
+	function setQuickActionsActive(value: boolean, prefill: QuickAddPrefill | null = null) {
 		quickActionsActive.value = value
+		quickAddPrefill.value = value ? prefill : null
 	}
 
 	function setBackground(newBackground: string) {
@@ -206,6 +209,7 @@ export const useBaseStore = defineStore('base', () => {
 		hasTasks: readonly(hasTasks),
 		keyboardShortcutsActive: readonly(keyboardShortcutsActive),
 		quickActionsActive: readonly(quickActionsActive),
+		quickAddPrefill: readonly(quickAddPrefill),
 		logoVisible: readonly(logoVisible),
 		updateAvailable: readonly(updateAvailable),
 

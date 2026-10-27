@@ -116,6 +116,7 @@ import {useTaskList} from '@/composables/useTaskList'
 import {useTaskDragToProject} from '@/composables/useTaskDragToProject'
 import {shouldShowTaskInListView} from '@/composables/useTaskListFiltering'
 import {PERMISSIONS as Permissions} from '@/constants/permissions'
+import {eventToShortcutString} from '@/helpers/shortcut'
 import {calculateItemPosition} from '@/helpers/calculateItemPosition'
 import type {ITask} from '@/modelTypes/ITask'
 import {isSavedFilter, useSavedFilter} from '@/services/savedFilter'
@@ -311,13 +312,14 @@ function handleListNavigation(e: KeyboardEvent) {
 		return
 	}
 
-	if (e.code === 'KeyJ') {
+	const shortcut = eventToShortcutString(e)
+	if (shortcut === 'KeyJ') {
 		e.preventDefault()
 		focusTask(Math.min(focusedIndex.value + 1, tasks.value.length - 1))
 		return
 	}
 
-	if (e.code === 'KeyK') {
+	if (shortcut === 'KeyK') {
 		e.preventDefault()
 		if (focusedIndex.value === -1) {
 			focusTask(tasks.value.length - 1)
@@ -334,11 +336,7 @@ function handleListNavigation(e: KeyboardEvent) {
 		return
 	}
 
-	if (e.code === 'Enter') {
-		if (e.isComposing) {
-			return
-		}
-
+	if (shortcut === 'Enter') {
 		// Links and buttons activate natively on Enter; leave them alone
 		if (e.target instanceof HTMLElement && e.target.closest('a, button, [role="button"]')) {
 			return

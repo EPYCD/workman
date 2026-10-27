@@ -10,6 +10,7 @@ import QuickActions from '@/components/quick-actions/QuickActions.vue'
 import {useBaseStore} from '@/stores/base'
 import type {IProject} from '@/modelTypes/IProject'
 import en from '@/i18n/lang/en.json'
+import type {QuickAddPrefill} from '@/helpers/quickAddPrefill'
 
 vi.mock('@/services/task', () => ({
 	default: class {
@@ -27,7 +28,7 @@ vi.mock('@/services/team', () => ({
 
 const i18n = createI18n({legacy: false, locale: 'en', messages: {en}})
 
-async function mountQuickActions(project: IProject | null) {
+async function mountQuickActions(project: IProject | null, prefill: QuickAddPrefill | null = null) {
 	const errors: unknown[] = []
 	const router = createRouter({
 		history: createMemoryHistory(),
@@ -42,7 +43,7 @@ async function mountQuickActions(project: IProject | null) {
 		setup() {
 			const baseStore = useBaseStore()
 			baseStore.setCurrentProject(project)
-			baseStore.setQuickActionsActive(true)
+			baseStore.setQuickActionsActive(true, prefill)
 			return () => h(QuickActions)
 		},
 	})
@@ -100,5 +101,13 @@ describe('QuickActions', () => {
 		expect(errors).toEqual([])
 		expect(event.defaultPrevented).toBe(true)
 		expect(useBaseStore().quickActionsActive).toBe(false)
+	})
+
+	it('opens the new task command with a prefill', async () => {
+		const {wrapper, errors} = await mountQuickActions(null, {title: 'Page', url: 'https://example.com', description: ''})
+
+		expect(errors).toEqual([])
+		expect((wrapper.get('input.input').element as HTMLInputElement).value).toBe('"Page"')
+		expect(wrapper.get('.prefill-description').text()).toContain('https://example.com')
 	})
 })

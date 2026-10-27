@@ -352,6 +352,12 @@
 						</table>
 					</div>
 
+					<AddTask
+						v-if="canWrite"
+						class="table-view__add-task d-print-none"
+						:autofocus="false"
+					/>
+
 					<Pagination
 						:total-pages="totalPages"
 						:current-page="currentPage"
@@ -380,6 +386,7 @@ import Sort from '@/components/tasks/partials/Sort.vue'
 import FilterPopup from '@/components/project/partials/FilterPopup.vue'
 import Pagination from '@/components/misc/Pagination.vue'
 import Popup from '@/components/misc/Popup.vue'
+import AddTask from '@/components/tasks/AddTask.vue'
 
 import type {SortBy} from '@/composables/useTaskList'
 import {useTaskList} from '@/composables/useTaskList'
@@ -391,6 +398,8 @@ import {getTaskIdentifier} from '@/models/task'
 import { camelCase } from 'change-case'
 import {isSavedFilter} from '@/services/savedFilter'
 import {useProjectStore} from '@/stores/projects'
+import {useBaseStore} from '@/stores/base'
+import {PERMISSIONS as Permissions} from '@/constants/permissions'
 
 const props = defineProps<{
 	isLoadingProject: boolean,
@@ -399,6 +408,13 @@ const props = defineProps<{
 }>()
 
 const projectStore = useProjectStore()
+const baseStore = useBaseStore()
+const project = computed(() => baseStore.currentProject)
+
+const canWrite = computed(() => typeof project.value?.maxPermission === 'number' &&
+	project.value.maxPermission > Permissions.READ &&
+	project.value.id > 0 &&
+	!project.value.isArchived)
 
 const ACTIVE_COLUMNS_DEFAULT = {
 	index: true,
@@ -573,6 +589,10 @@ const taskDetailRoutes = computed(() => Object.fromEntries(
 	.user {
 		margin: 0;
 	}
+}
+
+.table-view__add-task {
+	padding: 1rem;
 }
 
 .columns-filter {
