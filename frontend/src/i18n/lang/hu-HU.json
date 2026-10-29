@@ -1095,7 +1095,38 @@
 	},
 	"about": {
 		"title": "Névjegy",
-		"version": "Verzió: {version}"
+		"version": "Verzió: {version}",
+		"frontendVersion": "Frontend verzió: {version}",
+		"apiVersion": "API verzió: {version}",
+		"proActive": "Proaktív"
+	},
+	"timeTracking": {
+		"title": "Időmérés",
+		"stop": "Időmérő leállítása",
+		"logTime": "Idő rögzítése",
+		"editEntry": "Bejegyzés szerkesztése",
+		"form": {
+			"task": "Feladat",
+			"taskSearch": "Feladat keresése…",
+			"commentPlaceholder": "Min dolgoztál?",
+			"save": "Bejegyzés mentése",
+			"startTimer": "Időmérő elindítása",
+			"update": "Bejegyzés frissítése",
+			"smartFill": "Kitöltés az utolsó bejegyzésből",
+			"endsSpanningEntriesAt": "Új időmérő indítása megállítja az átfedő bejegyzéseket itt: {time}"
+		},
+		"list": {
+			"emptyTask": "Ehhez a feladathoz még nem lett idő rögzítve.",
+			"emptyFiltered": "A kiválasztott szűrőkhöz nem lett idő rögzítve.",
+			"total": "Összesen",
+			"pageTotal": "Összesen ezen az oldalon",
+			"time": "Idő",
+			"duration": "Időtartam"
+		},
+		"browse": {
+			"selectRange": "Tartomány kiválasztása",
+			"userSearch": "Felhasználó keresése…"
+		}
 	},
 	"time": {
 		"units": {
