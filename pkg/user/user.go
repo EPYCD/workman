@@ -121,6 +121,9 @@ type User struct {
 	Language   string `xorm:"varchar(50) null" json:"-" valid:"language"`
 	Timezone   string `xorm:"varchar(255) null" json:"-"`
 
+	// The user who created this bot. Only set for bot users.
+	BotOwner *User `xorm:"-" json:"bot_owner,omitempty" readOnly:"true" doc:"The user who created this bot. Only set for bot users."`
+
 	DeletionScheduledAt      time.Time `xorm:"datetime null" json:"-"`
 	DeletionLastReminderSent time.Time `xorm:"datetime null" json:"-"`
 
@@ -261,7 +264,14 @@ func GetUserByID(s *xorm.Session, id int64) (user *User, err error) {
 		return &User{}, ErrUserDoesNotExist{}
 	}
 
-	return getUser(s, &User{ID: id}, false)
+	u, err := getUser(s, &User{ID: id}, false)
+	if err != nil {
+		return u, err
+	}
+	if err := AttachBotOwners(s, u); err != nil {
+		return &User{}, err
+	}
+	return u, nil
 }
 
 // Unlike GetUserByID, also refuses accounts awaiting email confirmation, which is how admins freeze one.
@@ -348,7 +358,50 @@ func GetUsersByIDs(s *xorm.Session, userIDs []int64) (users map[int64]*User, err
 		return users, nil
 	}
 
-	return GetUsersByCond(s, builder.In("id", userIDs))
+	users, err = GetUsersByCond(s, builder.In("id", userIDs))
+	if err != nil {
+		return nil, err
+	}
+
+	bots := make([]*User, 0, len(users))
+	for _, u := range users {
+		bots = append(bots, u)
+	}
+	if err := AttachBotOwners(s, bots...); err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
+// AttachBotOwners sets BotOwner on every bot in users, loading all owners in one query.
+// Owners skip the disabled/locked gate: a bot's activity stays visible after its owner is disabled.
+func AttachBotOwners(s *xorm.Session, users ...*User) error {
+	ownerIDs := make([]int64, 0, len(users))
+	for _, u := range users {
+		if u.IsBot() && u.BotOwner == nil {
+			ownerIDs = append(ownerIDs, u.BotOwnerID)
+		}
+	}
+	if len(ownerIDs) == 0 {
+		return nil
+	}
+
+	owners, err := GetUsersByCond(s, builder.In("id", ownerIDs))
+	if err != nil {
+		return err
+	}
+
+	copies := make(map[int64]*User, len(owners))
+	for id, o := range owners {
+		copied := *o
+		copies[id] = &copied
+	}
+	for _, u := range users {
+		if u.IsBot() && u.BotOwner == nil {
+			u.BotOwner = copies[u.BotOwnerID]
+		}
+	}
+	return nil
 }
 
 func GetUsersByCond(s *xorm.Session, cond builder.Cond) (users map[int64]*User, err error) {
