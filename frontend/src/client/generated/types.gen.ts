@@ -95,6 +95,10 @@ export type AdminUser = {
      */
     readonly auth_provider?: string;
     /**
+     * The user who created this bot. Only set for bot users.
+     */
+    readonly bot_owner?: User;
+    /**
      * The id of the owning (human) user. Set by the server on creation; a non-zero value means this user is a bot.
      */
     readonly bot_owner_id?: number;
@@ -234,6 +238,10 @@ export type BotUser = {
      */
     readonly $schema?: string;
     /**
+     * The user who created this bot. Only set for bot users.
+     */
+    readonly bot_owner?: User;
+    /**
      * The id of the owning (human) user. Set by the server on creation; a non-zero value means this user is a bot.
      */
     readonly bot_owner_id?: number;
@@ -272,6 +280,10 @@ export type BotUserReadBody = {
      * A URL to the JSON Schema for this object.
      */
     readonly $schema?: string;
+    /**
+     * The user who created this bot. Only set for bot users.
+     */
+    readonly bot_owner?: User;
     /**
      * The id of the owning (human) user. Set by the server on creation; a non-zero value means this user is a bot.
      */
@@ -315,6 +327,10 @@ export type BotUserUpdateBody = {
      * A URL to the JSON Schema for this object.
      */
     readonly $schema?: string;
+    /**
+     * The user who created this bot. Only set for bot users.
+     */
+    readonly bot_owner?: User;
     /**
      * The id of the owning (human) user. Set by the server on creation; a non-zero value means this user is a bot.
      */
@@ -3390,6 +3406,10 @@ export type TeamReadBody = {
 export type TeamUser = {
     admin?: boolean;
     /**
+     * The user who created this bot. Only set for bot users.
+     */
+    readonly bot_owner?: User;
+    /**
      * The id of the owning (human) user. Set by the server on creation; a non-zero value means this user is a bot.
      */
     readonly bot_owner_id?: number;
@@ -3650,6 +3670,10 @@ export type User = {
      */
     readonly $schema?: string;
     /**
+     * The user who created this bot. Only set for bot users.
+     */
+    readonly bot_owner?: User;
+    /**
      * The id of the owning (human) user. Set by the server on creation; a non-zero value means this user is a bot.
      */
     readonly bot_owner_id?: number;
@@ -3854,6 +3878,10 @@ export type UserInfoBody = {
      */
     readonly auth_provider?: string;
     /**
+     * The user who created this bot. Only set for bot users.
+     */
+    readonly bot_owner?: User;
+    /**
      * The id of the owning (human) user. Set by the server on creation; a non-zero value means this user is a bot.
      */
     readonly bot_owner_id?: number;
@@ -3918,6 +3946,10 @@ export type UserRegister = {
 };
 
 export type UserWithPermission = {
+    /**
+     * The user who created this bot. Only set for bot users.
+     */
+    readonly bot_owner?: User;
     /**
      * The id of the owning (human) user. Set by the server on creation; a non-zero value means this user is a bot.
      */
