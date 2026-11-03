@@ -462,7 +462,16 @@ func createProjectWithEverything(s *xorm.Session, project *models.ProjectWithTas
 	tasksByOldID := make(map[int64]*models.TaskWithComments, len(tasks))
 	newTaskIDs := []int64{}
 	// Relations are created after the loop so the hierarchy is cycle-checked once.
-	relations := []*models.TaskRelation{}
+	// importBatch holds every task this import creates, keyed by its new id.
+	importBatch := []*models.Task{}
+	importedByID := map[int64]*models.Task{}
+	registerImported := func(id int64) {
+		if _, ok := importedByID[id]; !ok {
+			n := &models.Task{ID: id, RelatedTasks: models.RelatedTaskMap{}}
+			importedByID[id] = n
+			importBatch = append(importBatch, n)
+		}
+	}
 	// Create all tasks
 	for i, t := range tasks {
 		oldid := t.ID
@@ -486,6 +495,7 @@ func createProjectWithEverything(s *xorm.Session, project *models.ProjectWithTas
 		}
 
 		newTaskIDs = append(newTaskIDs, t.ID)
+		registerImported(t.ID)
 
 		tasksByOldID[oldid] = t
 
@@ -524,6 +534,7 @@ func createProjectWithEverything(s *xorm.Session, project *models.ProjectWithTas
 					}
 					tasksByOldID[oldid] = &models.TaskWithComments{Task: *rt}
 					log.Debugf("[creating structure] Created related task %d", rt.ID)
+					registerImported(rt.ID)
 				}
 
 				// Then create the relation
@@ -542,7 +553,13 @@ func createProjectWithEverything(s *xorm.Session, project *models.ProjectWithTas
 					continue
 				}
 
-				relations = append(relations, taskRel)
+				other, ok := importedByID[taskRel.OtherTaskID]
+				if !ok {
+					// Not created by this import: CreateTaskRelationsForImport rejects it.
+					other = &models.Task{ID: taskRel.OtherTaskID}
+				}
+				from := importedByID[taskRel.TaskID]
+				from.RelatedTasks[kind] = append(from.RelatedTasks[kind], other)
 
 			}
 		}
@@ -634,8 +651,8 @@ func createProjectWithEverything(s *xorm.Session, project *models.ProjectWithTas
 		}
 	}
 
-	log.Debugf("[creating structure] Creating %d task relations", len(relations))
-	err = models.CreateTaskRelationsForImport(s, relations, user)
+	log.Debugf("[creating structure] Creating relations for %d imported tasks", len(importBatch))
+	err = models.CreateTaskRelationsForImport(s, importBatch, user)
 	if err != nil {
 		return err
 	}
