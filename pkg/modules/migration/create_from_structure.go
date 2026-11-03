@@ -461,6 +461,8 @@ func createProjectWithEverything(s *xorm.Session, project *models.ProjectWithTas
 
 	tasksByOldID := make(map[int64]*models.TaskWithComments, len(tasks))
 	newTaskIDs := []int64{}
+	// Relations are created after the loop so the hierarchy is cycle-checked once.
+	relations := []*models.TaskRelation{}
 	// Create all tasks
 	for i, t := range tasks {
 		oldid := t.ID
@@ -540,12 +542,7 @@ func createProjectWithEverything(s *xorm.Session, project *models.ProjectWithTas
 					continue
 				}
 
-				err = taskRel.Create(s, user)
-				if err != nil && !models.IsErrRelationAlreadyExists(err) {
-					return
-				}
-
-				log.Debugf("[creating structure] Created task relation between task %d and %d", t.ID, rt.ID)
+				relations = append(relations, taskRel)
 
 			}
 		}
@@ -635,6 +632,12 @@ func createProjectWithEverything(s *xorm.Session, project *models.ProjectWithTas
 			}
 			log.Debugf("[creating structure] Created new comment %d", comment.ID)
 		}
+	}
+
+	log.Debugf("[creating structure] Creating %d task relations", len(relations))
+	err = models.CreateTaskRelationsForImport(s, relations, user)
+	if err != nil {
+		return err
 	}
 
 	for doneAt, taskIDs := range taskIDsByDoneAt {
