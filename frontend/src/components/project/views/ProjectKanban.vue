@@ -68,12 +68,13 @@
 						<template #item="{element: bucket, index: bucketIndex }">
 							<li
 								class="bucket"
-								:class="{'is-collapsed': collapsedBuckets[bucket.id]}"
+								:class="{'is-collapsed': isCollapsed(bucket)}"
 								:data-bucket-id="bucket.id"
 							>
 								<div
 									class="bucket-header"
 									@click="() => unCollapseBucket(bucket)"
+									@dragenter="() => expandWhileDragging(bucket)"
 								>
 									<span
 										v-if="bucket.id !== 0 && view?.doneBucketId === bucket.id"
@@ -512,6 +513,7 @@ const newTaskInputFocused = ref(false)
 
 const showSetLimitInput = ref(false)
 const collapsedBuckets = ref<CollapsedBuckets>({})
+const dragExpandedBuckets = ref(new Set<number>())
 
 // We're using this to show the loading animation only at the task when updating it
 const taskUpdating = ref<{ [id: ITask['id']]: boolean }>({})
@@ -765,6 +767,7 @@ function updateTasks(bucketId: IBucket['id'], tasks: IBucket['tasks']) {
 
 async function updateTaskPosition(e) {
 	drag.value = false
+	dragExpandedBuckets.value.clear()
 
 	// Check if dropped on a sidebar project
 	const {moved} = await handleTaskDropToProject(e, (task) => {
@@ -1124,6 +1127,17 @@ async function toggleClaimBucket(bucket: IBucket) {
 function collapseBucket(bucket: IBucket) {
 	collapsedBuckets.value[bucket.id] = true
 	saveCollapsedBucketState(projectIdWithFallback.value, collapsedBuckets.value)
+}
+
+function isCollapsed(bucket: IBucket) {
+	return collapsedBuckets.value[bucket.id] && !dragExpandedBuckets.value.has(bucket.id)
+}
+
+// Collapsed buckets hide their task list, leaving nothing to drop on.
+function expandWhileDragging(bucket: IBucket) {
+	if (drag.value && collapsedBuckets.value[bucket.id]) {
+		dragExpandedBuckets.value.add(bucket.id)
+	}
 }
 
 function unCollapseBucket(bucket: IBucket) {
