@@ -422,6 +422,27 @@ func TestInsertFromStructure(t *testing.T) {
 			assert.Equal(t, int64(4), count, "task %q must keep position %v in all views", title, position)
 		}
 	})
+	t.Run("skips null positions and task buckets", func(t *testing.T) {
+		db.LoadAndAssertFixtures(t)
+
+		structure := []*models.ProjectWithTasksAndBuckets{{
+			Project: models.Project{
+				Title: "Null positions",
+				Views: []*models.ProjectView{{
+					ID:                      100,
+					Title:                   "Kanban",
+					ViewKind:                models.ProjectViewKindKanban,
+					BucketConfigurationMode: models.BucketConfigurationModeManual,
+				}},
+			},
+			Tasks:       []*models.TaskWithComments{{Task: models.Task{ID: 10, Title: "task"}}},
+			Buckets:     []*models.Bucket{{ID: 200, Title: "Backlog", ProjectViewID: 100}},
+			Positions:   []*models.TaskPosition{nil},
+			TaskBuckets: []*models.TaskBucket{nil},
+		}}
+
+		require.NoError(t, InsertFromStructure(structure, u))
+	})
 	t.Run("assignees from a foreign instance", func(t *testing.T) {
 		db.LoadAndAssertFixtures(t)
 
