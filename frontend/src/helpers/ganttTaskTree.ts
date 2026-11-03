@@ -50,6 +50,7 @@ export function buildGanttTaskTree(tasks: Map<number, ITask>): GanttTaskTreeNode
 	// Step 3: Depth-first flatten
 	const result: GanttTaskTreeNode[] = []
 	const visited = new Set<number>()
+	const collectChildDates = createChildDatesCollector(tasks, childrenMap)
 
 	function visit(taskId: number, level: number) {
 		if (visited.has(taskId)) return
@@ -68,7 +69,7 @@ export function buildGanttTaskTree(tasks: Map<number, ITask>): GanttTaskTreeNode
 		let hasDerivedDates = false
 
 		if (isParent && !task.startDate && !task.endDate && !task.dueDate) {
-			const dates = collectChildDates(childIds, tasks, childrenMap)
+			const dates = collectChildDates(childIds)
 			derivedStartDate = dates.minStart
 			derivedEndDate = dates.maxEnd
 			hasDerivedDates = derivedStartDate !== null || derivedEndDate !== null
@@ -112,43 +113,56 @@ export function buildGanttTaskTree(tasks: Map<number, ITask>): GanttTaskTreeNode
 	return result
 }
 
-function collectChildDates(
-	childIds: number[],
-	tasks: Map<number, ITask>,
-	childrenMap: Map<number, number[]>,
-): { minStart: Date | null; maxEnd: Date | null } {
-	let minStart: Date | null = null
-	let maxEnd: Date | null = null
-
-	for (const childId of childIds) {
-		const child = tasks.get(childId)
-		if (!child) continue
-
-		const start = child.startDate ? new Date(child.startDate) : null
-		const end = child.endDate || child.dueDate
-			? new Date((child.endDate || child.dueDate) as Date)
-			: null
-
-		if (start && (!minStart || start < minStart)) {
-			minStart = start
-		}
-		if (end && (!maxEnd || end > maxEnd)) {
-			maxEnd = end
-		}
-
-		// Recurse into grandchildren
-		const grandchildIds = childrenMap.get(childId) ?? []
-		if (grandchildIds.length > 0) {
-			const grandDates = collectChildDates(grandchildIds, tasks, childrenMap)
-			if (grandDates.minStart && (!minStart || grandDates.minStart < minStart)) {
-				minStart = grandDates.minStart
-			}
-			if (grandDates.maxEnd && (!maxEnd || grandDates.maxEnd > maxEnd)) {
-				maxEnd = grandDates.maxEnd
-			}
-		}
-	}
-
-	return {minStart, maxEnd}
+interface DateRange {
+	minStart: Date | null
+	maxEnd: Date | null
 }
 
+function mergeRange(into: DateRange, from: DateRange) {
+	if (from.minStart && (!into.minStart || from.minStart < into.minStart)) {
+		into.minStart = from.minStart
+	}
+	if (from.maxEnd && (!into.maxEnd || from.maxEnd > into.maxEnd)) {
+		into.maxEnd = from.maxEnd
+	}
+}
+
+// Memoized per task: relation graphs can be DAGs (shared descendants) or cyclic.
+function createChildDatesCollector(
+	tasks: Map<number, ITask>,
+	childrenMap: Map<number, number[]>,
+) {
+	const subtreeRanges = new Map<number, DateRange>()
+	const inProgress = new Set<number>()
+
+	function subtreeRange(taskId: number): DateRange {
+		const cached = subtreeRanges.get(taskId)
+		if (cached) return cached
+
+		const range: DateRange = {minStart: null, maxEnd: null}
+		const task = tasks.get(taskId)
+		if (!task || inProgress.has(taskId)) return range
+
+		inProgress.add(taskId)
+		const end = task.endDate || task.dueDate
+		mergeRange(range, {
+			minStart: task.startDate ? new Date(task.startDate) : null,
+			maxEnd: end ? new Date(end) : null,
+		})
+		for (const childId of childrenMap.get(taskId) ?? []) {
+			mergeRange(range, subtreeRange(childId))
+		}
+		inProgress.delete(taskId)
+
+		subtreeRanges.set(taskId, range)
+		return range
+	}
+
+	return (childIds: number[]): DateRange => {
+		const range: DateRange = {minStart: null, maxEnd: null}
+		for (const childId of childIds) {
+			mergeRange(range, subtreeRange(childId))
+		}
+		return range
+	}
+}
