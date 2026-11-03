@@ -1699,6 +1699,7 @@
     "4040": "The user who submitted this task for review cannot mark it done.",
     "4041": "The receipt bot must be an existing bot user.",
     "4042": "The receipt is invalid: {reason}",
+    "4051": "This task hierarchy is too large to add more subtasks or parent tasks.",
     "6001": "The team name cannot be empty.",
     "6002": "The team does not exist.",
     "6004": "The team already has access to that project.",
