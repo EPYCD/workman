@@ -115,6 +115,7 @@
 				"create": "Bot Erstellen",
 				"enable": "Aktivieren",
 				"badge": "Bot",
+				"badgeOwner": "Bot, erstellt von {user}",
 				"delete": {
 					"header": "Diesen Bot-Account löschen",
 					"text1": "Bist Du sicher, dass Du den Bot-Account \"{username}\" löschen möchtest?",
