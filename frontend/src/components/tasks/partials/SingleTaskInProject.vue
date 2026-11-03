@@ -101,7 +101,7 @@
 								:datetime="formatISO(task.dueDate)"
 								:aria-expanded="isOpen ? 'true' : 'false'"
 							>
-								– {{ $t('task.detail.due', {at: dueDateFormatted}) }}
+								{{ $t('task.detail.due', {at: dueDateFormatted}) }}
 							</time>
 						</BaseButton>
 					</template>
