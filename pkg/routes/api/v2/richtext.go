@@ -149,6 +149,11 @@ func convertToHTML(ctx context.Context, fields ...*string) error {
 		return nil
 	}
 
+	a, err := authFromCtx(ctx)
+	if err != nil {
+		return err
+	}
+
 	s := db.NewSession()
 	defer s.Close()
 
@@ -156,7 +161,7 @@ func convertToHTML(ctx context.Context, fields ...*string) error {
 		if field == nil {
 			continue
 		}
-		htmlDesc, err := richtext.MarkdownToHTMLWithMentions(s, *field)
+		htmlDesc, err := richtext.MarkdownToHTMLWithMentions(s, a, *field)
 		if err != nil {
 			return err
 		}
