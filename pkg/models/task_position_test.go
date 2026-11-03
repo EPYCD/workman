@@ -918,5 +918,24 @@ func TestDoneBucketOrdersNewestFirst(t *testing.T) {
 		require.NoError(t, (&Task{ID: 1, Done: false}).Update(s, u))
 
 		assert.InDelta(t, 4321.0, positionOf(t, s, 1), 0.001)
+func TestAddPositionsToTasks(t *testing.T) {
+	t.Run("only includes positions of views in the task's project", func(t *testing.T) {
+		db.LoadAndAssertFixtures(t)
+		s := db.NewSession()
+		defer s.Close()
+
+		// View 5 belongs to project 2, task 1 to project 1.
+		_, err := s.Insert(&TaskPosition{TaskID: 1, ProjectViewID: 5, Position: 10})
+		require.NoError(t, err)
+
+		task := &Task{ID: 1}
+		require.NoError(t, AddPositionsToTasks(s, []*Task{task}))
+
+		viewIDs := make([]int64, 0, len(task.Positions))
+		for _, p := range task.Positions {
+			viewIDs = append(viewIDs, p.ProjectViewID)
+		}
+		assert.Contains(t, viewIDs, int64(1))
+		assert.NotContains(t, viewIDs, int64(5))
 	})
 }
