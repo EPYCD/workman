@@ -769,6 +769,17 @@ export type HealthBodyBody = {
     status?: 'OK' | 'degraded';
 };
 
+export type IdentityPreview = {
+    /**
+     * A URL to the JSON Schema for this object.
+     */
+    readonly $schema?: string;
+    /**
+     * The provider account being linked, from the verified ID token.
+     */
+    account?: string;
+};
+
 export type Image = {
     /**
      * A URL to the JSON Schema for this object.
@@ -1011,6 +1022,33 @@ export type LegalLink = {
     url?: string;
 };
 
+export type LinkIdentityRequest = {
+    /**
+     * A URL to the JSON Schema for this object.
+     */
+    readonly $schema?: string;
+    /**
+     * The authorization code the provider redirected back with.
+     */
+    code?: string;
+    /**
+     * The current user's password.
+     */
+    password?: string;
+    /**
+     * The provider key as returned by /info.
+     */
+    provider?: string;
+    /**
+     * The redirect URL the authorization request was started with.
+     */
+    redirect_url?: string;
+    /**
+     * A current totp passcode. Required when the user has totp enabled.
+     */
+    totp_passcode?: string;
+};
+
 export type LinkShareReadBody = {
     /**
      * A URL to the JSON Schema for this object.
@@ -1135,6 +1173,33 @@ export type LinkSharing = {
      * A timestamp when this share was last updated. You cannot change this value.
      */
     readonly updated?: string;
+};
+
+export type LinkedIdentity = {
+    /**
+     * A URL to the JSON Schema for this object.
+     */
+    readonly $schema?: string;
+    /**
+     * When the identity was linked.
+     */
+    readonly created?: string;
+    /**
+     * The unique, numeric id of this linked identity.
+     */
+    readonly id?: number;
+    /**
+     * The issuer URL from the provider's ID token.
+     */
+    readonly issuer?: string;
+    /**
+     * The key of the configured provider this identity belongs to. Empty when no configured provider matches the issuer anymore.
+     */
+    readonly provider_key?: string;
+    /**
+     * The display name of the configured provider. Empty when no configured provider matches the issuer anymore.
+     */
+    readonly provider_name?: string;
 };
 
 export type LocalAuthInfo = {
@@ -1388,6 +1453,18 @@ export type PaginatedLinkSharing = {
      */
     readonly $schema?: string;
     items?: Array<LinkSharing> | null;
+    page?: number;
+    per_page?: number;
+    total?: number;
+    total_pages?: number;
+};
+
+export type PaginatedLinkedIdentity = {
+    /**
+     * A URL to the JSON Schema for this object.
+     */
+    readonly $schema?: string;
+    items?: Array<LinkedIdentity> | null;
     page?: number;
     per_page?: number;
     total?: number;
@@ -3718,6 +3795,40 @@ export type UserChangePasswordRequest = {
     old_password?: string;
 };
 
+export type UserIdentitiesPreviewRequest = {
+    /**
+     * A URL to the JSON Schema for this object.
+     */
+    readonly $schema?: string;
+    /**
+     * The authorization code the provider redirected back with.
+     */
+    code?: string;
+    /**
+     * The provider key as returned by /info.
+     */
+    provider?: string;
+    /**
+     * The redirect URL the authorization request was started with.
+     */
+    redirect_url?: string;
+};
+
+export type UserIdentitiesUnlinkRequest = {
+    /**
+     * A URL to the JSON Schema for this object.
+     */
+    readonly $schema?: string;
+    /**
+     * The current user's password.
+     */
+    password?: string;
+    /**
+     * A current totp passcode. Required when the user has totp enabled.
+     */
+    totp_passcode?: string;
+};
+
 export type UserUpdateEmailRequest = {
     /**
      * A URL to the JSON Schema for this object.
@@ -4475,6 +4586,13 @@ export type HealthBodyBodyWritable = {
     status?: 'OK' | 'degraded';
 };
 
+export type IdentityPreviewWritable = {
+    /**
+     * The provider account being linked, from the verified ID token.
+     */
+    account?: string;
+};
+
 export type ImageWritable = {
     /**
      * A BlurHash placeholder for the image.
@@ -4555,6 +4673,29 @@ export type LabelWithTaskIdWritable = {
      * The title of the label. You'll see this one on tasks associated with it.
      */
     title?: string;
+};
+
+export type LinkIdentityRequestWritable = {
+    /**
+     * The authorization code the provider redirected back with.
+     */
+    code?: string;
+    /**
+     * The current user's password.
+     */
+    password?: string;
+    /**
+     * The provider key as returned by /info.
+     */
+    provider?: string;
+    /**
+     * The redirect URL the authorization request was started with.
+     */
+    redirect_url?: string;
+    /**
+     * A current totp passcode. Required when the user has totp enabled.
+     */
+    totp_passcode?: string;
 };
 
 export type LinkShareReadBodyWritable = {
@@ -4710,6 +4851,14 @@ export type PaginatedLabelWithTaskIdWritable = {
 
 export type PaginatedLinkSharingWritable = {
     items?: Array<LinkSharingWritable> | null;
+    page?: number;
+    per_page?: number;
+    total?: number;
+    total_pages?: number;
+};
+
+export type PaginatedLinkedIdentityWritable = {
+    items?: Array<unknown> | null;
     page?: number;
     per_page?: number;
     total?: number;
@@ -5717,6 +5866,32 @@ export type UserChangePasswordRequestWritable = {
      * The current password, for confirmation.
      */
     old_password?: string;
+};
+
+export type UserIdentitiesPreviewRequestWritable = {
+    /**
+     * The authorization code the provider redirected back with.
+     */
+    code?: string;
+    /**
+     * The provider key as returned by /info.
+     */
+    provider?: string;
+    /**
+     * The redirect URL the authorization request was started with.
+     */
+    redirect_url?: string;
+};
+
+export type UserIdentitiesUnlinkRequestWritable = {
+    /**
+     * The current user's password.
+     */
+    password?: string;
+    /**
+     * A current totp passcode. Required when the user has totp enabled.
+     */
+    totp_passcode?: string;
 };
 
 export type UserUpdateEmailRequestWritable = {
@@ -12655,6 +12830,111 @@ export type UserUpdateSettingsResponses = {
 };
 
 export type UserUpdateSettingsResponse = UserUpdateSettingsResponses[keyof UserUpdateSettingsResponses];
+
+export type UserIdentitiesListData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/user/settings/identities';
+};
+
+export type UserIdentitiesListErrors = {
+    /**
+     * Error
+     */
+    default: VikunjaErrorModel;
+};
+
+export type UserIdentitiesListError = UserIdentitiesListErrors[keyof UserIdentitiesListErrors];
+
+export type UserIdentitiesListResponses = {
+    /**
+     * OK
+     */
+    200: PaginatedLinkedIdentity;
+};
+
+export type UserIdentitiesListResponse = UserIdentitiesListResponses[keyof UserIdentitiesListResponses];
+
+export type UserIdentitiesLinkData = {
+    body: LinkIdentityRequestWritable;
+    path?: never;
+    query?: never;
+    url: '/user/settings/identities';
+};
+
+export type UserIdentitiesLinkErrors = {
+    /**
+     * Error
+     */
+    default: VikunjaErrorModel;
+};
+
+export type UserIdentitiesLinkError = UserIdentitiesLinkErrors[keyof UserIdentitiesLinkErrors];
+
+export type UserIdentitiesLinkResponses = {
+    /**
+     * Created
+     */
+    201: LinkedIdentity;
+};
+
+export type UserIdentitiesLinkResponse = UserIdentitiesLinkResponses[keyof UserIdentitiesLinkResponses];
+
+export type UserIdentitiesPreviewData = {
+    body: UserIdentitiesPreviewRequestWritable;
+    path?: never;
+    query?: never;
+    url: '/user/settings/identities/preview';
+};
+
+export type UserIdentitiesPreviewErrors = {
+    /**
+     * Error
+     */
+    default: VikunjaErrorModel;
+};
+
+export type UserIdentitiesPreviewError = UserIdentitiesPreviewErrors[keyof UserIdentitiesPreviewErrors];
+
+export type UserIdentitiesPreviewResponses = {
+    /**
+     * OK
+     */
+    200: IdentityPreview;
+};
+
+export type UserIdentitiesPreviewResponse = UserIdentitiesPreviewResponses[keyof UserIdentitiesPreviewResponses];
+
+export type UserIdentitiesUnlinkData = {
+    body: UserIdentitiesUnlinkRequestWritable;
+    path: {
+        /**
+         * The id of the linked identity.
+         */
+        identity: number;
+    };
+    query?: never;
+    url: '/user/settings/identities/{identity}/unlink';
+};
+
+export type UserIdentitiesUnlinkErrors = {
+    /**
+     * Error
+     */
+    default: VikunjaErrorModel;
+};
+
+export type UserIdentitiesUnlinkError = UserIdentitiesUnlinkErrors[keyof UserIdentitiesUnlinkErrors];
+
+export type UserIdentitiesUnlinkResponses = {
+    /**
+     * No Content
+     */
+    204: void;
+};
+
+export type UserIdentitiesUnlinkResponse = UserIdentitiesUnlinkResponses[keyof UserIdentitiesUnlinkResponses];
 
 export type CaldavTokensListData = {
     body?: never;
