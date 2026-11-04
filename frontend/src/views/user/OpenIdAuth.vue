@@ -68,6 +68,7 @@ import Message from '@/components/misc/Message.vue'
 import FormField from '@/components/input/FormField.vue'
 import {useRedirectToLastVisited} from '@/composables/useRedirectToLastVisited'
 import {
+	endOpenIdFlow,
 	isLinkingIdentity,
 	redirectToProvider,
 } from '@/helpers/redirectToProvider'
@@ -118,7 +119,9 @@ async function authenticateWithCode() {
 			: t('user.auth.openIdGeneralError')
 		if (isLinkingIdentity(queryState.value)) {
 			linking.value = true
+			return
 		}
+		endOpenIdFlow(queryState.value)
 		return
 	}
 
@@ -133,6 +136,8 @@ async function authenticateWithCode() {
 		linking.value = true
 		return
 	}
+
+	endOpenIdFlow(queryState.value)
 
 	// sessionStorage (not localStorage): per-tab, cleared on tab close.
 	const pendingPasscode = sessionStorage.getItem(pendingTotpKey(providerKey)) ?? undefined
