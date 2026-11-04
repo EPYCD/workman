@@ -403,6 +403,24 @@ func lockingSession(s *xorm.Session) *xorm.Session {
 	return s
 }
 
+// Can* checks read the task unlocked, so a concurrent move into another project can land before the write.
+// Write paths call this to serialize with movers and recheck against the project the task is in now.
+func lockTaskForWrite(s *xorm.Session, a web.Auth, taskID int64) (task Task, err error) {
+	task, err = GetTaskSimple(lockingSession(s), &Task{ID: taskID})
+	if err != nil {
+		return Task{}, err
+	}
+
+	can, err := (&Project{ID: task.ProjectID}).CanWrite(s, a)
+	if err != nil {
+		return Task{}, err
+	}
+	if !can {
+		return Task{}, ErrGenericForbidden{}
+	}
+	return task, nil
+}
+
 // GetTaskByIDSimple returns a raw task without extra data by the task ID
 func GetTaskByIDSimple(s *xorm.Session, taskID int64) (task Task, err error) {
 	if taskID < 1 {
@@ -1352,18 +1370,9 @@ func (t *Task) Update(s *xorm.Session, a web.Auth) (err error) {
 //nolint:gocyclo
 func (t *Task) updateSingleTask(s *xorm.Session, a web.Auth, fields []string) (err error) {
 
-	// Check if the task exists and get the old values
-	ot, err := GetTaskByIDSimple(s, t.ID)
+	ot, err := lockTaskForWrite(s, a, t.ID)
 	if err != nil {
 		return
-	}
-
-	can, err := (&Project{ID: ot.ProjectID}).CanWrite(s, a)
-	if err != nil {
-		return err
-	}
-	if !can {
-		return ErrGenericForbidden{}
 	}
 
 	if t.ProjectID == 0 {
