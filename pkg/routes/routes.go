@@ -169,6 +169,8 @@ func NewEcho() *echo.Echo {
 
 	setupSentry(e)
 
+	e.Binder = &bodyBinder{}
+
 	// Validation
 	e.Validator = &CustomValidator{}
 
