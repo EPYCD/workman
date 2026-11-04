@@ -81,7 +81,7 @@ type Project struct {
 	DiscordEvents    string `xorm:"text null" json:"discord_events" doc:"Comma-separated event names the relay posts, e.g. \"task.done,receipt.red\". Empty posts everything the relay knows."`
 
 	// The id of the file this project has set as background
-	BackgroundFileID int64 `xorm:"null" json:"-"`
+	BackgroundFileID int64 `xorm:"null index" json:"-"`
 	// Holds extra information about the background set since some background providers require attribution or similar. If not null, the background can be accessed at /projects/{projectID}/background
 	BackgroundInformation interface{} `xorm:"-" json:"background_information" readOnly:"true" doc:"Extra information about the background (e.g. attribution). When not null, the background is available at /projects/{projectID}/background."`
 	// Contains a very small version of the project background to use as a blurry preview until the actual background is loaded. Check out https://blurha.sh/ to learn how it works.
