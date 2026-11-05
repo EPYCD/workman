@@ -217,13 +217,7 @@
 		},
 		"delete": {
 			"title": "\"{project}\" törlése",
-			"header": "Projekt törlése",
-			"text1": "Biztosan törölni szeretnéd ezt a projektet és annak összes tartalmát?",
-			"text2": "Ez magában foglalja az összes feladatot és NEM VISSZAVONHATÓ!",
-			"success": "A projekt sikeresen törölve.",
-			"tasksToDelete": "Ezzel visszavonhatatlanul eltávolítunk kb. {count} feladatot.",
-			"tasksAndChildProjectsToDelete": "Ezzel visszavonhatatlanul eltávolítunk kb. {tasks} feladatot és {projects} projektet.",
-			"noTasksToDelete": "Ez a projekt nem tartalmaz feladatokat, biztonságosan törölhető."
+			"header": "Projekt törlése"
 		},
 		"duplicate": {
 			"title": "Duplikálja a projektet",
@@ -674,17 +668,11 @@
 			"updated": "Frissítve: {0}",
 			"doneAt": "Befejezve: {0}",
 			"updateSuccess": "A feladat mentése sikeres volt.",
-			"deleteSuccess": "A feladat sikeresen törölve.",
 			"belongsToProject": "Ez a feladat a(z) „{project}” projekthez tartozik",
 			"due": "Határidő {at}",
 			"organization": "Szervezet",
 			"management": "Menedzsment",
 			"dateAndTime": "Dátum és idő",
-			"delete": {
-				"header": "Feladat törlése",
-				"text1": "Biztos törölni akarod ezt a feladatot?",
-				"text2": "Ezzel eltávolítja a feladathoz kapcsolódó összes mellékletet, emlékeztetőt és kapcsolatot is és nem vonható vissza!"
-			},
 			"actions": {
 				"assign": "Hozzárendelés felhasználóhoz",
 				"label": "Címkék hozzáadása",

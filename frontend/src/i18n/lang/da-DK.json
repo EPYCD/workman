@@ -326,13 +326,7 @@
 			"updated": "Opdateret {0}",
 			"doneAt": "Udført {0}",
 			"updateSuccess": "Opgaven blev gemt.",
-			"deleteSuccess": "Opgaven er blevet slettet.",
 			"due": "Forfalder {at}",
-			"delete": {
-				"header": "Slet denne opgave",
-				"text1": "Er du sikker på, at du vil slette denne opgave?",
-				"text2": "Dette vil også fjerne alle vedhæftede filer, påmindelser og relationer knyttet til denne opgave, og kan ikke fortrydes!"
-			},
 			"actions": {
 				"assign": "Tildel til bruger",
 				"label": "Tilføj Etiketter",

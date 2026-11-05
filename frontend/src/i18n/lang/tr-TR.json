@@ -274,7 +274,6 @@
 			"header": "Bu projeyi sil",
 			"text1": "Bu projeyi ve tüm içeriğini silmek istediğinizden emin misiniz?",
 			"text2": "Bu, tüm görevleri içerir ve GERİ ALINAMAZ!",
-			"success": "Proje başarıyla silindi.",
 			"tasksToDelete": "Bu, yaklaşık {count} görevi geri alınamaz şekilde kaldıracak.",
 			"tasksAndChildProjectsToDelete": "Bu, yaklaşık {tasks} görevi ve {projects} projeyi geri alınamaz şekilde kaldıracak.",
 			"noTasksToDelete": "Bu proje herhangi bir görev içermiyor, silmek güvenli olmalı."
@@ -782,7 +781,6 @@
 			"updated": "{0} tarihinde güncellendi",
 			"doneAt": "{0} tarihinde tamamlandı",
 			"updateSuccess": "Görev başarıyla kaydedildi.",
-			"deleteSuccess": "Görev başarıyla silindi.",
 			"belongsToProject": "Bu görev '{project}' projesine aittir",
 			"back": "Projeye geri dön",
 			"due": "{at} tarihinde bitiyor",

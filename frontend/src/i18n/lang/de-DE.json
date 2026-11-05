@@ -394,13 +394,7 @@
 		},
 		"delete": {
 			"title": "„{project}“ löschen",
-			"header": "Dieses Projekt löschen",
-			"text1": "Bist du sicher, dass du dieses Projekt und alle seine Inhalte löschen willst?",
-			"text2": "Dies umfasst alle Aufgaben und kann NICHT rückgängig gemacht werden!",
-			"success": "Das Projekt wurde erfolgreich gelöscht.",
-			"tasksToDelete": "Dies löscht unwiderruflich ca. {count} Aufgaben.",
-			"tasksAndChildProjectsToDelete": "Dies löscht unwiderruflich ca. {tasks} Aufgaben und {projects} Projekte.",
-			"noTasksToDelete": "Dieses Projekt enthält keine Aufgaben, es kann sicher gelöscht werden."
+			"header": "Dieses Projekt löschen"
 		},
 		"duplicate": {
 			"title": "Dupliziere dieses Projekt",
@@ -537,7 +531,8 @@
 			"bucketTitleSavedSuccess": "Der Spaltenname wurde erfolgreich gespeichert.",
 			"bucketLimitSavedSuccess": "Das Spaltenlimit wurde erfolgreich gespeichert.",
 			"collapse": "Spalte einklappen",
-			"bucketLimitReached": "Du hast das Limit dieses Buckets erreicht. Entferne Aufgaben oder erhöhe das Limit, um neue Aufgaben hinzuzufügen.",
+			"bucketLimitReached": "Du hast das Limit dieser Spalte erreicht. Entferne Aufgaben oder erhöhe das Limit, um neue Aufgaben hinzuzufügen.",
+			"bucketLimitReachedShort": "Limit erreicht",
 			"bucketOptions": "Bucketoptionen"
 		},
 		"pseudo": {
@@ -1027,7 +1022,6 @@
 			"doneAt": "Erledigt {0}",
 			"titleRequired": "Der Aufgabentitel darf nicht leer sein.",
 			"updateSuccess": "Die Aufgabe wurde erfolgreich gespeichert.",
-			"deleteSuccess": "Die Aufgabe wurde erfolgreich gelöscht.",
 			"duplicateSuccess": "Die Aufgabe wurde erfolgreich dupliziert.",
 			"noBucket": "Keine Spalte",
 			"bucketSelectLabel": "Kanban bucket: {bucket}",
@@ -1035,6 +1029,7 @@
 			"belongsToProject": "Diese Aufgabe gehört zum Projekt „{project}“",
 			"back": "Zurück zum Projekt",
 			"due": "Fällig {at}",
+			"overdue": "Überfällig",
 			"closeTaskDetail": "Aufgabendetails schließen",
 			"title": "Aufgabendetails",
 			"markAsDone": "'{task}' als erledigt markieren",
@@ -1042,11 +1037,6 @@
 			"organization": "Organisation",
 			"management": "Verwaltung",
 			"dateAndTime": "Datum und Uhrzeit",
-			"delete": {
-				"header": "Diese Aufgabe löschen",
-				"text1": "Willst du diese Aufgabe wirklich löschen?",
-				"text2": "Dies wird auch alle Anhänge, Erinnerungen und Verknüpfungen, die zu dieser Aufgabe gehören löschen und kann nicht rückgängig gemacht werden!"
-			},
 			"actions": {
 				"assign": "Benutzer:in zuweisen",
 				"label": "Label hinzufügen",
@@ -1557,7 +1547,10 @@
 		"10007": "Eine Projektansicht kann maximal 100 Spalten haben.",
 		"14018": "Der Import enthält mehr Elemente als erlaubt sind.",
 		"14019": "Der Migrationsstatus ist ungültig oder abgelaufen. Bitte starte die Migration erneut.",
-		"14205": "Die Planka-URL zeigt auf eine private oder lokale Netzwerkadresse, die Vikunja standardmäßig blockiert. Ein Admin kann das ändern, indem outgoingrequests.allownonroutableips eingeschaltet werden."
+		"14020": "Ein Projekt im Import hat mehr Ansichten als erlaubt.",
+		"14205": "Die Planka-URL zeigt auf eine private oder lokale Netzwerkadresse, die Vikunja standardmäßig blockiert. Ein Admin kann das ändern, indem outgoingrequests.allownonroutableips eingeschaltet werden.",
+		"3020": "Diese Projekthierarchie ist zu groß, um unter das gewählte übergeordnete Projekt verschoben zu werden.",
+		"4041": "Diese Aufgabenhierarchie ist zu groß, um weitere Unteraufgaben oder übergeordnete Aufgaben hinzuzufügen."
 	},
 	"about": {
 		"title": "Über",
@@ -1568,6 +1561,7 @@
 	"timeTracking": {
 		"title": "Zeiterfassung",
 		"stop": "Timer stoppen",
+		"running": "Timer läuft",
 		"logTime": "Zeit buchen",
 		"editEntry": "Eintrag bearbeiten",
 		"commentLabel": "Kommentar",
