@@ -109,23 +109,38 @@ func trashProject(s *xorm.Session, project *Project, a web.Auth) error {
 	return nil
 }
 
+func lockProjectTreeViewsForPositionUpdate(s *xorm.Session, projectIDs ...int64) ([]*ProjectView, error) {
+	// Workman has no project_ancestors table: union each root's subtree (trashed rows included).
+	ids := []int64{}
+	for _, projectID := range projectIDs {
+		subtree, err := subtreeIDs(s, projectID, builder.Expr("1 = 1"))
+		if err != nil {
+			return nil, err
+		}
+		ids = append(ids, subtree...)
+	}
+	return lockProjectViewsForPositionUpdate(s, ids...)
+}
+
 // Time entries survive without a container, kept by their authors. A nil doer is the system.
 func hardDeleteProject(s *xorm.Session, p *Project, doer *user.User) error {
+	views, err := lockProjectTreeViewsForPositionUpdate(s, p.ID)
+	if err != nil {
+		return err
+	}
+	return hardDeleteProjectInViews(s, p, doer, views)
+}
+
+func hardDeleteProjectInViews(s *xorm.Session, p *Project, doer *user.User, views []*ProjectView) error {
 	ancestorIDs, err := projectAncestorIDs(s, p.ID)
 	if err != nil {
 		return err
 	}
-	return hardDeleteProjectTree(s, p, doer, ancestorIDs)
+	return hardDeleteProjectTree(s, p, doer, ancestorIDs, views)
 }
 
 // Children get their ancestors passed down: deleting p's closure rows also drops their links to p.
-func hardDeleteProjectTree(s *xorm.Session, p *Project, doer *user.User, ancestorIDs []int64) (err error) {
-	// Lock first: the task loop below deletes task_positions rows before the views are dropped further down.
-	_, err = lockProjectViewsForPositionUpdate(s, p.ID)
-	if err != nil {
-		return err
-	}
-
+func hardDeleteProjectTree(s *xorm.Session, p *Project, doer *user.User, ancestorIDs []int64, views []*ProjectView) (err error) {
 	// Including trashed tasks: there is nothing to restore them into once the project is gone.
 	tasks := []*Task{}
 	err = s.Unscoped().Where("project_id = ?", p.ID).Find(&tasks)
@@ -162,13 +177,11 @@ func hardDeleteProjectTree(s *xorm.Session, p *Project, doer *user.User, ancesto
 		return
 	}
 
-	views, err := getViewsForProject(s, p.ID)
-	if err != nil {
-		return
-	}
 	viewIDs := []int64{}
 	for _, v := range views {
-		viewIDs = append(viewIDs, v.ID)
+		if v.ProjectID == p.ID {
+			viewIDs = append(viewIDs, v.ID)
+		}
 	}
 
 	_, err = s.In("project_view_id", viewIDs).Delete(&Bucket{})
@@ -219,7 +232,7 @@ func hardDeleteProjectTree(s *xorm.Session, p *Project, doer *user.User, ancesto
 	}
 	childAncestorIDs := append(slices.Clone(ancestorIDs), p.ID)
 	for _, child := range children {
-		err = hardDeleteProjectTree(s, child, doer, childAncestorIDs)
+		err = hardDeleteProjectTree(s, child, doer, childAncestorIDs, views)
 		if err != nil {
 			return
 		}
@@ -622,9 +635,14 @@ func EmptyProjectTrash(s *xorm.Session, a web.Auth, includeOthers bool) (purged 
 	if err = s.Unscoped().Where(cond).Find(&projects); err != nil {
 		return 0, err
 	}
+	projectIDs, _ := getProjectIDsFromProjects(projects)
+	views, err := lockProjectTreeViewsForPositionUpdate(s, projectIDs...)
+	if err != nil {
+		return 0, err
+	}
 	doer := doerFromAuth(s, a)
 	for _, project := range projects {
-		if err = hardDeleteProject(s, project, doer); err != nil {
+		if err = hardDeleteProjectInViews(s, project, doer, views); err != nil {
 			return 0, err
 		}
 	}
