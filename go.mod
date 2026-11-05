@@ -218,4 +218,4 @@ tool (
 	src.techknowlogick.com/xgo
 )
 
-replace github.com/samedi/caldav-go => github.com/kolaente/caldav-go v3.0.1-0.20260819190554-cb44e15e566f+incompatible
+replace github.com/samedi/caldav-go => github.com/go-vikunja/caldav-go v3.0.1-0.20261105133800-e975f7228544+incompatible
