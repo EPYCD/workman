@@ -19,7 +19,11 @@ package db
 import (
 	"testing"
 
+	"code.vikunja.io/api/pkg/config"
+
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"xorm.io/xorm/schemas"
 )
 
 func TestIsWriteStatement(t *testing.T) {
@@ -45,4 +49,45 @@ func TestIsWriteStatement(t *testing.T) {
 	for sqlStr, want := range tests {
 		assert.Equal(t, want, isWriteStatement(sqlStr), sqlStr)
 	}
+}
+
+type isolationTestRow struct {
+	ID    int64  `xorm:"autoincr not null unique pk"`
+	Title string `xorm:"varchar(250)"`
+}
+
+// Upstream proves this through its row memo (Remember/Forget), which Workman does not have:
+// an open transaction must see a concurrent commit on a plain re-read. Under MySQL's default
+// REPEATABLE READ it would keep returning the first snapshot.
+func TestSessionSeesCommittedUpdate(t *testing.T) {
+	config.InitDefaultConfig()
+	engine, err := CreateTestEngine()
+	require.NoError(t, err)
+	if Type() == schemas.SQLITE {
+		t.Skip("SQLite cannot commit a concurrent writer while a reader holds its snapshot")
+	}
+	require.NoError(t, engine.Sync(&isolationTestRow{}))
+	t.Cleanup(func() { _ = engine.DropTables(&isolationTestRow{}) })
+	row := &isolationTestRow{Title: "before"}
+	_, err = engine.Insert(row)
+	require.NoError(t, err)
+
+	reader := NewSession()
+	defer reader.Close()
+	var before isolationTestRow
+	_, err = reader.ID(row.ID).Get(&before)
+	require.NoError(t, err)
+	require.Equal(t, "before", before.Title)
+
+	writer := NewSession()
+	defer writer.Close()
+	_, err = writer.ID(row.ID).Cols("title").Update(&isolationTestRow{Title: "after"})
+	require.NoError(t, err)
+	require.NoError(t, writer.Commit())
+
+	var after isolationTestRow
+	has, err := reader.ID(row.ID).Get(&after)
+	require.NoError(t, err)
+	require.True(t, has)
+	assert.Equal(t, "after", after.Title)
 }
