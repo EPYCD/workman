@@ -198,7 +198,7 @@ onClickOutside(dropdown, (e) => {
 	box-shadow: var(--shadow-md);
 }
 
-.dropdown-divider {
+.dropdown-content :deep(.dropdown-divider) {
 	background-color: var(--wm-line-faint);
 	border: none;
 	display: block;
