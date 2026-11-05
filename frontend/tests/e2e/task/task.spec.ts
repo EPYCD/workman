@@ -19,6 +19,7 @@ import {createDefaultViews} from '../project/prepareProjects'
 import {TaskBucketFactory} from '../../factories/task_buckets'
 import {pasteFile, pasteHtmlFromClipboard} from '../../support/commands'
 import {login} from '../../support/authenticateUser'
+import {deleteTaskFromDetail} from '../../support/taskDetail'
 import type {Page} from '@playwright/test'
 import {readFileSync} from 'fs'
 import {join, dirname} from 'path'
@@ -58,27 +59,26 @@ interface Bucket {
 }
 
 async function addLabelToTaskAndVerify(page: Page, labelTitle: string) {
-	await page.locator('.task-view .action-buttons .button').filter({hasText: 'Add Labels'}).click()
-	await page.locator('.task-view .details.labels-list .multiselect input').fill(labelTitle)
+	await page.locator('.task-view .property-labels .multiselect input').fill(labelTitle)
 	// Wait for search results to appear before clicking
-	const searchResults = page.locator('.task-view .details.labels-list .multiselect .search-results')
+	const searchResults = page.locator('.task-view .property-labels .multiselect .search-results')
 	await searchResults.waitFor({state: 'visible'})
 	await searchResults.locator('> *').first().click()
 
 	await expect(page.locator('.global-notification')).toContainText('Success', {timeout: 4000})
-	await expect(page.locator('.task-view .details.labels-list .multiselect .input-wrapper span.tag')).toBeVisible()
-	await expect(page.locator('.task-view .details.labels-list .multiselect .input-wrapper span.tag')).toContainText(labelTitle)
+	await expect(page.locator('.task-view .property-labels .multiselect .input-wrapper span.tag')).toBeVisible()
+	await expect(page.locator('.task-view .property-labels .multiselect .input-wrapper span.tag')).toContainText(labelTitle)
 }
 
 async function uploadAttachmentAndVerify(page: Page, taskId: number, file = 'tests/fixtures/image.jpg') {
 	const uploadAttachmentPromise = page.waitForResponse(response =>
 		response.url().includes(`/tasks/${taskId}/attachments`) && response.request().method() === 'PUT',
 	)
-	// The "Add Attachments" button triggers openFilePicker() which may open
+	// The "Add attachments" action triggers openFilePicker() which may open
 	// a native file chooser (especially inside a <dialog>). Handle it via the
 	// filechooser event so it doesn't block the test.
 	const fileChooserPromise = page.waitForEvent('filechooser')
-	await page.locator('.task-view .action-buttons .button').filter({hasText: 'Add Attachments'}).click()
+	await clickTaskAction(page, 'Add attachments')
 	const fileChooser = await fileChooserPromise
 	await fileChooser.setFiles(file)
 	await uploadAttachmentPromise
@@ -434,7 +434,7 @@ test.describe('Task', () => {
 			})
 			await page.goto(`/tasks/${tasks[0].id}`)
 
-			await page.locator('.task-view .action-buttons .button').filter({hasText: /^Move$/}).click()
+			await clickTaskAction(page, 'Move')
 			const multiselectInput = page.locator('.task-view .content.details .field .multiselect.control .input-wrapper input')
 			// Use type/pressSequentially instead of fill to properly trigger Vue's input events
 			await multiselectInput.click()
@@ -454,16 +454,13 @@ test.describe('Task', () => {
 			})
 			await page.goto(`/tasks/${tasks[0].id}`)
 
-			await expect(page.locator('.task-view .action-buttons .button').filter({hasText: 'Delete'})).toBeVisible()
-			await page.locator('.task-view .action-buttons .button').filter({hasText: 'Delete'}).click()
-			await expect(page.locator('dialog[open] .modal-content .modal-header')).toContainText('Delete this task')
-			await page.locator('dialog[open] .modal-content .actions .button').filter({hasText: 'Do it!'}).click()
+			await deleteTaskFromDetail(page)
 
 			await expect(page.locator('.global-notification')).toContainText('Success')
 			await expect(page).toHaveURL(new RegExp(`/projects/${tasks[0].project_id}/`))
 		})
 
-		test('Can add an assignee to a task', async ({authenticatedPage: page}) => {
+		test('Can add an assignee to a task', async ({authenticatedPage: page, apiContext, userToken}) => {
 			// Create users with IDs starting at 100 to avoid conflict with logged-in user (ID 1)
 			// Don't truncate to preserve the authenticated user from the fixture
 			const users = await UserFactory.create(5, {
@@ -483,22 +480,32 @@ test.describe('Task', () => {
 			await page.goto(`/tasks/${tasks[0].id}`)
 			await page.waitForLoadState('networkidle')
 
-			// Wait for the assign button to be visible
-			const assignButton = page.locator('[data-cy="taskDetail.assign"]')
-			await expect(assignButton).toBeVisible({timeout: 10000})
-			await assignButton.click()
-
-			const input = page.locator('.task-view .column.assignees .multiselect input')
+			const input = page.locator('.task-view .property-assignees .multiselect input')
 			const userToAssign = users[0]
 			// Use type/pressSequentially instead of fill to properly trigger Vue's input events
 			await input.click()
 			await input.pressSequentially(userToAssign.username.substring(0, 10), {delay: 20})
 			// Wait for search results (200ms debounce + API request time)
-			await expect(page.locator('.task-view .column.assignees .multiselect .search-results')).toBeVisible({timeout: 5000})
-			await page.locator('.task-view .column.assignees .multiselect .search-results').locator('> *').first().click()
+			await expect(page.locator('.task-view .property-assignees .multiselect .search-results')).toBeVisible({timeout: 5000})
+			// Focus preloads every project member, so pick the matching result rather than the first.
+			const result = page.locator('.task-view .property-assignees .multiselect .search-result-button').filter({hasText: userToAssign.username})
+			await expect(result).toBeVisible()
+			await result.click()
 
 			await expect(page.locator('.global-notification')).toContainText('Success')
-			await expect(page.locator('.task-view .column.assignees .multiselect .input-wrapper span.assignee')).toBeVisible()
+			const assignees = page.locator('.task-view .property-assignees .multiselect .input-wrapper span.assignee')
+			await expect(assignees).toBeVisible()
+
+			await page.reload()
+			await expect(assignees).toHaveCount(1)
+			await expect(page.getByRole('button', {name: `Remove ${userToAssign.username} as assignee`})).toBeVisible()
+
+			const resp = await apiContext.get(`tasks/${tasks[0].id}`, {
+				headers: {Authorization: `Bearer ${userToken}`},
+			})
+			expect(resp.ok()).toBe(true)
+			const {assignees: apiAssignees} = await resp.json()
+			expect(apiAssignees.map((a: User) => a.id)).toEqual([userToAssign.id])
 		})
 
 		test('Can remove an assignee from a task', async ({authenticatedPage: page}) => {
@@ -518,10 +525,54 @@ test.describe('Task', () => {
 
 			await page.goto(`/tasks/${tasks[0].id}`)
 
-			await page.locator('.task-view .column.assignees .multiselect .input-wrapper span.assignee .remove-assignee').click()
+			await page.locator('.task-view .property-assignees .multiselect .input-wrapper span.assignee .remove-assignee').click()
 
 			await expect(page.locator('.global-notification')).toContainText('Success')
-			await expect(page.locator('.task-view .column.assignees .multiselect .input-wrapper span.assignee')).not.toBeVisible()
+			await expect(page.locator('.task-view .property-assignees .multiselect .input-wrapper span.assignee')).not.toBeVisible()
+		})
+
+		test('Keeps a removed assignee unassigned after saving another field', async ({authenticatedPage: page, apiContext, userToken}) => {
+			const [removed, kept] = await UserFactory.create(2, {
+				id: (i: number) => 100 + i,
+			}, false)
+			const [project] = await ProjectFactory.create(1)
+			const [task] = await TaskFactory.create(1, {
+				id: 1,
+				project_id: project.id,
+			})
+			await UserProjectFactory.create(2, {
+				project_id: project.id,
+				user_id: (i: number) => 100 + i,
+			})
+			await TaskAssigneeFactory.create(2, {
+				task_id: task.id,
+				user_id: (i: number) => 100 + i,
+			})
+
+			await page.goto(`/tasks/${task.id}`)
+
+			const assignees = page.locator('.task-view .property-assignees .multiselect .input-wrapper span.assignee')
+			await expect(assignees).toHaveCount(2)
+			await page.getByRole('button', {name: `Remove ${removed.username} as assignee`}).click()
+			await expect(page.locator('.global-notification')).toContainText('Success')
+			await expect(assignees).toHaveCount(1)
+
+			const saved = page.waitForResponse(r =>
+				r.url().includes(`/tasks/${task.id}`) && r.request().method() === 'PATCH',
+			)
+			await page.locator('.task-view .property-priority').locator('.select select').selectOption('Urgent')
+			await saved
+
+			const resp = await apiContext.get(`tasks/${task.id}`, {
+				headers: {Authorization: `Bearer ${userToken}`},
+			})
+			expect(resp.ok()).toBe(true)
+			const {assignees: apiAssignees} = await resp.json()
+			expect(apiAssignees.map((a: User) => a.id)).toEqual([kept.id])
+
+			await page.reload()
+			await expect(assignees).toHaveCount(1)
+			await expect(assignees).toContainText(kept.username)
 		})
 
 		test('Can add a new label to a task', async ({authenticatedPage: page}) => {
@@ -533,14 +584,40 @@ test.describe('Task', () => {
 
 			await page.goto(`/tasks/${tasks[0].id}`)
 
-			await expect(page.locator('.task-view .action-buttons .button').filter({hasText: 'Add Labels'})).toBeVisible()
-			await page.locator('.task-view .action-buttons .button').filter({hasText: 'Add Labels'}).click()
-			await page.locator('.task-view .details.labels-list .multiselect input').fill(newLabelText)
-			await page.locator('.task-view .details.labels-list .multiselect .search-results').locator('> *').first().click()
+			await page.locator('.task-view .property-labels .multiselect input').fill(newLabelText)
+			const createOption = page.locator('.task-view .property-labels .multiselect .search-results .is-create-option')
+			await expect(createOption).toHaveRole('option')
+			await expect(createOption.locator('span.tag.search-result')).toHaveText(newLabelText)
+			await expect(createOption.locator('.hint-text')).toHaveText('Add this as new label')
+			await page.locator('.task-view .property-labels .multiselect .search-results').locator('> *').first().click()
 
 			await expect(page.locator('.global-notification')).toContainText('Success')
-			await expect(page.locator('.task-view .details.labels-list .multiselect .input-wrapper span.tag')).toBeVisible()
-			await expect(page.locator('.task-view .details.labels-list .multiselect .input-wrapper span.tag')).toContainText(newLabelText)
+			await expect(page.locator('.task-view .property-labels .multiselect .input-wrapper span.tag')).toBeVisible()
+			await expect(page.locator('.task-view .property-labels .multiselect .input-wrapper span.tag')).toContainText(newLabelText)
+		})
+
+		test('Can create a new label with the keyboard', async ({authenticatedPage: page}) => {
+			const tasks = await TaskFactory.create(1, {
+				id: 1,
+				project_id: 1,
+			})
+			const newLabelText = 'keyboard label'
+
+			await page.goto(`/tasks/${tasks[0].id}`)
+
+			const labelInput = page.locator('.task-view .property-labels .multiselect input')
+			await labelInput.fill(newLabelText)
+			const createOption = page.locator('.task-view .property-labels .multiselect .search-results .is-create-option')
+			await expect(createOption).toContainText(newLabelText)
+
+			await labelInput.press('ArrowDown')
+			await expect(createOption).toBeFocused()
+			await page.keyboard.press('Enter')
+
+			await expect(page.locator('.global-notification')).toContainText('Success')
+			await expect(page.locator('.task-view .property-labels .multiselect .input-wrapper span.tag')).toHaveCount(1)
+			await expect(page.locator('.task-view .property-labels .multiselect .input-wrapper span.tag')).toContainText(newLabelText)
+			await expect(labelInput).toBeFocused()
 		})
 
 		test('Can add an existing label to a task', async ({authenticatedPage: page}) => {
@@ -564,15 +641,14 @@ test.describe('Task', () => {
 
 			await page.goto(`/tasks/${tasks[0].id}`)
 
-			await page.locator('.task-view .action-buttons .button').filter({hasText: 'Add Labels'}).click()
-			const labelInput = page.locator('.task-view .details.labels-list .multiselect input')
+			const labelInput = page.locator('.task-view .property-labels .multiselect input')
 			await labelInput.fill(labels[0].title)
-			await page.locator('.task-view .details.labels-list .multiselect .search-results').waitFor({state: 'visible'})
+			await page.locator('.task-view .property-labels .multiselect .search-results').waitFor({state: 'visible'})
 
 			await labelInput.press('ArrowDown')
 			await page.keyboard.press('Enter')
 
-			await expect(page.locator('.task-view .details.labels-list .multiselect .input-wrapper span.tag')).toContainText(labels[0].title)
+			await expect(page.locator('.task-view .property-labels .multiselect .input-wrapper span.tag')).toContainText(labels[0].title)
 			await expect(labelInput).toBeFocused()
 		})
 
@@ -613,7 +689,7 @@ test.describe('Task', () => {
 			await page.goto(`/tasks/${tasks[0].id}`)
 			await page.waitForLoadState('networkidle')
 
-			const labelWrapper = page.locator('.task-view .details.labels-list .multiselect .input-wrapper')
+			const labelWrapper = page.locator('.task-view .property-labels .multiselect .input-wrapper')
 			await expect(labelWrapper).toBeVisible({timeout: 10000})
 			await expect(labelWrapper).toContainText(labels[0].title)
 
@@ -636,11 +712,11 @@ test.describe('Task', () => {
 			await page.goto(`/tasks/${tasks[0].id}`)
 			await page.waitForLoadState('networkidle')
 
-			const dueDateColumn = page.locator('.task-view .columns.details .column').filter({hasText: 'Due Date'})
-			await expect(dueDateColumn).not.toBeVisible()
-			await page.locator('.task-view .action-buttons').click()
-			await page.locator('body').press('d')
+			const dueDateColumn = page.locator('.task-view .property-due-date')
 			await expect(dueDateColumn).toBeVisible()
+			await page.locator('body').press('d')
+			// The fork's datepicker has no open(): the shortcut focuses its trigger.
+			await expect(dueDateColumn.locator('.datepicker .show')).toBeFocused()
 		})
 
 		test('Can set a due date for a task', async ({authenticatedPage: page}) => {
@@ -651,13 +727,7 @@ test.describe('Task', () => {
 			await page.goto(`/tasks/${tasks[0].id}`)
 			await page.waitForLoadState('networkidle')
 
-			const setDueDateButton = page.locator('.task-view .action-buttons .button').filter({hasText: 'Set Due Date'})
-			await expect(setDueDateButton).toBeVisible({timeout: 10000})
-			await setDueDateButton.click()
-
-			const datepickerShow = page.locator('.task-view .columns.details .column').filter({hasText: 'Due Date'}).locator('.date-input .datepicker .show')
-			await expect(datepickerShow).toBeVisible()
-			await datepickerShow.click()
+			await page.locator('.task-view .property-due-date .datepicker .show').click()
 
 			const tomorrowButton = page.locator('.datepicker .datepicker-popup button').filter({hasText: 'Tomorrow'})
 			await expect(tomorrowButton).toBeVisible()
@@ -667,7 +737,7 @@ test.describe('Task', () => {
 			await expect(confirmButton).toBeVisible()
 			await confirmButton.click()
 
-			await expect(page.locator('.task-view .columns.details .column').filter({hasText: 'Due Date'}).locator('.date-input .datepicker-popup')).not.toBeVisible()
+			await expect(page.locator('.task-view .property-due-date').locator('.datepicker-popup')).not.toBeVisible()
 			await expect(page.locator('.global-notification')).toContainText('Success')
 		})
 
@@ -679,11 +749,9 @@ test.describe('Task', () => {
 			await page.goto(`/tasks/${tasks[0].id}`)
 			await page.waitForLoadState('networkidle')
 
-			const setDueDateButton = page.locator('.task-view .action-buttons .button').filter({hasText: 'Set Due Date'})
-			await expect(setDueDateButton).toBeVisible({timeout: 10000})
-			await setDueDateButton.click()
+			await page.locator('.task-view .property-due-date .datepicker .show').click()
 
-			const datepickerShow = page.locator('.task-view .columns.details .column').filter({hasText: 'Due Date'}).locator('.date-input .datepicker .show')
+			const datepickerShow = page.locator('.task-view .property-due-date').locator('.datepicker .show')
 			await expect(datepickerShow).toBeVisible()
 			await datepickerShow.click()
 
@@ -699,8 +767,8 @@ test.describe('Task', () => {
 			today.setHours(12)
 			today.setMinutes(0)
 			today.setSeconds(0)
-			await expect(page.locator('.task-view .columns.details .column').filter({hasText: 'Due Date'}).locator('.date-input .datepicker-popup')).not.toBeVisible()
-			await expect(page.locator('.task-view .columns.details .column').filter({hasText: 'Due Date'}).locator('.date-input')).toContainText(dayjs(today).fromNow())
+			await expect(page.locator('.task-view .property-due-date').locator('.datepicker-popup')).not.toBeVisible()
+			await expect(page.locator('.task-view .property-due-date').locator('dd')).toContainText(dayjs(today).fromNow())
 			await expect(page.locator('.global-notification')).toContainText('Success')
 		})
 
@@ -724,11 +792,9 @@ test.describe('Task', () => {
 			await page.goto(`/tasks/${tasks[0].id}`)
 			await page.waitForLoadState('networkidle')
 
-			const setDueDateButton = page.locator('.task-view .action-buttons .button').filter({hasText: 'Set Due Date'})
-			await expect(setDueDateButton).toBeVisible({timeout: 10000})
-			await setDueDateButton.click()
+			await page.locator('.task-view .property-due-date .datepicker .show').click()
 
-			const datepickerShow = page.locator('.task-view .columns.details .column').filter({hasText: 'Due Date'}).locator('.date-input .datepicker .show')
+			const datepickerShow = page.locator('.task-view .property-due-date').locator('.datepicker .show')
 			await expect(datepickerShow).toBeVisible()
 			await datepickerShow.click()
 
@@ -740,8 +806,8 @@ test.describe('Task', () => {
 			await expect(confirmButton).toBeVisible()
 			await confirmButton.click()
 
-			await expect(page.locator('.task-view .columns.details .column').filter({hasText: 'Due Date'}).locator('.date-input .datepicker-popup')).not.toBeVisible()
-			await expect(page.locator('.task-view .columns.details .column').filter({hasText: 'Due Date'}).locator('.date-input')).toContainText(dayjs(today).fromNow())
+			await expect(page.locator('.task-view .property-due-date').locator('.datepicker-popup')).not.toBeVisible()
+			await expect(page.locator('.task-view .property-due-date').locator('dd')).toContainText(dayjs(today).fromNow())
 			await expect(page.locator('.global-notification')).toContainText('Success')
 		})
 
@@ -798,8 +864,7 @@ test.describe('Task', () => {
 			})
 			await page.goto(`/tasks/${tasks[0].id}`)
 
-			await page.locator('.task-view .action-buttons .button').filter({hasText: 'Set Reminders'}).click()
-			await page.locator('.task-view .columns.details .column button').filter({hasText: 'Add a reminder'}).click()
+			await page.locator('.task-view .property-reminders button').filter({hasText: 'Add a reminder'}).click()
 			await page.locator('.datepicker__quick-select-date').filter({hasText: 'Tomorrow'}).click()
 
 			const openPopup = page.locator('.reminder-options-popup.is-open')
@@ -817,8 +882,7 @@ test.describe('Task', () => {
 			})
 			await page.goto(`/tasks/${tasks[0].id}`)
 
-			await page.locator('.task-view .action-buttons .button').filter({hasText: 'Set Reminders'}).click()
-			await page.locator('.task-view .columns.details .column button').filter({hasText: 'Add a reminder'}).click()
+			await page.locator('.task-view .property-reminders button').filter({hasText: 'Add a reminder'}).click()
 			await expect(page.locator('.datepicker__quick-select-date')).not.toBeVisible()
 			// Use .is-open to target the currently open popup
 			const openPopup = page.locator('.reminder-options-popup.is-open')
@@ -837,8 +901,7 @@ test.describe('Task', () => {
 			})
 			await page.goto(`/tasks/${tasks[0].id}`)
 
-			await page.locator('.task-view .action-buttons .button').filter({hasText: 'Set Reminders'}).click()
-			await page.locator('.task-view .columns.details .column button').filter({hasText: 'Add a reminder'}).click()
+			await page.locator('.task-view .property-reminders button').filter({hasText: 'Add a reminder'}).click()
 			await expect(page.locator('.datepicker__quick-select-date')).not.toBeVisible()
 			// Use .is-open to target the currently open popup
 			const openPopup = page.locator('.reminder-options-popup.is-open')
@@ -857,8 +920,7 @@ test.describe('Task', () => {
 			})
 			await page.goto(`/tasks/${tasks[0].id}`)
 
-			await page.locator('.task-view .action-buttons .button').filter({hasText: 'Set Reminders'}).click()
-			await page.locator('.task-view .columns.details .column button').filter({hasText: 'Add a reminder'}).click()
+			await page.locator('.task-view .property-reminders button').filter({hasText: 'Add a reminder'}).click()
 			await expect(page.locator('.datepicker__quick-select-date')).not.toBeVisible()
 			// Use .is-open to target the currently open popup
 			const openPopup = page.locator('.reminder-options-popup.is-open')
@@ -881,8 +943,7 @@ test.describe('Task', () => {
 			})
 			await page.goto(`/tasks/${tasks[0].id}`)
 
-			await page.locator('.task-view .action-buttons .button').filter({hasText: 'Set Reminders'}).click()
-			await page.locator('.task-view .columns.details .column button').filter({hasText: 'Add a reminder'}).click()
+			await page.locator('.task-view .property-reminders button').filter({hasText: 'Add a reminder'}).click()
 			await expect(page.locator('.datepicker__quick-select-date')).not.toBeVisible()
 			// Use .is-open to target the currently open popup
 			const openPopup = page.locator('.reminder-options-popup.is-open')
@@ -904,8 +965,7 @@ test.describe('Task', () => {
 			})
 			await page.goto(`/tasks/${tasks[0].id}`)
 
-			await page.locator('.task-view .action-buttons .button').filter({hasText: 'Set Reminders'}).click()
-			await page.locator('.task-view .columns.details .column button').filter({hasText: 'Add a reminder'}).click()
+			await page.locator('.task-view .property-reminders button').filter({hasText: 'Add a reminder'}).click()
 
 			const openPopup = page.locator('.reminder-options-popup.is-open')
 			// Wait for the flatpickr calendar to appear
@@ -948,8 +1008,7 @@ test.describe('Task', () => {
 			})
 			await page.goto(`/tasks/${tasks[0].id}`)
 
-			await page.locator('.task-view .action-buttons .button').filter({hasText: 'Set Reminders'}).click()
-			await page.locator('.task-view .columns.details .column button').filter({hasText: 'Add a reminder'}).click()
+			await page.locator('.task-view .property-reminders button').filter({hasText: 'Add a reminder'}).click()
 
 			const openPopup = page.locator('.reminder-options-popup.is-open')
 			// When no due date, the absolute date form should show directly
@@ -965,11 +1024,10 @@ test.describe('Task', () => {
 			})
 			await page.goto(`/tasks/${tasks[0].id}`)
 
-			await page.locator('.task-view .action-buttons .button').filter({hasText: 'Set Priority'}).click()
-			await page.locator('.task-view .columns.details .column').filter({hasText: 'Priority'}).locator('.select select').selectOption('Urgent')
+			await page.locator('.task-view .property-priority').locator('.select select').selectOption('Urgent')
 			await expect(page.locator('.global-notification')).toContainText('Success')
 
-			await expect(page.locator('.task-view .columns.details .column').filter({hasText: 'Priority'}).locator('.select select')).toHaveValue('4')
+			await expect(page.locator('.task-view .property-priority').locator('.select select')).toHaveValue('4')
 		})
 
 		test('Can set the progress for a task', async ({authenticatedPage: page}) => {
@@ -978,14 +1036,13 @@ test.describe('Task', () => {
 			})
 			await page.goto(`/tasks/${tasks[0].id}`)
 
-			await page.locator('.task-view .action-buttons .button').filter({hasText: 'Set Progress'}).click()
-			await page.locator('.task-view .columns.details .column').filter({hasText: 'Progress'}).locator('.select select').selectOption('50%')
+			await page.locator('.task-view .property-percent-done').locator('.select select').selectOption('50%')
 			await expect(page.locator('.global-notification')).toContainText('Success')
 
 			await page.waitForTimeout(200)
 
-			await expect(page.locator('.task-view .columns.details .column').filter({hasText: 'Progress'}).locator('.select select')).toBeVisible()
-			await expect(page.locator('.task-view .columns.details .column').filter({hasText: 'Progress'}).locator('.select select')).toHaveValue('0.5')
+			await expect(page.locator('.task-view .property-percent-done').locator('.select select')).toBeVisible()
+			await expect(page.locator('.task-view .property-percent-done').locator('.select select')).toHaveValue('0.5')
 		})
 
 		test('Can add an attachment to a task', async ({authenticatedPage: page}) => {
