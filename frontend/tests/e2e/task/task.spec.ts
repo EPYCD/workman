@@ -773,6 +773,22 @@ test.describe('Task', () => {
 			await expect(dueDateColumn.locator('.datepicker .show')).toBeFocused()
 		})
 
+		test('Names each date picker trigger after its property', async ({authenticatedPage: page}) => {
+			const tasks = await TaskFactory.create(1, {
+				id: 1,
+				done: false,
+			})
+			await page.goto(`/tasks/${tasks[0].id}`)
+			await page.waitForLoadState('networkidle')
+
+			for (const name of ['Due date Not set', 'Start date Not set', 'End date Not set']) {
+				await expect(page.locator('.task-view').getByRole('button', {
+					name,
+					exact: true,
+				})).toBeVisible()
+			}
+		})
+
 		test('Can set a due date for a task', async ({authenticatedPage: page}) => {
 			const tasks = await TaskFactory.create(1, {
 				id: 1,
