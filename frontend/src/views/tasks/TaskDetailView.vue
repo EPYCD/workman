@@ -1484,7 +1484,6 @@ h2 .button {
 	gap: var(--wm-space-2);
 	flex: 1;
 	min-block-size: 2rem;
-	padding: var(--wm-space-1) var(--wm-space-2);
 	text-align: start;
 	color: var(--wm-text);
 	transition: background-color var(--wm-duration) var(--wm-ease);
