@@ -5,6 +5,7 @@ import {createProjects} from './prepareProjects'
 async function openAndSetFilters(page) {
 	await page.locator('.filter-container button').filter({hasText: 'Filters'}).click()
 	await expect(page.locator('.filter-popup')).toBeVisible()
+	await page.getByRole('tab', {name: 'Advanced', exact: true}).click()
 	await page.locator('.filter-popup .filter-input .ProseMirror').fill('done = true')
 	await page.locator('.filter-popup button').filter({hasText: 'Show results'}).click()
 }
