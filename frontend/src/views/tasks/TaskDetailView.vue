@@ -394,6 +394,7 @@
 							<Datepicker
 								:ref="e => setFieldRef('dueDate', e)"
 								v-model="task.dueDate"
+								aria-labelledby="task-property-due-date-label"
 								:choose-date-label="$t('task.detail.chooseDueDate')"
 								:empty-label="$t('misc.notSet')"
 								:disabled="taskService.loading || !canWrite"
@@ -412,6 +413,7 @@
 						>
 							<Datepicker
 								v-model="task.startDate"
+								aria-labelledby="task-property-start-date-label"
 								:choose-date-label="$t('task.detail.chooseStartDate')"
 								:empty-label="$t('misc.notSet')"
 								:disabled="taskService.loading || !canWrite"
@@ -430,6 +432,7 @@
 						>
 							<Datepicker
 								v-model="task.endDate"
+								aria-labelledby="task-property-end-date-label"
 								:choose-date-label="$t('task.detail.chooseEndDate')"
 								:empty-label="$t('misc.notSet')"
 								:disabled="taskService.loading || !canWrite"
