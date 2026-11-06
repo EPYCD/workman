@@ -315,275 +315,203 @@
 						v-if="canWrite || hasAnyProperty"
 						class="property-list"
 					>
-						<div
-							v-if="canWrite || isSet.assignees"
-							class="property property-assignees"
-							:class="{'is-set': isSet.assignees}"
+						<TaskPropertyRow
+							name="assignees"
+							icon="users"
+							:label="$t('task.attributes.assignees')"
+							:is-set="isSet.assignees"
+							:can-write="canWrite"
 						>
-							<dt>
-								<Icon icon="users" />
-								{{ $t('task.attributes.assignees') }}
-							</dt>
-							<dd>
-								<EditAssignees
-									v-if="canWrite"
-									:ref="e => setFieldRef('assignees', e)"
-									v-model="task.assignees"
-									:project-id="task.projectId"
-									:task-id="task.id"
-								/>
-								<AssigneeList
-									v-else
-									:assignees="task.assignees"
-								/>
-							</dd>
-						</div>
+							<EditAssignees
+								v-if="canWrite"
+								:ref="e => setFieldRef('assignees', e)"
+								v-model="task.assignees"
+								:project-id="task.projectId"
+								:task-id="task.id"
+							/>
+							<AssigneeList
+								v-else
+								:assignees="task.assignees"
+							/>
+						</TaskPropertyRow>
 
-						<div
-							v-if="canWrite || isSet.labels"
-							class="property property-labels"
-							:class="{'is-set': isSet.labels}"
+						<TaskPropertyRow
+							name="labels"
+							icon="tags"
+							:label="$t('task.attributes.labels')"
+							:is-set="isSet.labels"
+							:can-write="canWrite"
 						>
-							<dt>
-								<Icon icon="tags" />
-								{{ $t('task.attributes.labels') }}
-							</dt>
-							<dd>
-								<EditLabels
-									:ref="e => setFieldRef('labels', e)"
-									v-model="task.labels"
-									:disabled="!canWrite"
-									:task-id="taskId"
-									:creatable="!authStore.isLinkShareAuth"
-									:creation-disabled-message="authStore.isLinkShareAuth ? $t('task.label.linkShareCannotCreate') : ''"
-								/>
-							</dd>
-						</div>
+							<EditLabels
+								:ref="e => setFieldRef('labels', e)"
+								v-model="task.labels"
+								:disabled="!canWrite"
+								:task-id="taskId"
+								:creatable="!authStore.isLinkShareAuth"
+								:creation-disabled-message="authStore.isLinkShareAuth ? $t('task.label.linkShareCannotCreate') : ''"
+							/>
+						</TaskPropertyRow>
 
-						<div
-							v-if="canWrite || isSet.priority"
-							class="property property-priority"
-							:class="{'is-set': isSet.priority}"
+						<TaskPropertyRow
+							name="priority"
+							icon="exclamation-circle"
+							:label="$t('task.attributes.priority')"
+							:is-set="isSet.priority"
+							:can-write="canWrite"
 						>
-							<dt>
-								<Icon icon="exclamation-circle" />
-								{{ $t('task.attributes.priority') }}
-							</dt>
-							<dd>
-								<PrioritySelect
-									:ref="e => setFieldRef('priority', e)"
-									v-model="task.priority"
-									:disabled="!canWrite"
-									@update:modelValue="setPriority"
-								/>
-							</dd>
-						</div>
+							<PrioritySelect
+								:ref="e => setFieldRef('priority', e)"
+								v-model="task.priority"
+								:disabled="!canWrite"
+								@update:modelValue="setPriority"
+							/>
+						</TaskPropertyRow>
 
-						<div
-							v-if="canWrite || isSet.percentDone"
-							class="property property-percent-done"
-							:class="{'is-set': isSet.percentDone}"
+						<TaskPropertyRow
+							name="percent-done"
+							icon="percent"
+							:label="$t('task.attributes.percentDone')"
+							:is-set="isSet.percentDone"
+							:can-write="canWrite"
 						>
-							<dt>
-								<Icon icon="percent" />
-								{{ $t('task.attributes.percentDone') }}
-							</dt>
-							<dd>
-								<PercentDoneSelect
-									v-model="task.percentDone"
-									:disabled="!canWrite"
-									@update:modelValue="setPercentDone"
-								/>
-							</dd>
-						</div>
+							<PercentDoneSelect
+								v-model="task.percentDone"
+								:disabled="!canWrite"
+								@update:modelValue="setPercentDone"
+							/>
+						</TaskPropertyRow>
 
-						<div
-							v-if="canWrite || isSet.dueDate"
-							class="property property-due-date"
-							:class="{'is-set': isSet.dueDate}"
+						<TaskPropertyRow
+							name="due-date"
+							icon="calendar"
+							:label="$t('task.detail.properties.dueDate')"
+							:is-set="isSet.dueDate"
+							:can-write="canWrite"
+							:remove-label="$t('task.detail.removeDueDate')"
+							@remove="task.dueDate = null; saveTask()"
 						>
-							<dt>
-								<Icon icon="calendar" />
-								{{ $t('task.detail.properties.dueDate') }}
-							</dt>
-							<dd>
-								<Datepicker
-									:ref="e => setFieldRef('dueDate', e)"
-									v-model="task.dueDate"
-									:choose-date-label="$t('task.detail.chooseDueDate')"
-									:empty-label="$t('misc.notSet')"
-									:disabled="taskService.loading || !canWrite"
-									@closeOnChange="saveTask()"
-								/>
-								<BaseButton
-									v-if="isSet.dueDate && canWrite"
-									v-tooltip="$t('task.detail.removeDueDate')"
-									class="remove"
-									:aria-label="$t('task.detail.removeDueDate')"
-									@click="() => {task.dueDate = null;saveTask()}"
-								>
-									<Icon icon="times" />
-								</BaseButton>
-							</dd>
-						</div>
+							<Datepicker
+								:ref="e => setFieldRef('dueDate', e)"
+								v-model="task.dueDate"
+								:choose-date-label="$t('task.detail.chooseDueDate')"
+								:empty-label="$t('misc.notSet')"
+								:disabled="taskService.loading || !canWrite"
+								@closeOnChange="saveTask()"
+							/>
+						</TaskPropertyRow>
 
-						<div
-							v-if="canWrite || isSet.startDate"
-							class="property property-start-date"
-							:class="{'is-set': isSet.startDate}"
+						<TaskPropertyRow
+							name="start-date"
+							icon="play"
+							:label="$t('task.detail.properties.startDate')"
+							:is-set="isSet.startDate"
+							:can-write="canWrite"
+							:remove-label="$t('task.detail.removeStartDate')"
+							@remove="task.startDate = null; saveTask()"
 						>
-							<dt>
-								<Icon icon="play" />
-								{{ $t('task.detail.properties.startDate') }}
-							</dt>
-							<dd>
-								<Datepicker
-									v-model="task.startDate"
-									:choose-date-label="$t('task.detail.chooseStartDate')"
-									:empty-label="$t('misc.notSet')"
-									:disabled="taskService.loading || !canWrite"
-									@closeOnChange="saveTask()"
-								/>
-								<BaseButton
-									v-if="isSet.startDate && canWrite"
-									v-tooltip="$t('task.detail.removeStartDate')"
-									class="remove"
-									:aria-label="$t('task.detail.removeStartDate')"
-									@click="() => {task.startDate = null;saveTask()}"
-								>
-									<Icon icon="times" />
-								</BaseButton>
-							</dd>
-						</div>
+							<Datepicker
+								v-model="task.startDate"
+								:choose-date-label="$t('task.detail.chooseStartDate')"
+								:empty-label="$t('misc.notSet')"
+								:disabled="taskService.loading || !canWrite"
+								@closeOnChange="saveTask()"
+							/>
+						</TaskPropertyRow>
 
-						<div
-							v-if="canWrite || isSet.endDate"
-							class="property property-end-date"
-							:class="{'is-set': isSet.endDate}"
+						<TaskPropertyRow
+							name="end-date"
+							icon="stop"
+							:label="$t('task.detail.properties.endDate')"
+							:is-set="isSet.endDate"
+							:can-write="canWrite"
+							:remove-label="$t('task.detail.removeEndDate')"
+							@remove="task.endDate = null; saveTask()"
 						>
-							<dt>
-								<Icon icon="stop" />
-								{{ $t('task.detail.properties.endDate') }}
-							</dt>
-							<dd>
-								<Datepicker
-									v-model="task.endDate"
-									:choose-date-label="$t('task.detail.chooseEndDate')"
-									:empty-label="$t('misc.notSet')"
-									:disabled="taskService.loading || !canWrite"
-									@closeOnChange="saveTask()"
-								/>
-								<BaseButton
-									v-if="isSet.endDate && canWrite"
-									v-tooltip="$t('task.detail.removeEndDate')"
-									class="remove"
-									:aria-label="$t('task.detail.removeEndDate')"
-									@click="() => {task.endDate = null;saveTask()}"
-								>
-									<Icon icon="times" />
-								</BaseButton>
-							</dd>
-						</div>
+							<Datepicker
+								v-model="task.endDate"
+								:choose-date-label="$t('task.detail.chooseEndDate')"
+								:empty-label="$t('misc.notSet')"
+								:disabled="taskService.loading || !canWrite"
+								@closeOnChange="saveTask()"
+							/>
+						</TaskPropertyRow>
 
-						<div
-							v-if="canWrite || isSet.reminders"
-							class="property property-reminders"
-							:class="{'is-set': isSet.reminders}"
+						<TaskPropertyRow
+							name="reminders"
+							:icon="['far', 'clock']"
+							:label="$t('task.attributes.reminders')"
+							:is-set="isSet.reminders"
+							:can-write="canWrite"
 						>
-							<dt>
-								<Icon :icon="['far', 'clock']" />
-								{{ $t('task.attributes.reminders') }}
-							</dt>
-							<dd>
-								<Reminders
-									:ref="e => setFieldRef('reminders', e)"
-									v-model="task.reminders"
-									:default-relative-to="remindersDefaultRelativeTo"
-									:disabled="!canWrite"
-									@update:modelValue="saveTask()"
-								/>
-							</dd>
-						</div>
+							<Reminders
+								:ref="e => setFieldRef('reminders', e)"
+								v-model="task.reminders"
+								:default-relative-to="remindersDefaultRelativeTo"
+								:disabled="!canWrite"
+								@update:modelValue="saveTask()"
+							/>
+						</TaskPropertyRow>
 
-						<div
-							v-if="canWrite || isSet.repeatAfter"
-							class="property property-repeat"
-							:class="{'is-set': isSet.repeatAfter, 'is-expanded': repeatEditorOpen}"
+						<TaskPropertyRow
+							name="repeat"
+							icon="history"
+							:label="$t('task.attributes.repeat')"
+							:is-set="isSet.repeatAfter"
+							:can-write="canWrite"
+							:remove-label="$t('task.detail.removeRepeat')"
+							:class="{'is-expanded': repeatEditorOpen}"
+							@remove="removeRepeatAfter"
 						>
-							<dt id="task-property-repeat-label">
-								<Icon icon="history" />
-								{{ $t('task.attributes.repeat') }}
-							</dt>
-							<dd>
-								<BaseButton
-									id="task-property-repeat-value"
-									aria-labelledby="task-property-repeat-label task-property-repeat-value"
-									class="property-value-button"
-									:class="{'property-empty': !isSet.repeatAfter}"
-									:disabled="!canWrite"
-									:aria-expanded="canWrite ? repeatEditorOpen : undefined"
-									@click="repeatEditorOpen = !repeatEditorOpen"
-								>
-									{{ repeatSummary }}
-									<Icon
-										v-if="canWrite"
-										icon="chevron-down"
-										class="chevron"
-									/>
-								</BaseButton>
-								<BaseButton
-									v-if="isSet.repeatAfter && canWrite"
-									v-tooltip="$t('task.detail.removeRepeat')"
-									class="remove"
-									:aria-label="$t('task.detail.removeRepeat')"
-									@click="removeRepeatAfter"
-								>
-									<Icon icon="times" />
-								</BaseButton>
-							</dd>
-							<div
-								v-if="repeatEditorOpen && canWrite"
-								class="property-editor"
+							<BaseButton
+								id="task-property-repeat-value"
+								aria-labelledby="task-property-repeat-label task-property-repeat-value"
+								class="property-value-button"
+								:class="{'property-empty': !isSet.repeatAfter}"
+								:disabled="!canWrite"
+								:aria-expanded="canWrite ? repeatEditorOpen : undefined"
+								@click="repeatEditorOpen = !repeatEditorOpen"
 							>
-								<RepeatAfter
-									v-model="task"
-									@update:modelValue="saveTask()"
-								/>
-							</div>
-						</div>
-
-						<div
-							v-if="canWrite || isSet.color"
-							class="property property-color"
-							:class="{'is-set': isSet.color}"
-						>
-							<dt>
-								<Icon icon="fill-drip" />
-								{{ $t('task.attributes.color') }}
-							</dt>
-							<dd>
-								<ColorPicker
+								{{ repeatSummary }}
+								<Icon
 									v-if="canWrite"
-									:ref="e => setFieldRef('color', e)"
-									v-model="taskColor"
-									:resettable="false"
-									@update:modelValue="saveTask()"
+									icon="chevron-down"
+									class="chevron"
 								/>
-								<ColorBubble
-									v-else
-									:color="color"
-								/>
-								<BaseButton
-									v-if="isSet.color && canWrite"
-									v-tooltip="$t('task.detail.removeColor')"
-									class="remove"
-									:aria-label="$t('task.detail.removeColor')"
-									@click="() => {taskColor = '';saveTask()}"
+							</BaseButton>
+							<template #editor>
+								<div
+									v-if="repeatEditorOpen && canWrite"
+									class="property-editor"
 								>
-									<Icon icon="times" />
-								</BaseButton>
-							</dd>
-						</div>
+									<RepeatAfter
+										v-model="task"
+										@update:modelValue="saveTask()"
+									/>
+								</div>
+							</template>
+						</TaskPropertyRow>
+
+						<TaskPropertyRow
+							name="color"
+							icon="fill-drip"
+							:label="$t('task.attributes.color')"
+							:is-set="isSet.color"
+							:can-write="canWrite"
+							:remove-label="$t('task.detail.removeColor')"
+							@remove="taskColor = ''; saveTask()"
+						>
+							<ColorPicker
+								v-if="canWrite"
+								:ref="e => setFieldRef('color', e)"
+								v-model="taskColor"
+								:resettable="false"
+								@update:modelValue="saveTask()"
+							/>
+							<ColorBubble
+								v-else
+								:color="color"
+							/>
+						</TaskPropertyRow>
 					</dl>
 
 					<!-- Created / Updated [by] -->
@@ -663,6 +591,7 @@ import RelatedTasks from '@/components/tasks/partials/RelatedTasks.vue'
 import TaskScopeSection from '@/components/tasks/partials/TaskScopeSection.vue'
 import TaskReceiptsSection from '@/components/tasks/partials/TaskReceiptsSection.vue'
 import TaskReferencesSection from '@/components/tasks/partials/TaskReferencesSection.vue'
+import TaskPropertyRow from '@/components/tasks/partials/TaskPropertyRow.vue'
 import Reminders from '@/components/tasks/partials/Reminders.vue'
 import RepeatAfter from '@/components/tasks/partials/RepeatAfter.vue'
 import TaskSubscription from '@/components/misc/Subscription.vue'
@@ -1544,98 +1473,6 @@ h2 .button {
 	border-block-start: 1px solid var(--wm-line-faint);
 }
 
-.property {
-	display: grid;
-	grid-template-columns: minmax(6rem, 7.5rem) 1fr;
-	column-gap: var(--wm-space-2);
-	align-items: start;
-	padding-block: var(--wm-space-1);
-	border-block-end: 1px solid var(--wm-line-faint);
-
-	// Every attribute is captioned like an instrument dial.
-	dt {
-		@include mono-label;
-
-		display: flex;
-		align-items: center;
-		gap: var(--wm-space-2);
-		// Line up the label with the value's first line, whose control has its own vertical padding.
-		min-block-size: 2rem;
-		color: var(--wm-text-tertiary);
-		transition: color var(--wm-duration) var(--wm-ease);
-
-		svg {
-			inline-size: .75rem;
-			flex-shrink: 0;
-			transition: color var(--wm-duration) var(--wm-ease);
-		}
-	}
-
-	dd {
-		min-inline-size: 0;
-		margin: 0;
-		display: flex;
-		align-items: center;
-		gap: var(--wm-space-1);
-
-		> * {
-			min-inline-size: 0;
-		}
-	}
-
-	// Between tablet and desktop the column is too narrow for label and value side by side.
-	@container task-sidebar (inline-size < 19rem) {
-		grid-template-columns: 1fr;
-
-		dt {
-			min-block-size: 1.5rem;
-		}
-	}
-
-	// A set value lifts its caption; the accent stays reserved for the primary action.
-	&.is-set dt {
-		color: var(--wm-text-secondary);
-	}
-
-	.remove,
-	:deep(.reminders .remove),
-	:deep(.remove-assignee) {
-		color: var(--wm-text-tertiary);
-		line-height: 1;
-		padding: var(--wm-space-1);
-		transition:
-			opacity var(--wm-duration) var(--wm-ease),
-			color var(--wm-duration) var(--wm-ease);
-
-		&:hover,
-		&:focus-visible {
-			color: var(--danger);
-		}
-	}
-
-	@media (hover: hover) {
-		.remove,
-		:deep(.reminders .remove),
-		:deep(.remove-assignee) {
-			opacity: 0;
-		}
-
-		&:hover,
-		&:focus-within {
-			.remove,
-			:deep(.reminders .remove),
-			:deep(.remove-assignee) {
-				opacity: 1;
-			}
-		}
-	}
-
-	&:not(.is-set) > dd :deep(select) {
-		color: var(--wm-text-tertiary);
-		font-style: italic;
-	}
-}
-
 .property-empty {
 	color: var(--wm-text-tertiary);
 	font-style: italic;
@@ -1680,164 +1517,6 @@ h2 .button {
 		.control:first-child {
 			flex: 1 1 auto;
 			min-inline-size: 0;
-		}
-	}
-}
-
-.property > dd {
-	:deep(.select) {
-		inline-size: 100%;
-
-		select {
-			inline-size: 100%;
-			background: transparent;
-			border-color: transparent;
-			box-shadow: none;
-			block-size: 2rem;
-			padding-block: 0;
-			padding-inline-start: var(--wm-space-2);
-			line-height: 2rem;
-		}
-
-		&:not(.has-defaults):after {
-			opacity: 0;
-		}
-
-		&:hover:not(.has-defaults):after {
-			opacity: 1;
-		}
-
-		select:disabled {
-			color: var(--wm-text);
-			opacity: 1;
-			cursor: default;
-		}
-
-		&:has(select:disabled)::after {
-			display: none;
-		}
-
-		select:not(:disabled) {
-			cursor: pointer;
-
-			&:hover,
-			&:focus {
-				background: var(--wm-surface-hover);
-				border-color: var(--wm-line);
-			}
-
-			&:focus-visible {
-				border-color: var(--wm-accent);
-				@include focus-ring;
-			}
-		}
-	}
-
-	:deep(.multiselect) {
-		inline-size: 100%;
-		min-inline-size: 0;
-
-		input {
-			flex: 1 1 5rem;
-			min-inline-size: 5rem;
-			inline-size: auto;
-			text-overflow: ellipsis;
-		}
-
-		.tag {
-			max-inline-size: 100%;
-
-			> span {
-				min-inline-size: 0;
-				overflow: hidden;
-				text-overflow: ellipsis;
-			}
-		}
-
-		.input-wrapper {
-			&:not(:focus-within, :hover) {
-				background: transparent;
-				border-color: transparent;
-			}
-		}
-	}
-
-	:deep(.datepicker) {
-		flex: 1;
-		min-inline-size: 0;
-
-		.show {
-			@include mono-data;
-
-			color: var(--wm-text);
-			padding: var(--wm-space-1) var(--wm-space-2);
-			transition: background-color var(--wm-duration) var(--wm-ease);
-			border-radius: 0;
-			display: block;
-			inline-size: 100%;
-			min-block-size: 2rem;
-			text-align: start;
-
-			i {
-				color: var(--wm-text-tertiary);
-			}
-
-			&:hover {
-				background: var(--wm-surface-hover);
-			}
-		}
-
-		&.disabled .show:hover {
-			background: transparent;
-		}
-	}
-
-	:deep(.reminders) {
-		inline-size: 100%;
-
-		.reminder-input:last-child {
-			margin-block-end: 0;
-		}
-	}
-
-	:deep(.color-picker-container) {
-		justify-content: flex-start;
-		min-block-size: 2rem;
-		padding-inline-start: var(--wm-space-2);
-	}
-
-	:deep(.color-bubble) {
-		inline-size: 1.25rem;
-		block-size: 1.25rem;
-		margin: .375rem var(--wm-space-2);
-	}
-
-	// Overlapping avatars can't wrap, so a long list would overflow the row.
-	:deep(.assignees-list) {
-		flex-wrap: wrap;
-		gap: .375rem;
-		padding-block-start: var(--wm-space-1);
-
-		.assignee:not(:first-child) {
-			margin-inline-start: 0;
-		}
-
-		.remove-assignee {
-			inset-block-start: -.25rem;
-			inset-inline: auto -.375rem;
-			inline-size: 1rem;
-			block-size: 1rem;
-			padding: 0;
-			font-size: .625rem;
-			box-shadow: var(--shadow-sm);
-		}
-
-		.user {
-			margin: 0;
-		}
-
-		.username {
-			display: none;
 		}
 	}
 }

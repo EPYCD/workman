@@ -73,7 +73,7 @@ async function mountDetail(stubs: Record<string, unknown> = {}) {
 		global: {
 			plugins: [router],
 			mocks: {$t: (key: string) => key},
-			stubs: {Icon: true, XButton: true, Modal: true, ...stubs},
+			stubs: {Icon: true, XButton: true, Modal: true, TaskPropertyRow: false, ...stubs},
 			directives: {tooltip: () => {}, cy: () => {}, shortcut: () => {}},
 		},
 	})
