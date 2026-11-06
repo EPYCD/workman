@@ -288,6 +288,9 @@ importers:
       dompurify:
         specifier: 3.4.17
         version: 3.4.17
+      emoji-picker-element-data:
+        specifier: 1.8.0
+        version: 1.8.0
       fast-deep-equal:
         specifier: 3.1.3
         version: 3.1.3
@@ -4056,6 +4059,9 @@ packages:
 
   emoji-picker-element@1.29.1:
     resolution: {integrity: sha512-TOiHzu9Dqib3x4MwcAi3wi3RdyT4SoeB4b15AvH1ks4SBwTl7DeebhZ0d3x6dNi4XfNU7IGRZ7NBQllj0RqwrQ==}
+
+  emoji-picker-element-data@1.8.0:
+    resolution: {integrity: sha512-VfRuRJNEDLS1JKlNS4olaqhjX5S1nnZ+ZHG73b/dV8QeZyi0yPruTPEE72EmF6XO3k/9hj3lybMIYMOYXb/57A==}
 
   emoji-regex@10.6.0:
     resolution: {integrity: sha512-toUI84YS5YmxW219erniWD0CIVOo46xGKColeNQRgOzDorgBi1v4D71/OFzgD9GO2UGKIv1C3Sp8DAn0+j5w7A==}
@@ -11121,6 +11127,8 @@ snapshots:
   electron-to-chromium@1.5.406: {}
 
   emoji-picker-element@1.29.1: {}
+
+  emoji-picker-element-data@1.8.0: {}
 
   emoji-regex@10.6.0: {}
 
