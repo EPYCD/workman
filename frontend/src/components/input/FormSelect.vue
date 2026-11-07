@@ -14,6 +14,7 @@ interface Props {
 	loading?: boolean
 	error?: string | null
 	options?: SelectOption[]
+	flat?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -31,7 +32,10 @@ const errorId = computed(() => props.error ? `${selectId.value}-error` : undefin
 
 const wrapperClasses = computed(() => [
 	'select',
-	{'is-loading': props.loading},
+	{
+		'is-loading': props.loading,
+		'is-flat': props.flat,
+	},
 ])
 
 const selectBindings = computed(() => {
@@ -101,5 +105,54 @@ function handleChange(event: Event) {
 <style lang="scss" scoped>
 .select select {
 	inline-size: 100%;
+}
+
+.select.is-flat {
+	inline-size: 100%;
+	// Bulma sizes the wrapper to --input-height.
+	block-size: auto;
+	margin-block: .1rem;
+
+	select {
+		background: transparent;
+		border-color: transparent;
+		box-shadow: none;
+		block-size: 2rem;
+		padding-block: 0;
+		padding-inline-start: var(--wm-space-2);
+		line-height: 2rem;
+	}
+
+	&::after {
+		opacity: 0;
+	}
+
+	&:hover::after {
+		opacity: 1;
+	}
+
+	select:disabled {
+		color: var(--wm-text);
+		opacity: 1;
+		cursor: default;
+	}
+
+	&:has(select:disabled)::after {
+		display: none;
+	}
+
+	select:not(:disabled) {
+		cursor: pointer;
+
+		&:hover,
+		&:focus {
+			background: var(--wm-surface-hover);
+		}
+
+		&:focus-visible {
+			border-color: var(--wm-accent);
+			@include focus-ring;
+		}
+	}
 }
 </style>
