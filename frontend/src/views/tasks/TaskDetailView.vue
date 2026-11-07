@@ -1474,7 +1474,8 @@ h2 .button {
 	border-block-start: 1px solid var(--wm-line-faint);
 }
 
-.property-empty {
+.property-empty,
+.property:not(.is-set) > :deep(dd select) {
 	color: var(--wm-text-tertiary);
 	font-style: italic;
 }
@@ -1517,6 +1518,199 @@ h2 .button {
 		.control:first-child {
 			flex: 1 1 auto;
 			min-inline-size: 0;
+		}
+	}
+}
+
+.property > dd {
+	.multiselect {
+		inline-size: 100%;
+		min-inline-size: 0;
+
+		:deep(input) {
+			flex: 1 1 5rem;
+			min-inline-size: 5rem;
+			inline-size: auto;
+			text-overflow: ellipsis;
+		}
+
+		:deep(.tag) {
+			max-inline-size: 100%;
+
+			> span {
+				min-inline-size: 0;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
+		}
+
+		:deep(.input-wrapper:not(:focus-within)) {
+			// Beats Multiselect's !important hover border.
+			border-color: transparent !important;
+
+			&:not(:hover) {
+				background: transparent;
+			}
+		}
+	}
+
+	.user-is-tabbing & .multiselect :deep(.input-wrapper:focus-within) {
+		@include focus-ring;
+
+		.input {
+			box-shadow: none;
+		}
+	}
+
+	.datepicker {
+		flex: 1;
+		min-inline-size: 0;
+
+		:deep(.show) {
+			@include mono-data;
+
+			color: var(--wm-text);
+			transition: background-color var(--wm-duration) var(--wm-ease);
+			border-radius: 0;
+			display: block;
+			inline-size: 100%;
+			min-block-size: 2rem;
+			text-align: start;
+
+			i {
+				color: var(--wm-text-tertiary);
+			}
+
+			&:hover:not(:disabled) {
+				background: var(--wm-surface-hover);
+			}
+		}
+	}
+
+	// The selects' border, so keyboard focus looks the same without moving the text.
+	.datepicker :deep(.show),
+	.reminders :deep(.simple-button:not(.option-button)),
+	.property-value-button {
+		border: 1px solid transparent;
+		padding: calc(var(--wm-space-1) - 1px) calc(var(--wm-space-2) - 1px);
+
+		&:not(:disabled):focus-visible {
+			border-color: var(--wm-accent);
+			background: var(--wm-surface-hover);
+		}
+	}
+
+	.reminders {
+		inline-size: 100%;
+
+		:deep(.reminder-input:last-child) {
+			margin-block-end: 0;
+		}
+	}
+
+	.color-picker-container {
+		justify-content: flex-start;
+		min-block-size: 2rem;
+		margin-block: .1rem;
+		padding-inline-start: var(--wm-space-2);
+
+		:deep(.picker:has(:focus-visible)) {
+			border-color: var(--wm-accent);
+			@include focus-ring;
+		}
+	}
+
+	.color-bubble {
+		inline-size: 1.25rem;
+		block-size: 1.25rem;
+		margin: calc(.375rem + .1rem) var(--wm-space-2);
+	}
+}
+
+.property-assignees > dd {
+	// 1px border + .25rem padding + 1.375rem avatar = the other rows' 2rem controls.
+	.edit-assignees {
+		:deep(.input-wrapper) {
+			gap: var(--wm-space-1);
+			margin-block: .1rem;
+			padding: var(--wm-space-1) var(--wm-space-2);
+		}
+
+		:deep(input) {
+			block-size: 1.375rem;
+			padding: 0;
+		}
+	}
+
+	// The placeholder alone keeps the other rows' text inset.
+	.edit-assignees.has-assignees :deep(.input-wrapper) {
+		padding-inline-start: var(--wm-space-1);
+	}
+
+	// Read-only list, without the Multiselect wrapper.
+	> .assignees-list {
+		min-block-size: 2rem;
+		margin-block: .1rem;
+		// The editable field's border + padding.
+		padding-inline: calc(var(--wm-space-1) + 1px);
+		align-items: center;
+	}
+}
+
+.property-assignees > :deep(dd .assignees-list) {
+	flex-wrap: wrap;
+	gap: var(--wm-space-1);
+	transition: margin-inline-start var(--wm-duration) var(--wm-ease);
+
+	// Otherwise the wrapper's gap still pushes the input away.
+	&:empty {
+		display: none;
+	}
+
+	.assignee {
+		// The task view's `*` opacity transition overrides AssigneeList's.
+		transition: margin-inline-start var(--wm-duration) var(--wm-ease);
+
+		&:not(:first-child) {
+			margin-inline-start: 0;
+		}
+	}
+
+	.avatar-wrapper {
+		margin-inline-end: 0;
+	}
+
+	.avatar {
+		inline-size: 1.375rem;
+		block-size: 1.375rem;
+	}
+
+	.remove-assignee {
+		inset-block-start: -.25rem;
+		inset-inline: auto -.25rem;
+		inline-size: .75rem;
+		block-size: .75rem;
+		padding: 0;
+		font-size: .5rem;
+		box-shadow: var(--shadow-sm);
+	}
+
+	.user {
+		margin: 0;
+	}
+
+	.username {
+		display: none;
+	}
+}
+
+@media (hover: hover) {
+	// The list's margin offsets the avatars', so a wrapped line doesn't start outside the field.
+	.property-assignees:not(:hover, :focus-within) > :deep(dd .assignees-list) {
+		margin-inline-start: calc(.4375rem + var(--wm-space-1));
+
+		.assignee {
+			margin-inline-start: calc(-.4375rem - var(--wm-space-1));
 		}
 	}
 }
