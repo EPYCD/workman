@@ -91,6 +91,7 @@ import (
 	ws "code.vikunja.io/api/pkg/websocket"
 
 	"github.com/getsentry/sentry-go"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
 )
@@ -1092,6 +1093,7 @@ func httpRequestLogger(httpLogger *slog.Logger) echo.MiddlewareFunc {
 				slog.Int("status", v.Status),
 				slog.Duration("latency", v.Latency),
 				slog.String("user_agent", v.UserAgent),
+				slog.String("auth", requestAuthKind(c)),
 			}
 			if v.Error != nil {
 				attrs = append(attrs, slog.String("err", v.Error.Error()))
@@ -1100,6 +1102,26 @@ func httpRequestLogger(httpLogger *slog.Logger) echo.MiddlewareFunc {
 			return nil
 		},
 	})
+}
+
+// Lets operators tell browser sessions, API automation and MCP clients apart.
+func requestAuthKind(c *echo.Context) string {
+	if c.Path() == mcpmodule.RoutePrefix || mcpmodule.IsLoopback(c.Request().Context()) {
+		return "mcp"
+	}
+	if c.Get("api_token") != nil {
+		return "api_token"
+	}
+	if c.Get("userBasicAuth") != nil {
+		return "caldav"
+	}
+	if token, ok := c.Get("user").(*jwt.Token); ok {
+		if auth.IsUserToken(token) {
+			return "session"
+		}
+		return "link_share"
+	}
+	return "none"
 }
 
 // Level by status so log.httplevel can filter successful requests out
