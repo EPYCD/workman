@@ -328,21 +328,7 @@
 			"updateSuccess": "Opgaven blev gemt.",
 			"due": "Forfalder {at}",
 			"actions": {
-				"assign": "Tildel til bruger",
-				"label": "Tilføj Etiketter",
-				"priority": "Angiv Prioritet",
-				"dueDate": "Angiv Forfaldsdato",
-				"startDate": "Angiv Startdato",
-				"endDate": "Angiv Slutdato",
-				"reminders": "Indstil Påmindelser",
-				"repeatAfter": "Angiv Gentagelsesinterval",
-				"percentDone": "Indstil Fremskridt",
-				"attachments": "Tilføj Vedhæftninger",
-				"relatedTasks": "Tilføj Relation",
-				"color": "Indstil Farve",
-				"delete": "Slet",
-				"favorite": "Tilføj til Favoritter",
-				"unfavorite": "Fjern fra favoritter"
+				"delete": "Slet"
 			}
 		},
 		"attributes": {
@@ -452,8 +438,6 @@
 			}
 		},
 		"repeat": {
-			"everyDay": "Hver Dag",
-			"everyWeek": "Hver Uge",
 			"mode": "Gentagelsestilstand",
 			"monthly": "Månedligt",
 			"each": "Hver",

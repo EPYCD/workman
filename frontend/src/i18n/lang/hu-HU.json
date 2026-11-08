@@ -670,26 +670,10 @@
 			"updateSuccess": "A feladat mentése sikeres volt.",
 			"belongsToProject": "Ez a feladat a(z) „{project}” projekthez tartozik",
 			"due": "Határidő {at}",
-			"organization": "Szervezet",
-			"management": "Menedzsment",
-			"dateAndTime": "Dátum és idő",
 			"actions": {
-				"assign": "Hozzárendelés felhasználóhoz",
-				"label": "Címkék hozzáadása",
-				"priority": "Prioritás beállítása",
-				"dueDate": "Határidő beállítása",
-				"startDate": "Kezdő dátum beállítása",
-				"endDate": "Befejező dátum beállítása",
-				"reminders": "Emlékeztető beállítása",
 				"repeatAfter": "Állítsa be az ismétlési intervallumot",
-				"percentDone": "Előrehaladás beállítása",
-				"attachments": "Melléklet hozzáadása",
-				"relatedTasks": "Kapcsolat hozzáadása",
 				"moveProject": "Áthelyezés",
-				"color": "Szín beállítása",
-				"delete": "Törlés",
-				"favorite": "Hozzáadás a kedvencekhez",
-				"unfavorite": "Törlés a kedvencekből"
+				"delete": "Törlés"
 			}
 		},
 		"attributes": {
@@ -820,9 +804,6 @@
 			"dateAndTime": "Dátum és idő"
 		},
 		"repeat": {
-			"everyDay": "Minden nap",
-			"everyWeek": "Minden héten",
-			"every30d": "30 naponta",
 			"mode": "Ismétlés típusa",
 			"monthly": "Havi",
 			"each": "Minden egyes",

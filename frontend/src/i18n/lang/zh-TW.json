@@ -779,26 +779,9 @@
 			"belongsToProject": "此任務屬於專案「{project}」",
 			"back": "返回專案",
 			"due": "截止至 {at}",
-			"organization": "機構",
-			"management": "管理",
-			"dateAndTime": "日期與時間",
 			"actions": {
-				"assign": "分配給用户",
-				"label": "新增標籤",
-				"priority": "設定優先級",
-				"dueDate": "設定截止日期",
-				"startDate": "設定開始日期",
-				"endDate": "設定結束日期",
-				"reminders": "設定提醒",
-				"repeatAfter": "設定重複間隔",
-				"percentDone": "設定進度",
-				"attachments": "新增附件",
-				"relatedTasks": "新增關聯",
 				"moveProject": "移動",
-				"color": "設定顏色",
-				"delete": "刪除",
-				"favorite": "收藏",
-				"unfavorite": "移除收藏"
+				"delete": "刪除"
 			}
 		},
 		"attributes": {
