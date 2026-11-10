@@ -1,5 +1,5 @@
 import {test, expect} from '../../support/fixtures'
-import {clickTaskAction, deleteTaskFromDetail} from '../../support/taskDetail'
+import {clickTaskAction} from '../../support/taskDetail'
 import {BucketFactory} from '../../factories/bucket'
 import {ProjectFactory} from '../../factories/project'
 import {TaskFactory} from '../../factories/task'
@@ -305,15 +305,38 @@ test.describe('Project View Kanban', () => {
 
 		await expect(page.locator('.kanban .bucket .tasks .task').filter({hasText: task.title})).toBeVisible()
 		await page.locator('.kanban .bucket .tasks .task').filter({hasText: task.title}).click()
-		await deleteTaskFromDetail(page)
+		await clickTaskAction(page, 'Delete')
 
-		await expect(page.locator('.global-notification')).toContainText('Success')
+		await expect(page.locator('.global-notification')).toContainText('moved to the trash')
 
 		await page.goBack()
 		const bucketCount = await page.locator('.kanban .bucket').count()
 		for (let i = 0; i < bucketCount; i++) {
 			await expect(page.locator('.kanban .bucket').nth(i)).not.toContainText(task.title)
 		}
+	})
+
+	test('Undo after deleting a task puts its card back on the board', async ({
+		authenticatedPage: page,
+		apiContext,
+		userToken,
+	}) => {
+		const {task, view} = await createSingleTaskInBucket()
+		await page.goto(`/projects/1/${view.id}`)
+
+		const card = page.locator('.kanban .bucket .tasks .task').filter({hasText: task.title})
+		await card.click()
+		await clickTaskAction(page, 'Delete')
+		await expect(page).toHaveURL(new RegExp(`/projects/1/${view.id}$`))
+		await expect(page.locator('.kanban .bucket:nth-child(1) .tasks')).toBeVisible()
+		await expect(card).toHaveCount(0)
+
+		const toast = page.locator('.global-notification').filter({hasText: 'moved to the trash'})
+		await toast.getByRole('button', {name: 'Undo'}).click()
+
+		await expect(page.locator('.kanban .bucket:nth-child(1) .tasks')).toContainText(task.title)
+		const stored = await apiContext.get(`tasks/${task.id}`, {headers: {Authorization: `Bearer ${userToken}`}})
+		expect(stored.status()).toBe(200)
 	})
 
 	test('Should show a task description icon if the task has a description', async ({authenticatedPage: page}) => {

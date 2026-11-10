@@ -10,6 +10,8 @@ import type {ITask} from '@/modelTypes/ITask'
 const api = vi.hoisted(() => ({
 	get: vi.fn(),
 	update: vi.fn(),
+	delete: vi.fn(),
+	undoTaskDelete: vi.fn(),
 }))
 vi.mock('@/services/task', () => ({
 	default: class {
@@ -20,10 +22,16 @@ vi.mock('@/services/task', () => ({
 vi.mock('@/stores/tasks', () => ({
 	useTaskStore: () => ({
 		update: api.update,
+		delete: api.delete,
 		markTaskAsRead: vi.fn(async () => {}),
 	}),
 }))
-vi.mock('@/message', () => ({error: vi.fn(), success: vi.fn()}))
+const message = vi.hoisted(() => ({error: vi.fn(), success: vi.fn()}))
+vi.mock('@/message', () => message)
+vi.mock('@/client/queries/trash', async importOriginal => ({
+	...await importOriginal<typeof import('@/client/queries/trash')>(),
+	undoTaskDelete: api.undoTaskDelete,
+}))
 vi.mock('vue-i18n', async importOriginal => ({
 	...await importOriginal<typeof import('vue-i18n')>(),
 	useI18n: () => ({t: (key: string, named?: Record<string, unknown>) => named ? `${key}:${JSON.stringify(named)}` : key}),
@@ -31,7 +39,15 @@ vi.mock('vue-i18n', async importOriginal => ({
 
 import PercentDoneSelect from '@/components/tasks/partials/PercentDoneSelect.vue'
 import RelatedTasks from '@/components/tasks/partials/RelatedTasks.vue'
+import TaskInTrashNotice from '@/components/tasks/partials/TaskInTrashNotice.vue'
+import ProjectInTrashNotice from '@/components/project/ProjectInTrashNotice.vue'
+import {SHORTCUTS} from '@/constants/shortcuts'
 import TaskDetailView from './TaskDetailView.vue'
+
+// TaskService rejects like axios: the API error body sits under response.data.
+function apiError(status: number, data: Record<string, unknown>) {
+	return Object.assign(new Error('Request failed'), {response: {status, data}})
+}
 
 enableAutoUnmount(afterEach)
 
@@ -139,5 +155,80 @@ describe('TaskDetailView property sidebar', () => {
 		const wrapper = await mountDetail(renderButtons)
 
 		expect(wrapper.find('.property-repeat .property-value-button').text()).toBe(summary)
+	})
+})
+
+describe('TaskDetailView trash', () => {
+	beforeEach(() => {
+		setActivePinia(createPinia())
+		api.get.mockReset()
+		api.update.mockReset()
+		api.delete.mockReset()
+		api.undoTaskDelete.mockReset()
+		message.success.mockReset()
+	})
+
+	const taskInTrash = {
+		id: 1,
+		project_id: 1,
+		deleted_at: '2026-01-01T00:00:00Z',
+		can_restore: true,
+	}
+
+	it('shows the trash notice for a trashed task instead of routing away', async () => {
+		api.get.mockRejectedValue(apiError(404, {code: 4052, details: taskInTrash}))
+		const wrapper = await mountDetail()
+
+		expect(wrapper.findComponent(TaskInTrashNotice).props('inTrash')).toEqual(taskInTrash)
+		expect(wrapper.find('.property-list').exists()).toBe(false)
+		expect(wrapper.vm.$router.currentRoute.value.name).toBe('task.detail')
+	})
+
+	it('shows the project notice when the task sits in a trashed project', async () => {
+		const projectInTrash = {id: 3, deleted_at: '2026-01-01T00:00:00Z', can_restore: false, trashed_root_id: 2, can_restore_root: true}
+		api.get.mockRejectedValue(apiError(404, {code: 3018, details: projectInTrash}))
+		const wrapper = await mountDetail()
+
+		expect(wrapper.findComponent(ProjectInTrashNotice).props('inTrash')).toEqual(projectInTrash)
+		expect(wrapper.findComponent(TaskInTrashNotice).exists()).toBe(false)
+	})
+
+	it('loads the task once it is restored', async () => {
+		api.get.mockRejectedValueOnce(apiError(404, {code: 4052, details: taskInTrash}))
+		serve()
+		const wrapper = await mountDetail()
+
+		wrapper.findComponent(TaskInTrashNotice).vm.$emit('restored')
+		await flushPromises()
+
+		expect(api.get).toHaveBeenCalledTimes(2)
+		expect(wrapper.findComponent(TaskInTrashNotice).exists()).toBe(false)
+		expect(wrapper.find('.property-list').exists()).toBe(true)
+	})
+
+	it('still routes unknown tasks to not found', async () => {
+		api.get.mockRejectedValue(apiError(404, {code: 4002}))
+		const wrapper = await mountDetail()
+
+		expect(wrapper.vm.$router.currentRoute.value.name).toBe('not-found')
+		expect(wrapper.findComponent(TaskInTrashNotice).exists()).toBe(false)
+	})
+
+	it('moves the task to the trash without asking and offers undo', async () => {
+		serve()
+		api.delete.mockResolvedValue(undefined)
+		const wrapper = await mountDetail()
+
+		document.body.dispatchEvent(new KeyboardEvent('keydown', {code: SHORTCUTS.taskDetail.delete, key: SHORTCUTS.taskDetail.delete, bubbles: true}))
+		await flushPromises()
+
+		expect(api.delete).toHaveBeenCalledOnce()
+		expect(wrapper.vm.$router.currentRoute.value.name).toBe('project.index')
+		expect(message.success).toHaveBeenCalledOnce()
+		const [toast, actions, options] = message.success.mock.calls[0]!
+		expect(toast).toEqual({message: 'task.detail.deleteSuccess'})
+		expect(options).toEqual({takeFocus: true})
+		actions[0].callback()
+		expect(api.undoTaskDelete).toHaveBeenCalledWith(1)
 	})
 })

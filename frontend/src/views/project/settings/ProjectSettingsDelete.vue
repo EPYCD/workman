@@ -8,39 +8,53 @@
 		</template>
 
 		<template #text>
-			<p>
-				{{ $t('project.delete.text1') }}
-			</p>
-
+			<template v-if="count">
+				<p
+					v-cy="'projectDeleteNotice'"
+					class="tw:text-balance"
+				>
+					{{ trashNotice }}
+				</p>
+				<p
+					v-if="count.time_entries"
+					v-cy="'projectDeleteTimeEntries'"
+					class="tw:text-balance has-text-weight-bold"
+				>
+					{{ timeEntriesNotice }}
+				</p>
+			</template>
 			<p
-				v-if="totalTasks !== null"
-				class="has-text-weight-bold"
+				v-else-if="countFailed"
+				v-cy="'projectDeleteNotice'"
+				class="tw:text-balance"
 			>
-				{{ deleteNotice }}
+				{{ $t('project.delete.toTrashFallback', {days: TRASH_RETENTION_DAYS}) }}
 			</p>
 			<Loading
 				v-else
 				class="is-loading-small"
 				variant="default"
 			/>
-
-			<p>
-				{{ $t('misc.cannotBeUndone') }}
-			</p>
 		</template>
 	</Modal>
 </template>
 
 <script setup lang="ts">
-import {computed, ref, watchEffect} from 'vue'
-import {useTitle} from '@/composables/useTitle'
+import {computed, ref} from 'vue'
+import {useQuery} from '@tanstack/vue-query'
 import {useI18n} from 'vue-i18n'
 import {useRoute, useRouter} from 'vue-router'
-import {success} from '@/message'
+
 import Loading from '@/components/misc/Loading.vue'
-import {useProjectStore} from '@/stores/projects'
-import TaskService from '@/services/task'
+import {
+	TRASH_RETENTION_DAYS,
+	projectContentsCountQuery,
+	undoProjectDelete,
+} from '@/client/queries/trash'
 import {useGoBack} from '@/composables/useGoBack'
+import {useTitle} from '@/composables/useTitle'
+import {success} from '@/message'
+import {useProjectStore} from '@/stores/projects'
 
 const {t} = useI18n({useScope: 'global'})
 const projectStore = useProjectStore()
@@ -48,50 +62,52 @@ const route = useRoute()
 const router = useRouter()
 const goBack = useGoBack()
 
-const totalTasks = ref<number | null>(null)
-
-const project = computed(() => projectStore.projects[route.params.projectId])
-const projectIdsToDelete = ref<number[]>([])
-
-watchEffect(
-	async () => {
-		if (!route.params.projectId) {
-			return
-		}
-
-		projectIdsToDelete.value = projectStore
-			.getChildProjects(parseInt(route.params.projectId))
-			.map(p => p.id)
-
-		projectIdsToDelete.value.push(parseInt(route.params.projectId))
-
-		const taskService = new TaskService()
-		await taskService.getAll({}, {filter: `project in ${projectIdsToDelete.value.join(',')}`})
-		totalTasks.value = taskService.totalPages * taskService.resultCount
-	},
-)
+const projectId = computed(() => Number(route.params.projectId))
+const project = computed(() => projectStore.projects[projectId.value])
+const {data: count, isError: countFailed} = useQuery(computed(() => projectContentsCountQuery(projectId.value)))
 
 useTitle(() => t('project.delete.title', {project: project?.value?.title}))
 
-const deleteNotice = computed(() => {
-	if(totalTasks.value && totalTasks.value > 0) {
-		if (projectIdsToDelete.value.length <= 1) {
-			return t('project.delete.tasksToDelete', {count: totalTasks.value})
-		} else if (projectIdsToDelete.value.length > 1) {
-			return t('project.delete.tasksAndChildProjectsToDelete', {tasks: totalTasks.value, projects: projectIdsToDelete.value.length})
-		}
-	}
-
-	return t('project.delete.noTasksToDelete')
+const trashNotice = computed(() => {
+	const subProjects = count.value?.sub_projects ?? 0
+	const tasks = t('project.delete.tasks', count.value?.tasks ?? 0)
+	return subProjects > 0
+		? t('project.delete.toTrashWithSubProjects', {
+			subProjects: t('project.delete.subProjects', subProjects),
+			tasks,
+			days: TRASH_RETENTION_DAYS,
+		})
+		: t('project.delete.toTrash', {
+			tasks,
+			days: TRASH_RETENTION_DAYS,
+		})
 })
 
+const timeEntriesNotice = computed(() => t('project.delete.timeEntries', {
+	entries: t('project.delete.timeEntryCount', count.value?.time_entries ?? 0),
+	people: t('project.delete.people', count.value?.time_entry_authors ?? 0),
+	days: TRASH_RETENTION_DAYS,
+}))
+
+const deleting = ref(false)
+
 async function deleteProject() {
-	if (!project.value) {
+	if (!project.value || deleting.value) {
 		return
 	}
 
-	await projectStore.deleteProject(project.value)
-	success({message: t('project.delete.success')})
-	router.push({name: 'home'})
+	const id = project.value.id
+	deleting.value = true
+	try {
+		// The store drops the project and its children from the sidebar.
+		await projectStore.deleteProject(project.value)
+	} finally {
+		deleting.value = false
+	}
+	await router.push({name: 'home'})
+	success({message: t('project.delete.success')}, [{
+		title: t('task.undo'),
+		callback: () => undoProjectDelete(id),
+	}], {takeFocus: true})
 }
 </script>

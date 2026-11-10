@@ -14,6 +14,7 @@ import type {IProject} from '@/modelTypes/IProject'
 import {useAuthStore} from '@/stores/auth'
 import {useViewFiltersStore} from '@/stores/viewFilters'
 import type {IProjectView} from '@/modelTypes/IProjectView'
+import {lastRestoredTask} from '@/helpers/taskRestored'
 
 export type Order = 'asc' | 'desc' | 'none'
 
@@ -260,6 +261,13 @@ export function useTaskList(
 
 		loadTasks()
 	}, {immediate: true, flush: 'post'})
+
+	// Reload in place so the list doesn't flash empty.
+	watch(lastRestoredTask, () => {
+		if (!pendingQueryRestore.value) {
+			loadTasks(false)
+		}
+	})
 
 	return {
 		tasks,

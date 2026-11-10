@@ -19,7 +19,7 @@ import {createDefaultViews} from '../project/prepareProjects'
 import {TaskBucketFactory} from '../../factories/task_buckets'
 import {pasteFile, pasteHtmlFromClipboard} from '../../support/commands'
 import {login} from '../../support/authenticateUser'
-import {clickTaskAction, deleteTaskFromDetail, openTaskActions} from '../../support/taskDetail'
+import {clickTaskAction, openTaskActions} from '../../support/taskDetail'
 import type {Page} from '@playwright/test'
 import {readFileSync} from 'fs'
 import {join, dirname} from 'path'
@@ -454,7 +454,7 @@ test.describe('Task', () => {
 			})
 			await page.goto(`/tasks/${tasks[0].id}`)
 
-			await deleteTaskFromDetail(page)
+			await clickTaskAction(page, 'Delete')
 
 			await expect(page.locator('.global-notification')).toContainText('Success')
 			await expect(page).toHaveURL(new RegExp(`/projects/${tasks[0].project_id}/`))

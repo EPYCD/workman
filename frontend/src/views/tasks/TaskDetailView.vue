@@ -1,15 +1,39 @@
 <template>
 	<div
 		ref="taskViewContainer"
+		tabindex="-1"
 		class="loader-container task-view-container"
 		:class="{
-			'is-loading': taskService.loading || !visible,
+			'is-loading': taskService.loading || (!visible && !hasTrashNotice),
 			'is-modal': isModal,
 		}"
 	>
+		<div
+			v-if="hasTrashNotice"
+			class="task-view"
+		>
+			<BaseButton
+				v-if="isModal"
+				class="is-pulled-end"
+				:aria-label="$t('misc.close')"
+				@click="$emit('close')"
+			>
+				<Icon icon="times" />
+			</BaseButton>
+			<TaskInTrashNotice
+				v-if="trashedTask"
+				:in-trash="trashedTask"
+				@restored="loadTask(taskId)"
+			/>
+			<ProjectInTrashNotice
+				v-else-if="trashedProject"
+				:in-trash="trashedProject"
+				@restored="loadTask(taskId)"
+			/>
+		</div>
 		<!-- Removing everything until the task is loaded to prevent empty initialization of other components -->
 		<div
-			v-if="visible"
+			v-else-if="visible"
 			class="task-view"
 		>
 			<BaseButton
@@ -302,7 +326,7 @@
 										icon="trash-alt"
 										icon-class="has-text-danger"
 										class="has-text-danger"
-										@click="showDeleteModal = true"
+										@click="deleteTask()"
 									>
 										{{ $t('task.detail.actions.delete') }}
 									</DropdownItem>
@@ -533,25 +557,6 @@
 		>
 			<Icon icon="chevron-down" />
 		</BaseButton>
-
-		<Modal
-			:enabled="showDeleteModal"
-			@close="showDeleteModal = false"
-			@submit="deleteTask()"
-		>
-			<template #header>
-				<span>{{ $t('task.detail.delete.header') }}</span>
-			</template>
-
-			<template #text>
-				<p class="tw:text-balance">
-					{{ $t('task.detail.delete.text1') }}
-				</p>
-				<p class="tw:text-balance">
-					{{ $t('task.detail.delete.text2') }}
-				</p>
-			</template>
-		</Modal>
 	</div>
 </template>
 
@@ -613,6 +618,11 @@ import {TASK_REPEAT_MODES} from '@/types/IRepeatMode'
 import {REMINDER_PERIOD_RELATIVE_TO_TYPES} from '@/types/IReminderPeriodRelativeTo'
 import {playPopSound} from '@/helpers/playPop'
 import {isTypingTarget, matchesKey, parseKey} from '@/helpers/shortcut'
+import {taskLoadErrorAction, type TaskLoadErrorAction} from './taskDetailError'
+import TaskInTrashNotice from '@/components/tasks/partials/TaskInTrashNotice.vue'
+import ProjectInTrashNotice from '@/components/project/ProjectInTrashNotice.vue'
+import {undoTaskDelete} from '@/client/queries/trash'
+import {useFocusAfterRemoval} from '@/composables/useFocusAfterRemoval'
 import {secondsToPeriod} from '@/helpers/time/period'
 import {SECONDS_A_DAY, SECONDS_A_HOUR, SECONDS_A_MINUTE, SECONDS_A_MONTH, SECONDS_A_WEEK, SECONDS_A_YEAR} from '@/constants/date'
 import type {IRepeatAfter, IRepeatType} from '@/types/IRepeatAfter'
@@ -667,7 +677,18 @@ const remindersDefaultRelativeTo = computed(() => {
 	return null
 })
 const taskNotFound = ref(false)
-const taskTitle = computed(() => task.value.title)
+const loadError = ref<TaskLoadErrorAction | null>(null)
+const trashedTask = computed(() => loadError.value?.action === 'inTrash'
+	? loadError.value.inTrash
+	: null)
+const trashedProject = computed(() => loadError.value?.action === 'projectInTrash'
+	? loadError.value.inTrash
+	: null)
+const hasTrashNotice = computed(() => trashedTask.value !== null || trashedProject.value !== null)
+const taskTitle = computed(() => {
+	if (trashedProject.value) return t('trash.title')
+	return trashedTask.value ? t('trash.taskInTrashTitle') : task.value.title
+})
 useTitle(taskTitle)
 
 const lastProject = computed(() => {
@@ -774,6 +795,8 @@ async function scrollToHeading() {
 const attachmentsRef = ref<InstanceType<typeof Attachments> | null>(null)
 
 const taskViewContainer = ref<HTMLElement | null>(null)
+// Restoring removes the notice under the focused button.
+useFocusAfterRemoval(() => hasTrashNotice.value, () => taskViewContainer.value)
 const scrollContainer = ref<HTMLElement | null>(null)
 const contentBottomMarker = ref<HTMLElement | null>(null)
 const bottomMarkerVisible = ref(true)
@@ -857,51 +880,61 @@ onMounted(async () => {
 
 const taskService = shallowReactive(new TaskService())
 
-// load task
-watch(
-	() => props.taskId,
-	async (id) => {
-		if (id === undefined) {
-			return
+async function loadTask(id: ITask['id']) {
+	loadError.value = null
+	taskNotFound.value = false
+	try {
+		const expand = ['reactions', 'comments', 'is_unread', 'buckets']
+		if (timeTrackingEnabled.value) {
+			// Only request the (server-computed) count when the feature is on.
+			expand.push('time_entries_count')
+		}
+		const loaded = await taskService.get({id}, {expand})
+		Object.assign(task.value, loaded)
+		taskColor.value = task.value.hexColor
+		resetSections()
+
+		if (task.value.isUnread) {
+			await taskStore.markTaskAsRead(task.value.id)
+			task.value.isUnread = false
 		}
 
-		try {
-			const expand = ['reactions', 'comments', 'is_unread', 'buckets']
-			if (timeTrackingEnabled.value) {
-				// Only request the (server-computed) count when the feature is on.
-				expand.push('time_entries_count')
-			}
-			const loaded = await taskService.get({id}, {expand})
-			Object.assign(task.value, loaded)
-			taskColor.value = task.value.hexColor
-			resetSections()
-
-			if (task.value.isUnread) {
-				await taskStore.markTaskAsRead(task.value.id)
-				task.value.isUnread = false
-			}
-
-			if (lastProject.value) {
-				await baseStore.handleSetCurrentProjectIfNotSet(lastProject.value)
-			}
-		} catch (e) {
-			// 403 means the task exists but is not visible to us; treat it like
-			// a 404 so we route away instead of rendering an empty task shell.
-			if (e?.response?.status === 404 || e?.response?.status === 403) {
-				taskNotFound.value = true
-				router.replace({name: 'not-found'})
-				return
-			}
-
+		if (lastProject.value) {
+			await baseStore.handleSetCurrentProjectIfNotSet(lastProject.value)
+		}
+	} catch (e) {
+		const action = taskLoadErrorAction(e)
+		if (action.action === 'report') {
 			throw e
-		} finally {
-			await nextTick()
+		}
+		// A trashed task or project gets a notice; an unknown or hidden one routes away.
+		taskNotFound.value = true
+		if (action.action === 'notFound') {
+			router.replace({name: 'not-found'})
+		} else {
+			loadError.value = action
+		}
+		return
+	} finally {
+		await nextTick()
+		if (loadError.value === null && !taskNotFound.value) {
 			scrollToHeading()
-			resolveScrollContainer()
-			updateScrollable()
 			visible.value = true
 		}
-	}, {immediate: true})
+		resolveScrollContainer()
+		updateScrollable()
+	}
+}
+
+watch(
+	() => props.taskId,
+	id => {
+		if (id !== undefined) {
+			return loadTask(id)
+		}
+	},
+	{immediate: true},
+)
 
 type FieldType =
 	| 'assignees'
@@ -1046,7 +1079,7 @@ const fieldShortcuts = ([
 	[SHORTCUTS.taskDetail.attachments, () => openAttachments()],
 	[SHORTCUTS.taskDetail.relatedTasks, () => setRelatedTasksActive()],
 	[SHORTCUTS.taskDetail.moveProject, () => setFieldActive('moveProject')],
-	[SHORTCUTS.taskDetail.delete, () => { showDeleteModal.value = true }],
+	[SHORTCUTS.taskDetail.delete, () => deleteTask()],
 ] as const).map(([key, run]) => [parseKey(key), run] as const)
 
 function handleFieldShortcut(event: KeyboardEvent) {
@@ -1121,12 +1154,16 @@ useTaskDetailShortcuts({
 	onDoneAndBack: markDoneAndGoBack,
 })
 
-const showDeleteModal = ref(false)
-
+// Deleting moves the task to the trash, so there is no confirmation: the toast offers undo.
 async function deleteTask() {
+	const id = task.value.id
+	const projectId = task.value.projectId
 	await taskStore.delete(task.value)
-	success({message: t('task.detail.deleteSuccess')})
-	router.push({name: 'project.index', params: {projectId: task.value.projectId}})
+	await router.push({name: 'project.index', params: {projectId}})
+	success({message: t('task.detail.deleteSuccess')}, [{
+		title: t('task.undo'),
+		callback: () => undoTaskDelete(id),
+	}], {takeFocus: true})
 }
 
 async function toggleTaskDone() {

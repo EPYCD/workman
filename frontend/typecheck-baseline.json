@@ -1,5 +1,5 @@
 {
-	"total": 1574,
+	"total": 1562,
 	"files": {
 		"src/components/home/ContentAuth.vue": 2,
 		"src/components/home/ProjectsNavigation.vue": 4,
@@ -151,14 +151,14 @@
 		"src/views/project/ProjectView.vue": 6,
 		"src/views/project/settings/ProjectSettingsArchive.vue": 4,
 		"src/views/project/settings/ProjectSettingsBackground.vue": 36,
-		"src/views/project/settings/ProjectSettingsDelete.vue": 10,
+		"src/views/project/settings/ProjectSettingsDelete.vue": 2,
 		"src/views/project/settings/ProjectSettingsDuplicate.vue": 6,
 		"src/views/project/settings/ProjectSettingsEdit.vue": 6,
 		"src/views/project/settings/ProjectSettingsViews.vue": 8,
 		"src/views/project/settings/ProjectSettingsWebhooks.vue": 10,
 		"src/views/sharing/LinkSharingAuth.vue": 20,
 		"src/views/tasks/ShowTasks.vue": 14,
-		"src/views/tasks/TaskDetailView.vue": 26,
+		"src/views/tasks/TaskDetailView.vue": 22,
 		"src/views/teams/EditTeam.vue": 52,
 		"src/views/teams/ListTeams.vue": 8,
 		"src/views/teams/NewTeam.vue": 2,
