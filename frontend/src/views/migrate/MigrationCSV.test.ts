@@ -66,7 +66,9 @@ describe('MigrationCSV', () => {
 
 		expect(wrapper.text()).toContain('Row 3 of the CSV file has more than 100 labels.')
 
-		await wrapper.findAll('select').at(-1)!.setValue('ignore')
+		// No .at(): the fork's vitest tsconfig has an empty lib.
+		const selects = wrapper.findAll('select')
+		await selects[selects.length - 1]!.setValue('ignore')
 		await flushPromises()
 
 		expect(service.preview).toHaveBeenCalledTimes(2)
