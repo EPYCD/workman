@@ -1104,11 +1104,9 @@ func httpRequestLogger(httpLogger *slog.Logger) echo.MiddlewareFunc {
 	})
 }
 
-// Lets operators tell browser sessions, API automation and MCP clients apart.
+// Lets operators tell browser sessions and API automation apart.
+// Workman has no MCP module, so upstream's "mcp" kind does not exist here.
 func requestAuthKind(c *echo.Context) string {
-	if c.Path() == mcpmodule.RoutePrefix || mcpmodule.IsLoopback(c.Request().Context()) {
-		return "mcp"
-	}
 	if c.Get("api_token") != nil {
 		return "api_token"
 	}

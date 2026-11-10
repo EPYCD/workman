@@ -24,7 +24,6 @@ import (
 	"testing"
 
 	"code.vikunja.io/api/pkg/models"
-	"code.vikunja.io/api/pkg/modules/mcp"
 	"code.vikunja.io/api/pkg/user"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -112,16 +111,14 @@ func TestHTTPRequestLoggerAuthKind(t *testing.T) {
 	})
 	route("/token", func(c *echo.Context) { c.Set("api_token", &models.APIToken{}) })
 	route("/caldav", func(c *echo.Context) { c.Set("userBasicAuth", &user.User{}) })
-	route(mcp.RoutePrefix, func(c *echo.Context) { c.Set("api_token", &models.APIToken{}) })
 	route("/none", func(*echo.Context) {})
 
 	for path, want := range map[string]string{
-		"/session":      "session",
-		"/link-share":   "link_share",
-		"/token":        "api_token",
-		"/caldav":       "caldav",
-		mcp.RoutePrefix: "mcp",
-		"/none":         "none",
+		"/session":    "session",
+		"/link-share": "link_share",
+		"/token":      "api_token",
+		"/caldav":     "caldav",
+		"/none":       "none",
 	} {
 		t.Run(path, func(t *testing.T) {
 			buf.Reset()
