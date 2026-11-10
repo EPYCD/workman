@@ -2608,6 +2608,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/models.Message"
                         }
+                    },
+                    "503": {
+                        "description": "The server is busy decoding other images.",
+                        "schema": {
+                            "$ref": "#/definitions/models.Message"
+                        }
                     }
                 }
             }
@@ -3997,7 +4003,7 @@ const docTemplate = `{
                         "JWTKeyAuth": []
                     }
                 ],
-                "description": "Share a project via link. The user needs to have write-access to the project to be able do this.",
+                "description": "Share a project via link. The user needs to be admin of the project to be able do this.",
                 "consumes": [
                     "application/json"
                 ],
@@ -4127,7 +4133,7 @@ const docTemplate = `{
                         "JWTKeyAuth": []
                     }
                 ],
-                "description": "Remove a link share. The user needs to have write-access to the project to be able do this.",
+                "description": "Remove a link share. The user needs to be admin of the project to be able do this.",
                 "consumes": [
                     "application/json"
                 ],
@@ -5334,14 +5340,14 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "The size of the preview image. Can be sm = 100px, md = 200px, lg = 400px or xl = 800px. If provided, a preview image will be returned if the attachment is an image.",
+                        "description": "The size of the preview image. Can be sm = 100px, md = 200px, lg = 400px or xl = 800px. If provided, a preview image is returned instead of the attachment: a JPEG, or a PNG when the image has transparency.",
                         "name": "preview_size",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "The attachment file.",
+                        "description": "The attachment file, or its preview when preview_size is provided.",
                         "schema": {
                             "type": "file"
                         }
@@ -5358,8 +5364,20 @@ const docTemplate = `{
                             "$ref": "#/definitions/models.Message"
                         }
                     },
+                    "422": {
+                        "description": "preview_size is invalid (code 4050), or the attachment has no preview (code 4049).",
+                        "schema": {
+                            "$ref": "#/definitions/models.Message"
+                        }
+                    },
                     "500": {
                         "description": "Internal error",
+                        "schema": {
+                            "$ref": "#/definitions/models.Message"
+                        }
+                    },
+                    "503": {
+                        "description": "Too many previews are being generated, try again later.",
                         "schema": {
                             "$ref": "#/definitions/models.Message"
                         }
@@ -7801,6 +7819,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/models.Message"
                         }
+                    },
+                    "503": {
+                        "description": "The server is busy decoding other images.",
+                        "schema": {
+                            "$ref": "#/definitions/models.Message"
+                        }
                     }
                 }
             }
@@ -8100,7 +8124,7 @@ const docTemplate = `{
                         "JWTKeyAuth": []
                     }
                 ],
-                "description": "Disables any totp settings for the current user.",
+                "description": "Disables any totp settings for the current user. Requires the current password and a current totp passcode.",
                 "consumes": [
                     "application/json"
                 ],
@@ -8113,7 +8137,7 @@ const docTemplate = `{
                 "summary": "Disable totp settings",
                 "parameters": [
                     {
-                        "description": "The current user's password (only password is enough).",
+                        "description": "The current user's password and a current totp passcode (totp_passcode).",
                         "name": "totp",
                         "in": "body",
                         "required": true,
@@ -8135,8 +8159,26 @@ const docTemplate = `{
                             "$ref": "#/definitions/web.HTTPError"
                         }
                     },
+                    "403": {
+                        "description": "Wrong password.",
+                        "schema": {
+                            "$ref": "#/definitions/web.HTTPError"
+                        }
+                    },
                     "404": {
                         "description": "User does not exist.",
+                        "schema": {
+                            "$ref": "#/definitions/web.HTTPError"
+                        }
+                    },
+                    "412": {
+                        "description": "Invalid totp passcode.",
+                        "schema": {
+                            "$ref": "#/definitions/web.HTTPError"
+                        }
+                    },
+                    "429": {
+                        "description": "Too many failed attempts.",
                         "schema": {
                             "$ref": "#/definitions/web.HTTPError"
                         }
@@ -8157,7 +8199,7 @@ const docTemplate = `{
                         "JWTKeyAuth": []
                     }
                 ],
-                "description": "Enables a previously enrolled totp setting by providing a totp passcode.",
+                "description": "Enables a previously enrolled totp setting by providing a totp passcode and the current password.",
                 "consumes": [
                     "application/json"
                 ],
@@ -8170,12 +8212,12 @@ const docTemplate = `{
                 "summary": "Enable a previously enrolled totp setting.",
                 "parameters": [
                     {
-                        "description": "The totp passcode.",
+                        "description": "The totp passcode and the current password.",
                         "name": "totp",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/user.TOTPPasscode"
+                            "$ref": "#/definitions/v1.UserTOTPEnableRequest"
                         }
                     }
                 ],
@@ -8192,6 +8234,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/web.HTTPError"
                         }
                     },
+                    "403": {
+                        "description": "Wrong password.",
+                        "schema": {
+                            "$ref": "#/definitions/web.HTTPError"
+                        }
+                    },
                     "404": {
                         "description": "User does not exist.",
                         "schema": {
@@ -8200,6 +8248,12 @@ const docTemplate = `{
                     },
                     "412": {
                         "description": "TOTP is not enrolled.",
+                        "schema": {
+                            "$ref": "#/definitions/web.HTTPError"
+                        }
+                    },
+                    "429": {
+                        "description": "Too many failed attempts.",
                         "schema": {
                             "$ref": "#/definitions/web.HTTPError"
                         }
@@ -8220,7 +8274,7 @@ const docTemplate = `{
                         "JWTKeyAuth": []
                     }
                 ],
-                "description": "Creates an initial setup for the user in the db. After this step, the user needs to verify they have a working totp setup with the \"enable totp\" endpoint.",
+                "description": "Creates an initial setup for the user in the db. After this step, the user needs to verify they have a working totp setup with the \"enable totp\" endpoint. Requires the current password.",
                 "consumes": [
                     "application/json"
                 ],
@@ -8231,6 +8285,17 @@ const docTemplate = `{
                     "user"
                 ],
                 "summary": "Enroll a user into totp",
+                "parameters": [
+                    {
+                        "description": "The current user's password.",
+                        "name": "password",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.UserPasswordConfirmation"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -8244,8 +8309,20 @@ const docTemplate = `{
                             "$ref": "#/definitions/web.HTTPError"
                         }
                     },
+                    "403": {
+                        "description": "Wrong password.",
+                        "schema": {
+                            "$ref": "#/definitions/web.HTTPError"
+                        }
+                    },
                     "404": {
                         "description": "User does not exist.",
+                        "schema": {
+                            "$ref": "#/definitions/web.HTTPError"
+                        }
+                    },
+                    "429": {
+                        "description": "Too many failed attempts.",
                         "schema": {
                             "$ref": "#/definitions/web.HTTPError"
                         }
@@ -8590,9 +8667,9 @@ const docTemplate = `{
                         }
                     },
                     "401": {
-                        "description": "Invalid or expired refresh token.",
+                        "description": "Invalid, expired or already-used refresh token, or no refresh token cookie sent (codes 16002-16005).",
                         "schema": {
-                            "$ref": "#/definitions/models.Message"
+                            "$ref": "#/definitions/web.HTTPError"
                         }
                     }
                 }
@@ -8893,7 +8970,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "description": "The size of the avatar you want to get. If bigger than the max configured size this will be adjusted to the maximum size.",
+                        "description": "The size of the avatar you want to get. Rounded up to 16, 32, 48, 64, 128, 256, 512 or 1024 and capped at the max configured size.",
                         "name": "size",
                         "in": "query"
                     }
@@ -9217,6 +9294,9 @@ const docTemplate = `{
             "properties": {
                 "code": {
                     "type": "string"
+                },
+                "state": {
+                    "type": "string"
                 }
             }
         },
@@ -9513,6 +9593,29 @@ const docTemplate = `{
                 }
             }
         },
+        "models.LagCollision": {
+            "type": "object",
+            "properties": {
+                "landed_at": {
+                    "type": "string"
+                },
+                "landed_by_identifier": {
+                    "type": "string"
+                },
+                "landed_by_task_id": {
+                    "type": "integer"
+                },
+                "landed_in_sha": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "severity": {
+                    "type": "string"
+                }
+            }
+        },
         "models.LinkSharing": {
             "type": "object",
             "properties": {
@@ -9645,6 +9748,16 @@ const docTemplate = `{
                     "description": "The description of the project.",
                     "type": "string"
                 },
+                "discord_avatar_url": {
+                    "type": "string"
+                },
+                "discord_events": {
+                    "type": "string"
+                },
+                "discord_username": {
+                    "description": "How the Discord relay presents this project. The webhook URL itself is\ndeliberately absent: it is a credential, it belongs in the relay's own\nenvironment (MARSHAL_DISCORD_WEBHOOK), and putting it here would place\nit in every database backup and in reach of anyone with read access to\nthe row. What lives here is only the behaviour an admin wants to change\nwithout a redeploy.",
+                    "type": "string"
+                },
                 "hex_color": {
                     "description": "The hex color of this project",
                     "type": "string",
@@ -9685,6 +9798,20 @@ const docTemplate = `{
                 "position": {
                     "description": "The position this project has when querying all projects. See the tasks.position property on how to use this.",
                     "type": "number"
+                },
+                "receipt_bot_id": {
+                    "description": "The CI identity. While set, \"done\" needs a merged, passing receipt from\nit, and the user who submitted a task for review may not close it.",
+                    "type": "integer"
+                },
+                "scope_app_entries": {
+                    "type": "string"
+                },
+                "scope_app_root": {
+                    "type": "string"
+                },
+                "scope_repo_roots": {
+                    "description": "The board cannot tell a repository-root-relative path from an\napp-relative one by looking at it, so the repository tells it. Marshal\npublishes both from the checkout it has; while scope_repo_roots is empty\nnothing is enforced and every path is accepted as before.",
+                    "type": "string"
                 },
                 "subscription": {
                     "description": "The subscription status for the user reading this project. You can only read this property, use the subscription endpoints to modify it.\nWill only returned when retreiving one project.",
@@ -9782,6 +9909,10 @@ const docTemplate = `{
                         "manual",
                         "filter"
                     ]
+                },
+                "claim_bucket_id": {
+                    "description": "Entering this bucket is the ownership lock: the move is refused while a\nblocker is open or an owned path is leased elsewhere, and on success the\ntask's paths_owned are leased to its assignee. Without it only the claim\nendpoint enforces that, and a drag on the board bypasses it.",
+                    "type": "integer"
                 },
                 "created": {
                     "description": "A timestamp when this reaction was created. You cannot change this value.",
@@ -10155,6 +10286,21 @@ const docTemplate = `{
                         "$ref": "#/definitions/models.Label"
                     }
                 },
+                "lag": {
+                    "description": "How far the task's branch has fallen behind the integration branch, in\nthe files it holds. Only present when requested via the lag expand option.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.TaskLag"
+                        }
+                    ]
+                },
+                "leases": {
+                    "description": "The path leases the task currently holds. Only present when requested via the leases expand option.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.TaskPathLease"
+                    }
+                },
                 "percent_done": {
                     "description": "Determines how far a task is left from being done",
                     "type": "number"
@@ -10163,12 +10309,18 @@ const docTemplate = `{
                     "description": "The position of the task - any task project can be sorted as usual by this parameter.\nWhen accessing tasks via views with buckets, this is primarily used to sort them based on a range.\nPositions are always saved per view. They will automatically be set if you request the tasks through a view\nendpoint, otherwise they will always be 0. To update them, take a look at the Task Position endpoint.",
                     "type": "number"
                 },
+                "positions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.TaskPosition"
+                    }
+                },
                 "priority": {
                     "description": "The task priority. Can be anything you want, it is possible to sort by this later.",
                     "type": "integer"
                 },
                 "project_id": {
-                    "description": "The project this task belongs to.",
+                    "description": "The project this task belongs to.\nMust precede done/due_date: xorm orders composite index columns by struct field order.",
                     "type": "integer"
                 },
                 "reactions": {
@@ -10203,6 +10355,14 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/models.TaskRepeatMode"
+                        }
+                    ]
+                },
+                "scope": {
+                    "description": "The task's scope: the files and endpoints it touches. Only present when requested via the scope expand option.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.TaskScope"
                         }
                     ]
                 },
@@ -10271,6 +10431,13 @@ const docTemplate = `{
                     "$ref": "#/definitions/models.Bucket"
                 },
                 "bucket_id": {
+                    "type": "integer"
+                },
+                "moved_at": {
+                    "type": "string"
+                },
+                "moved_by_id": {
+                    "description": "Who last moved the task into this bucket, so \"the one who submitted for\nreview is not the one who closes\" can be checked.",
                     "type": "integer"
                 },
                 "project_view_id": {
@@ -10349,6 +10516,94 @@ const docTemplate = `{
                             "$ref": "#/definitions/models.Task"
                         }
                     ]
+                }
+            }
+        },
+        "models.TaskLag": {
+            "type": "object",
+            "properties": {
+                "base": {
+                    "type": "string"
+                },
+                "base_sha": {
+                    "type": "string"
+                },
+                "branch": {
+                    "type": "string"
+                },
+                "collisions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.LagCollision"
+                    }
+                },
+                "commits_behind": {
+                    "type": "integer"
+                },
+                "computed_at": {
+                    "type": "string"
+                },
+                "created": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "merge_base_sha": {
+                    "type": "string"
+                },
+                "severity": {
+                    "type": "string"
+                },
+                "task_id": {
+                    "type": "integer"
+                },
+                "updated": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.TaskPathLease": {
+            "type": "object",
+            "properties": {
+                "created": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "last_active": {
+                    "description": "LastActive moves whenever the holder touches the task (claim, update,\ncomment, heartbeat); it is what tells a live agent from a dead one.",
+                    "type": "string"
+                },
+                "owner": {
+                    "description": "Owner is the human behind a bot holder — the person to ask about the\nlease. Empty when the holder is a human.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/user.User"
+                        }
+                    ]
+                },
+                "pattern": {
+                    "type": "string"
+                },
+                "project_id": {
+                    "type": "integer"
+                },
+                "stale": {
+                    "type": "boolean"
+                },
+                "task": {
+                    "$ref": "#/definitions/models.Task"
+                },
+                "task_id": {
+                    "type": "integer"
+                },
+                "user": {
+                    "$ref": "#/definitions/user.User"
+                },
+                "user_id": {
+                    "type": "integer"
                 }
             }
         },
@@ -10435,6 +10690,44 @@ const docTemplate = `{
                 "TaskRepeatModeMonth",
                 "TaskRepeatModeFromCurrentDate"
             ]
+        },
+        "models.TaskScope": {
+            "type": "object",
+            "properties": {
+                "created": {
+                    "type": "string"
+                },
+                "endpoints": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "paths_affected": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "paths_owned": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "task_id": {
+                    "type": "integer"
+                },
+                "updated": {
+                    "type": "string"
+                }
+            }
         },
         "models.TaskUnreadStatus": {
             "type": "object",
@@ -11040,6 +11333,9 @@ const docTemplate = `{
                 "link_sharing_enabled": {
                     "type": "boolean"
                 },
+                "marshal_url": {
+                    "type": "string"
+                },
                 "max_file_size": {
                     "type": "string"
                 },
@@ -11077,6 +11373,9 @@ const docTemplate = `{
             "properties": {
                 "code": {
                     "type": "string"
+                },
+                "state": {
+                    "type": "string"
                 }
             }
         },
@@ -11084,6 +11383,9 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "code": {
+                    "type": "string"
+                },
+                "state": {
                     "type": "string"
                 }
             }
@@ -11182,14 +11484,6 @@ const docTemplate = `{
                 },
                 "url": {
                     "description": "The totp url used to be able to enroll the user later",
-                    "type": "string"
-                }
-            }
-        },
-        "user.TOTPPasscode": {
-            "type": "object",
-            "properties": {
-                "passcode": {
                     "type": "string"
                 }
             }
@@ -11333,6 +11627,19 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 250,
                     "minLength": 3
+                }
+            }
+        },
+        "v1.UserTOTPEnableRequest": {
+            "type": "object",
+            "properties": {
+                "passcode": {
+                    "description": "A passcode generated from the enrolled secret.",
+                    "type": "string"
+                },
+                "password": {
+                    "description": "The current user's password.",
+                    "type": "string"
                 }
             }
         },
