@@ -102,7 +102,8 @@ describe('OpenIdAuth login', () => {
 	})
 
 	it('asks for a TOTP passcode when the login requires one', async () => {
-		authStore.openIdAuth.mockRejectedValue({code: 1017})
+		// The fork store calls the API through axios, so the error code sits on the response.
+		authStore.openIdAuth.mockRejectedValue({response: {data: {code: 1017}}})
 		const wrapper = mountCallback()
 		await flushPromises()
 
