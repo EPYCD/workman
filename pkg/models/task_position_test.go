@@ -918,6 +918,9 @@ func TestDoneBucketOrdersNewestFirst(t *testing.T) {
 		require.NoError(t, (&Task{ID: 1, Done: false}).Update(s, u))
 
 		assert.InDelta(t, 4321.0, positionOf(t, s, 1), 0.001)
+	})
+}
+
 func TestAddPositionsToTasks(t *testing.T) {
 	t.Run("only includes positions of views in the task's project", func(t *testing.T) {
 		db.LoadAndAssertFixtures(t)
