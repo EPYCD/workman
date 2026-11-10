@@ -70,8 +70,11 @@ func TestShouldNotify(t *testing.T) {
 			s := db.NewSession()
 			defer s.Close()
 
-			u, err := getUser(s, &User{ID: tt.userID}, false)
+			// The fork's getUser rejects disabled and locked users; load the row as is.
+			u := &User{}
+			has, err := s.ID(tt.userID).Get(u)
 			require.NoError(t, err)
+			require.True(t, has)
 
 			got, err := u.ShouldNotify(tt.notification, s)
 			require.NoError(t, err)
