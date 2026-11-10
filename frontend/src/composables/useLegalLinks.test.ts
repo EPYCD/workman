@@ -5,7 +5,7 @@ import {defineComponent, h} from 'vue'
 import {mount} from '@vue/test-utils'
 
 import {useLegalLinks} from './useLegalLinks'
-import {useConfigStore} from '@/stores/config'
+import {useConfigStore, type ConfigState} from '@/stores/config'
 
 function runLegalLinks() {
 	let result: ReturnType<typeof useLegalLinks> | undefined
@@ -51,7 +51,7 @@ describe('useLegalLinks', () => {
 					},
 				],
 			},
-		})
+		} as Partial<ConfigState> as ConfigState)
 
 		expect(runLegalLinks()).toEqual([
 			{

@@ -3,9 +3,15 @@ import {expect, it, vi} from 'vitest'
 import {createI18n} from 'vue-i18n'
 
 import User from './User.vue'
+import type {IUser} from '@/modelTypes/IUser'
 import en from '@/i18n/lang/en.json'
 
 vi.mock('@/components/misc/UserAvatar.vue', () => ({default: {template: '<span />'}}))
+// The fork's User.vue loads the avatar itself; keep the test off the network.
+vi.mock('@/models/user', async importOriginal => ({
+	...await importOriginal<typeof import('@/models/user')>(),
+	fetchAvatarBlobUrl: vi.fn(async () => ''),
+}))
 
 const i18n = createI18n({
 	legacy: false,
@@ -13,9 +19,10 @@ const i18n = createI18n({
 	messages: {en},
 })
 
-function mountUser(user: InstanceType<typeof User>['$props']['user']) {
+// Fixtures carry only the fields the badge reads.
+function mountUser(user: Omit<Partial<IUser>, 'botOwner'> & {botOwner?: Partial<IUser>}) {
 	return mount(User, {
-		props: {user},
+		props: {user: user as unknown as IUser},
 		global: {
 			plugins: [i18n],
 			directives: {tooltip: {}},

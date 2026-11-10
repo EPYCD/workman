@@ -3,7 +3,7 @@
 		<div
 			v-for="(r, index) in reminders"
 			:key="index"
-			:data-is-overdue="r.reminder && r.reminder < now || undefined"
+			:data-is-overdue="isOverdue(r) || undefined"
 			class="reminder-input"
 		>
 			<OverdueIndicator
@@ -68,6 +68,10 @@ const emit = defineEmits<{
 const reminders = ref<ITaskReminder[]>([])
 
 const now = useNow({interval: 1000})
+
+function isOverdue(reminder: ITaskReminder): boolean {
+	return reminder.reminder !== null && reminder.reminder < now.value
+}
 
 watch(
 	() => props.modelValue,

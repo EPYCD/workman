@@ -95,14 +95,14 @@
 				/>
 
 				<time
-					v-if="readonly && +new Date(task.dueDate) > 0"
+					v-if="readonly && task.dueDate && +new Date(task.dueDate) > 0"
 					:datetime="formatISO(task.dueDate)"
 					class="dueDate is-italic"
 				>
 					– {{ $t('task.detail.due', {at: dueDateFormatted}) }}
 				</time>
 				<Popup
-					v-else-if="+new Date(task.dueDate) > 0"
+					v-else-if="task.dueDate && +new Date(task.dueDate) > 0"
 				>
 					<template #trigger="{toggle, isOpen}">
 						<BaseButton
