@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import {ref, watch} from 'vue'
+import {computed, ref, watch} from 'vue'
 
 import type {IWebhook} from '@/modelTypes/IWebhook'
 import WebhookModel from '@/models/webhook'
@@ -51,7 +51,7 @@ function validateTargetUrl() {
 
 const eventGroups = computed(() => {
 	const groups: Record<string, string[]> = {}
-	for (const event of availableEvents.value) {
+	for (const event of props.availableEvents) {
 		const group = event.split('.')[0]
 		groups[group] ??= []
 		groups[group].push(event)
