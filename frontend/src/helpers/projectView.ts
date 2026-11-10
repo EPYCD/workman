@@ -5,7 +5,8 @@ export type ProjectViewSettings = Record<IProject['id'], number>
 
 const SETTINGS_KEY_PROJECT_VIEW = 'projectView'
 
-export function getDefaultProjectView(views: readonly IProjectView[], preferredKind: DefaultProjectViewKind | undefined) {
+// Generic so deep-readonly store views come back with their own type.
+export function getDefaultProjectView<V extends Pick<IProjectView, 'viewKind'>>(views: readonly V[], preferredKind: DefaultProjectViewKind | undefined): V | undefined {
 	return (preferredKind !== DEFAULT_PROJECT_VIEW_SETTINGS.FIRST
 		? views.find(view => view.viewKind === preferredKind)
 		: undefined) ?? views[0]
