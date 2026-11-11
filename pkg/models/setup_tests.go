@@ -79,6 +79,7 @@ func SetupTests() {
 		"webhooks",
 		"totp",
 		"oauth_codes",
+		"user_identities",
 		"notifications",
 		"task_scopes",
 		"task_path_leases",

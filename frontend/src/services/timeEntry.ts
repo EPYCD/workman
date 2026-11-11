@@ -19,10 +19,16 @@ export function parseTimeEntry(raw: Record<string, unknown>): ITimeEntry {
 		// null end_time = a running timer.
 		endTime: end ? new Date(end) : null,
 		comment: e.comment ?? '',
+		inTrash: e.inTrash ?? false,
 		created: new Date(e.created),
 		updated: new Date(e.updated),
 		maxPermission: e.maxPermission ?? null,
 	}
+}
+
+// Entries without task and project are only visible to their author.
+export function isPrivateEntry(entry: Pick<ITimeEntry, 'taskId' | 'projectId'>): boolean {
+	return entry.taskId === 0 && entry.projectId === 0
 }
 
 export interface TimeEntryListParams {

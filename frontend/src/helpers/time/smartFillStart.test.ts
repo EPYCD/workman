@@ -13,6 +13,7 @@ function entry(startTime: Date, endTime: Date | null): ITimeEntry {
 		startTime,
 		endTime,
 		comment: '',
+		inTrash: false,
 		created: startTime,
 		updated: startTime,
 		maxPermission: null,

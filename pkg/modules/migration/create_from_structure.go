@@ -76,21 +76,28 @@ func insertFromStructureWithFileProvider(str []*models.ProjectWithTasksAndBucket
 	}
 
 	// Failed transactions roll back file rows, not blobs written before commit.
+	// Deferred so a panic can't skip it.
 	createdFiles := &[]int64{}
+	committed := false
+	defer func() {
+		if committed {
+			return
+		}
+		cleanupAndRollback(s, *createdFiles)
+		events.CleanupPending(s)
+	}()
 
 	err = insertFromStructure(s, str, importer, provider, createdFiles)
 	if err != nil {
 		log.Errorf("[creating structure] Error while creating structure: %s", err.Error())
-		cleanupAndRollback(s, *createdFiles)
-		events.CleanupPending(s)
 		return err
 	}
 
 	err = s.Commit()
 	if err != nil {
-		events.CleanupPending(s)
 		return err
 	}
+	committed = true
 
 	events.DispatchPending(context.Background(), s)
 	return nil
@@ -129,6 +136,7 @@ func insertFromStructure(s *xorm.Session, str []*models.ProjectWithTasksAndBucke
 	}
 
 	archivedProjects := []int64{}
+	imported := newImportedTasks()
 
 	childRelations := make(map[int64][]int64)          // old id is the key, slice of old children ids
 	projectsByOldID := make(map[int64]*models.Project) // old id is the key
@@ -151,11 +159,16 @@ func insertFromStructure(s *xorm.Session, str []*models.ProjectWithTasksAndBucke
 			view.ProjectID = 0
 		}
 
-		err = createProject(s, p, &archivedProjects, labels, user, provider, createdFiles)
+		err = createProject(s, p, &archivedProjects, labels, user, provider, createdFiles, imported)
 		if err != nil {
 			return err
 		}
 		projectsByOldID[oldID] = &str[i].Project
+	}
+
+	err = imported.createRelations(s, user)
+	if err != nil {
+		return err
 	}
 
 	// parent / child relations
@@ -220,8 +233,70 @@ func seedMissingTaskPositions(tasks []*models.TaskWithComments) {
 	}
 }
 
-func createProject(s *xorm.Session, project *models.ProjectWithTasksAndBuckets, archivedProjectIDs *[]int64, labels map[string]*models.Label, user *user.User, provider FileProvider, createdFiles *[]int64) (err error) {
-	err = createProjectWithEverything(s, project, archivedProjectIDs, labels, user, provider, createdFiles)
+// importedTasks collects the tasks of all projects, so relations can point across projects.
+type importedTasks struct {
+	// batch holds every task this import creates, keyed by its new id in byNewID.
+	batch   []*models.Task
+	byNewID map[int64]*models.Task
+	// The first task created for an old id wins.
+	newIDByOldID map[int64]int64
+	// Id-only references to tasks not created yet, resolved once every project exists.
+	pending []pendingRelation
+}
+
+type pendingRelation struct {
+	taskID   int64
+	kind     models.RelationKind
+	oldOther int64
+}
+
+func newImportedTasks() *importedTasks {
+	return &importedTasks{
+		byNewID:      map[int64]*models.Task{},
+		newIDByOldID: map[int64]int64{},
+	}
+}
+
+func (imp *importedTasks) register(oldID, newID int64) {
+	if _, ok := imp.byNewID[newID]; !ok {
+		n := &models.Task{ID: newID, RelatedTasks: models.RelatedTaskMap{}}
+		imp.byNewID[newID] = n
+		imp.batch = append(imp.batch, n)
+	}
+	if _, ok := imp.newIDByOldID[oldID]; oldID != 0 && !ok {
+		imp.newIDByOldID[oldID] = newID
+	}
+}
+
+func (imp *importedTasks) relate(taskID int64, kind models.RelationKind, otherID int64) {
+	other, ok := imp.byNewID[otherID]
+	if !ok {
+		// Not created by this import: CreateTaskRelationsForImport rejects it.
+		other = &models.Task{ID: otherID}
+	}
+	from := imp.byNewID[taskID]
+	from.RelatedTasks[kind] = append(from.RelatedTasks[kind], other)
+}
+
+// Relations are created once for the whole import so the hierarchy is cycle-checked once.
+func (imp *importedTasks) createRelations(s *xorm.Session, user *user.User) error {
+	for _, p := range imp.pending {
+		otherID, has := imp.newIDByOldID[p.oldOther]
+		if !has {
+			log.Debugf("[creating structure] Could not find related task with old id %d", p.oldOther)
+			continue
+		}
+		if otherID == p.taskID {
+			continue
+		}
+		imp.relate(p.taskID, p.kind, otherID)
+	}
+	log.Debugf("[creating structure] Creating relations for %d imported tasks", len(imp.batch))
+	return models.CreateTaskRelationsForImport(s, imp.batch, user)
+}
+
+func createProject(s *xorm.Session, project *models.ProjectWithTasksAndBuckets, archivedProjectIDs *[]int64, labels map[string]*models.Label, user *user.User, provider FileProvider, createdFiles *[]int64, imported *importedTasks) (err error) {
+	err = createProjectWithEverything(s, project, archivedProjectIDs, labels, user, provider, createdFiles, imported)
 	if err != nil {
 		return err
 	}
@@ -231,7 +306,7 @@ func createProject(s *xorm.Session, project *models.ProjectWithTasksAndBuckets, 
 	return
 }
 
-func createProjectWithEverything(s *xorm.Session, project *models.ProjectWithTasksAndBuckets, archivedProjects *[]int64, labels map[string]*models.Label, user *user.User, provider FileProvider, createdFiles *[]int64) (err error) {
+func createProjectWithEverything(s *xorm.Session, project *models.ProjectWithTasksAndBuckets, archivedProjects *[]int64, labels map[string]*models.Label, user *user.User, provider FileProvider, createdFiles *[]int64, imported *importedTasks) (err error) {
 	// The tasks and bucket slices are going to be reset during the creation of the project, so we rescue it here
 	// to be able to still loop over them aftere the project was created.
 	tasks := project.Tasks
@@ -477,6 +552,7 @@ func createProjectWithEverything(s *xorm.Session, project *models.ProjectWithTas
 		}
 
 		newTaskIDs = append(newTaskIDs, t.ID)
+		imported.register(oldid, t.ID)
 
 		tasksByOldID[oldid] = t
 
@@ -493,6 +569,13 @@ func createProjectWithEverything(s *xorm.Session, project *models.ProjectWithTas
 			}
 
 			for _, rt := range tasks {
+				// Exports reference related tasks by id only; one not created yet may be
+				// later in this project or in another one.
+				if _, exists := tasksByOldID[rt.ID]; rt.Title == "" && rt.ID != 0 && !exists {
+					imported.pending = append(imported.pending, pendingRelation{taskID: t.ID, kind: kind, oldOther: rt.ID})
+					continue
+				}
+
 				// First create the related tasks if they do not exist
 				if _, exists := tasksByOldID[rt.ID]; !exists || rt.ID == 0 {
 					oldid := rt.ID
@@ -515,6 +598,7 @@ func createProjectWithEverything(s *xorm.Session, project *models.ProjectWithTas
 					}
 					tasksByOldID[oldid] = &models.TaskWithComments{Task: *rt}
 					log.Debugf("[creating structure] Created related task %d", rt.ID)
+					imported.register(oldid, rt.ID)
 				}
 
 				// Then create the relation
@@ -533,12 +617,7 @@ func createProjectWithEverything(s *xorm.Session, project *models.ProjectWithTas
 					continue
 				}
 
-				err = taskRel.Create(s, user)
-				if err != nil && !models.IsErrRelationAlreadyExists(err) {
-					return
-				}
-
-				log.Debugf("[creating structure] Created task relation between task %d and %d", t.ID, rt.ID)
+				imported.relate(taskRel.TaskID, kind, taskRel.OtherTaskID)
 
 			}
 		}
@@ -675,6 +754,9 @@ func createProjectWithEverything(s *xorm.Session, project *models.ProjectWithTas
 	if len(viewsByOldIDs) > 0 {
 		newPositions := []*models.TaskPosition{}
 		for _, pos := range project.Positions {
+			if pos == nil {
+				continue
+			}
 			_, hasTask := tasksByOldID[pos.TaskID]
 			_, hasView := viewsByOldIDs[pos.ProjectViewID]
 			if !hasTask || !hasView {
@@ -700,6 +782,9 @@ func createProjectWithEverything(s *xorm.Session, project *models.ProjectWithTas
 
 		newTaskBuckets := make([]*models.TaskBucket, 0, len(project.TaskBuckets))
 		for _, tb := range project.TaskBuckets {
+			if tb == nil {
+				continue
+			}
 			_, hasTask := tasksByOldID[tb.TaskID]
 			_, hasBucket := bucketsByOldID[tb.BucketID]
 			if !hasTask || !hasBucket {

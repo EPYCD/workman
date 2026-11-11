@@ -11,6 +11,7 @@ import {useI18n} from 'vue-i18n'
 import {useTitle} from '@/composables/useTitle'
 import {useConfigStore} from '@/stores/config'
 import {useAuthStore} from '@/stores/auth'
+import {canLinkAccounts} from '@/helpers/canLinkAccounts'
 
 import SideNavShell from '@/components/misc/SideNavShell.vue'
 
@@ -51,6 +52,11 @@ const navigationItems = computed(() => {
 			title: t('user.settings.totp.title'),
 			routeName: 'user.settings.totp',
 			condition: totpEnabled.value && isLocalUser.value,
+		},
+		{
+			title: t('user.settings.linkedAccounts.title'),
+			routeName: 'user.settings.linked-accounts',
+			condition: canLinkAccounts(configStore.auth.openidConnect, authStore.info),
 		},
 		{
 			title: t('user.export.title'),

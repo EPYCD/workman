@@ -39,17 +39,27 @@ func setupMetrics(a *echo.Group) {
 
 	r := a.Group("/metrics")
 
-	if config.MetricsUsername.GetString() != "" && config.MetricsPassword.GetString() != "" {
-		r.Use(middleware.BasicAuth(func(_ *echo.Context, username, password string) (bool, error) {
-			if subtle.ConstantTimeCompare([]byte(username), []byte(config.MetricsUsername.GetString())) == 1 &&
-				subtle.ConstantTimeCompare([]byte(password), []byte(config.MetricsPassword.GetString())) == 1 {
-				return true, nil
-			}
-			return false, nil
-		}))
+	if auth := configBasicAuth(config.MetricsUsername, config.MetricsPassword); auth != nil {
+		r.Use(auth)
 	}
 
 	r.GET("", echo.WrapHandler(promhttp.HandlerFor(metrics.GetRegistry(), promhttp.HandlerOpts{})))
+}
+
+// configBasicAuth returns nil when either credential is unset, leaving the route public.
+func configBasicAuth(usernameKey, passwordKey config.Key) echo.MiddlewareFunc {
+	wantUsername := usernameKey.GetString()
+	wantPassword := passwordKey.GetString()
+	if wantUsername == "" || wantPassword == "" {
+		return nil
+	}
+	return middleware.BasicAuth(func(_ *echo.Context, username, password string) (bool, error) {
+		if subtle.ConstantTimeCompare([]byte(username), []byte(wantUsername)) == 1 &&
+			subtle.ConstantTimeCompare([]byte(password), []byte(wantPassword)) == 1 {
+			return true, nil
+		}
+		return false, nil
+	})
 }
 
 func setupMetricsMiddleware(a *echo.Group) {

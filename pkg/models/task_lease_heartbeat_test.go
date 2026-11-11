@@ -77,6 +77,8 @@ func TestLeaseHeartbeat(t *testing.T) {
 
 	t.Run("a comment by the holder is activity, by someone else is not", func(t *testing.T) {
 		db.LoadAndAssertFixtures(t)
+		// Comment creation rechecks write access under the task lock, so the non-holder needs it too.
+		shareProjectForTest(t, 1, 2, PermissionWrite)
 		s := db.NewSession()
 		defer s.Close()
 		require.NoError(t, s.Begin())

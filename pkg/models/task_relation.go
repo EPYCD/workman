@@ -17,9 +17,11 @@
 package models
 
 import (
+	"fmt"
 	"time"
 
 	"code.vikunja.io/api/pkg/events"
+	"code.vikunja.io/api/pkg/log"
 	"code.vikunja.io/api/pkg/user"
 	"code.vikunja.io/api/pkg/web"
 
@@ -83,10 +85,10 @@ type TaskRelation struct {
 	// The ID of the "base" task, the task which has a relation to another.
 	TaskID int64 `xorm:"bigint not null" json:"task_id" param:"task" readOnly:"true" doc:"The id of the base task. Set from the URL path; ignored in the request body."`
 	// The ID of the other task, the task which is being related.
-	OtherTaskID int64 `xorm:"bigint not null" json:"other_task_id" param:"otherTask" doc:"The id of the other task this relation points to."`
+	OtherTaskID int64 `xorm:"bigint not null index(other_task_kind)" json:"other_task_id" param:"otherTask" doc:"The id of the other task this relation points to."`
 	// The kind of the relation.
 	// The enum list must stay in sync with RelationKind.isValid() (RelationKindUnknown excluded); the v2 delete route param repeats it.
-	RelationKind RelationKind `xorm:"varchar(50) not null" json:"relation_kind" param:"relationKind" enum:"subtask,parenttask,related,duplicateof,duplicates,blocking,blocked,precedes,follows,copiedfrom,copiedto" doc:"The kind of relation, describing the direction from the base task to the other task (e.g. subtask, blocking, related). The inverse relation is created automatically."`
+	RelationKind RelationKind `xorm:"varchar(50) not null index(other_task_kind)" json:"relation_kind" param:"relationKind" enum:"subtask,parenttask,related,duplicateof,duplicates,blocking,blocked,precedes,follows,copiedfrom,copiedto" doc:"The kind of relation, describing the direction from the base task to the other task (e.g. subtask, blocking, related). The inverse relation is created automatically."`
 
 	CreatedByID int64 `xorm:"bigint not null" json:"-"`
 	// The user who created this relation
@@ -144,6 +146,7 @@ var acyclicRelationKinds = map[RelationKind]bool{
 	RelationKindBlocked: true, RelationKindBlocking: true,
 	RelationKindFollows: true, RelationKindPreceeds: true,
 }
+var maxTaskRelationCycleCheckVisits = 10_000
 
 func checkTaskRelationCycle(s *xorm.Session, relation *TaskRelation, otherTaskIDToCheck int64, visited map[int64]bool, currentPath map[int64]bool) (err error) {
 	if visited == nil {
@@ -167,6 +170,10 @@ func checkTaskRelationCycle(s *xorm.Session, relation *TaskRelation, otherTaskID
 			OtherTaskID: relation.OtherTaskID,
 			Kind:        relation.RelationKind,
 		}
+	}
+
+	if len(visited) >= maxTaskRelationCycleCheckVisits {
+		return ErrTaskRelationHierarchyTooLarge{TaskID: relation.TaskID, MaxTasks: maxTaskRelationCycleCheckVisits}
 	}
 
 	visited[relation.TaskID] = true
@@ -207,7 +214,45 @@ func checkTaskRelationCycle(s *xorm.Session, relation *TaskRelation, otherTaskID
 // @Failure 500 {object} models.Message "Internal error"
 // @Router /tasks/{taskID}/relations [put]
 func (rel *TaskRelation) Create(s *xorm.Session, a web.Auth) error {
+	if err := rel.lockTasks(s, a); err != nil {
+		return err
+	}
+	return rel.create(s, a, true)
+}
 
+func (rel *TaskRelation) lockTasks(s *xorm.Session, a web.Auth) error {
+	taskIDs := []int64{
+		rel.TaskID,
+		rel.OtherTaskID,
+	}
+	if taskIDs[0] > taskIDs[1] {
+		taskIDs[0], taskIDs[1] = taskIDs[1], taskIDs[0]
+	}
+
+	for _, taskID := range taskIDs {
+		if taskID == rel.TaskID {
+			if _, err := lockTaskForWrite(s, a, taskID); err != nil {
+				return err
+			}
+			continue
+		}
+
+		task, err := GetTaskSimple(lockingSession(s), &Task{ID: taskID})
+		if err != nil {
+			return err
+		}
+		can, _, err := (&Project{ID: task.ProjectID}).CanRead(s, a)
+		if err != nil {
+			return err
+		}
+		if !can {
+			return ErrGenericForbidden{}
+		}
+	}
+	return nil
+}
+
+func (rel *TaskRelation) create(s *xorm.Session, a web.Auth, checkCycle bool) error {
 	// Check if both tasks are the same
 	if rel.TaskID == rel.OtherTaskID {
 		return ErrRelationTasksCannotBeTheSame{
@@ -250,7 +295,7 @@ func (rel *TaskRelation) Create(s *xorm.Session, a web.Auth) error {
 	// A cycle in the hierarchy or in the dependency graph would make a task
 	// wait on itself: no parent could ever roll up, no blocked task could
 	// ever become claimable.
-	if acyclicRelationKinds[rel.RelationKind] {
+	if checkCycle && acyclicRelationKinds[rel.RelationKind] {
 		err = checkTaskRelationCycle(s, rel, rel.OtherTaskID, nil, nil)
 		if err != nil {
 			return err
@@ -266,7 +311,7 @@ func (rel *TaskRelation) Create(s *xorm.Session, a web.Auth) error {
 		return err
 	}
 
-	doer, _ := user.GetFromAuth(a)
+	doer := doerFromAuth(s, a)
 	task, err := GetTaskByIDSimple(s, rel.TaskID)
 	if err != nil {
 		return err
@@ -277,6 +322,124 @@ func (rel *TaskRelation) Create(s *xorm.Session, a web.Auth) error {
 		Relation: rel,
 		Doer:     doer,
 	})
+	return nil
+}
+
+// CreateTaskRelationsForImport creates the RelatedTasks of a batch just passed to CreateTasksForImport.
+func CreateTaskRelationsForImport(s *xorm.Session, tasks []*Task, a web.Auth) error {
+	inBatch := make(map[int64]bool, len(tasks))
+	for _, t := range tasks {
+		inBatch[t.ID] = true
+	}
+
+	relations := []*TaskRelation{}
+	for _, t := range tasks {
+		for kind, related := range t.RelatedTasks {
+			for _, rt := range related {
+				if t.ID == rt.ID {
+					log.Debugf("[creating structure] Skipping invalid self-relation for task %d", rt.ID)
+					continue
+				}
+				// The batch-wide cycle check is only sound when no pre-existing relation can close a cycle.
+				if !inBatch[rt.ID] {
+					return fmt.Errorf("task %d is related to task %d, which is not part of the imported batch", t.ID, rt.ID)
+				}
+				relations = append(relations, &TaskRelation{
+					TaskID:       t.ID,
+					OtherTaskID:  rt.ID,
+					RelationKind: kind,
+				})
+			}
+		}
+	}
+
+	if err := checkImportedTaskRelationCycles(relations); err != nil {
+		return err
+	}
+
+	for _, rel := range relations {
+		err := rel.create(s, a, false)
+		if err != nil && !IsErrRelationAlreadyExists(err) {
+			return err
+		}
+	}
+	return nil
+}
+
+// acyclicRelationFamilies pairs each kind in acyclicRelationKinds with its inverse:
+// a kind and its inverse describe the same edge, so they share one graph.
+var acyclicRelationFamilies = [][2]RelationKind{
+	{RelationKindSubtask, RelationKindParenttask},
+	{RelationKindBlocking, RelationKindBlocked},
+	{RelationKindPreceeds, RelationKindFollows},
+}
+
+func checkImportedTaskRelationCycles(relations []*TaskRelation) error {
+	for _, family := range acyclicRelationFamilies {
+		if err := checkImportedRelationFamilyCycles(relations, family[0], family[1]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func checkImportedRelationFamilyCycles(relations []*TaskRelation, forward, inverse RelationKind) error {
+	type edge struct{ parent, child int64 }
+
+	seen := make(map[edge]bool)
+	children := make(map[int64][]int64)
+	parentCount := make(map[int64]int)
+	for _, rel := range relations {
+		var e edge
+		switch rel.RelationKind {
+		case forward:
+			e = edge{parent: rel.TaskID, child: rel.OtherTaskID}
+		case inverse:
+			e = edge{parent: rel.OtherTaskID, child: rel.TaskID}
+		default:
+			continue
+		}
+		if e.parent == e.child || seen[e] {
+			continue
+		}
+		seen[e] = true
+		children[e.parent] = append(children[e.parent], e.child)
+		parentCount[e.child]++
+		if _, ok := parentCount[e.parent]; !ok {
+			parentCount[e.parent] = 0
+		}
+	}
+
+	// Kahn's algorithm: tasks left over once all roots are peeled off sit on or below a cycle.
+	queue := make([]int64, 0, len(parentCount))
+	for id, count := range parentCount {
+		if count == 0 {
+			queue = append(queue, id)
+		}
+	}
+	for len(queue) > 0 {
+		id := queue[0]
+		queue = queue[1:]
+		delete(parentCount, id)
+		for _, child := range children[id] {
+			parentCount[child]--
+			if parentCount[child] == 0 {
+				queue = append(queue, child)
+			}
+		}
+	}
+
+	for _, rel := range relations {
+		_, taskLeft := parentCount[rel.TaskID]
+		_, otherLeft := parentCount[rel.OtherTaskID]
+		if taskLeft && otherLeft && (rel.RelationKind == forward || rel.RelationKind == inverse) {
+			return ErrTaskRelationCycle{
+				TaskID:      rel.TaskID,
+				OtherTaskID: rel.OtherTaskID,
+				Kind:        rel.RelationKind,
+			}
+		}
+	}
 	return nil
 }
 
@@ -326,6 +489,9 @@ func (rel *TaskRelation) Delete(s *xorm.Session, a web.Auth) error {
 	if err != nil {
 		return err
 	}
+	if err = rel.lockTasks(s, a); err != nil {
+		return err
+	}
 
 	// Build condition for deleting both the forward and inverse relations
 	cond := builder.Or(
@@ -348,7 +514,7 @@ func (rel *TaskRelation) Delete(s *xorm.Session, a web.Auth) error {
 		return err
 	}
 
-	doer, _ := user.GetFromAuth(a)
+	doer := doerFromAuth(s, a)
 	task, err := GetTaskByIDSimple(s, rel.TaskID)
 	if err != nil {
 		return err

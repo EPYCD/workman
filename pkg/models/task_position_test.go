@@ -282,6 +282,40 @@ func TestResolveTaskPositionConflicts(t *testing.T) {
 	})
 }
 
+func TestTaskPosition_Update(t *testing.T) {
+	t.Run("task moved to a forbidden project after the permission check", func(t *testing.T) {
+		db.LoadAndAssertFixtures(t)
+		s := db.NewSession()
+		defer s.Close()
+
+		u := &user.User{ID: 1}
+		tp := &TaskPosition{
+			TaskID:        1,
+			ProjectViewID: 1,
+			Position:      12345,
+		}
+		can, err := tp.CanUpdate(s, u)
+		require.NoError(t, err)
+		require.True(t, can)
+
+		// Project 2 belongs to user 3 and is not shared with user 1.
+		_, err = s.ID(1).Cols("project_id", "index").Update(&Task{
+			ProjectID: 2,
+			Index:     9999,
+		})
+		require.NoError(t, err)
+
+		err = tp.Update(s, u)
+		require.ErrorIs(t, err, ErrGenericForbidden{})
+		require.NoError(t, s.Commit())
+
+		db.AssertMissing(t, "task_positions", map[string]interface{}{
+			"task_id":  1,
+			"position": 12345,
+		})
+	})
+}
+
 func TestUpdateTaskPositionWithConflictResolution(t *testing.T) {
 	t.Run("resolves conflict on update", func(t *testing.T) {
 		db.LoadAndAssertFixtures(t)
@@ -918,5 +952,27 @@ func TestDoneBucketOrdersNewestFirst(t *testing.T) {
 		require.NoError(t, (&Task{ID: 1, Done: false}).Update(s, u))
 
 		assert.InDelta(t, 4321.0, positionOf(t, s, 1), 0.001)
+	})
+}
+
+func TestAddPositionsToTasks(t *testing.T) {
+	t.Run("only includes positions of views in the task's project", func(t *testing.T) {
+		db.LoadAndAssertFixtures(t)
+		s := db.NewSession()
+		defer s.Close()
+
+		// View 5 belongs to project 2, task 1 to project 1.
+		_, err := s.Insert(&TaskPosition{TaskID: 1, ProjectViewID: 5, Position: 10})
+		require.NoError(t, err)
+
+		task := &Task{ID: 1}
+		require.NoError(t, AddPositionsToTasks(s, []*Task{task}))
+
+		viewIDs := make([]int64, 0, len(task.Positions))
+		for _, p := range task.Positions {
+			viewIDs = append(viewIDs, p.ProjectViewID)
+		}
+		assert.Contains(t, viewIDs, int64(1))
+		assert.NotContains(t, viewIDs, int64(5))
 	})
 }

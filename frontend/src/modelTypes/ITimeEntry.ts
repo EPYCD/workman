@@ -14,6 +14,8 @@ export interface ITimeEntry extends IAbstract {
 	// null while the live timer is running.
 	endTime: Date | null
 	comment: string
+	// The entry's task is in the trash: the entry is read-only until it's restored.
+	inTrash: boolean
 
 	created: Date
 	updated: Date

@@ -15,9 +15,9 @@
 			>
 			<span
 				v-if="isBot"
-				v-tooltip="t('user.settings.bots.badge')"
+				v-tooltip="botBadgeLabel"
 				class="bot-badge"
-				aria-label="Bot"
+				:aria-label="botBadgeLabel"
 			>B</span>
 		</span>
 		<span
@@ -49,6 +49,9 @@ const {t} = useI18n({useScope: 'global'})
 
 const displayName = computed(() => getDisplayName(props.user))
 const isBot = computed(() => ((props.user as IUser & {botOwnerId?: number}).botOwnerId ?? 0) > 0)
+const botBadgeLabel = computed(() => props.user.botOwner
+	? t('user.settings.bots.badgeOwner', {user: getDisplayName(props.user.botOwner)})
+	: t('user.settings.bots.badge'))
 const avatarSrc = ref('')
 
 async function loadAvatar() {

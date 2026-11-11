@@ -204,6 +204,8 @@ definitions:
     properties:
       code:
         type: string
+      state:
+        type: string
     type: object
   migration.Status:
     properties:
@@ -431,6 +433,21 @@ definitions:
           $ref: '#/definitions/models.Label'
         type: array
     type: object
+  models.LagCollision:
+    properties:
+      landed_at:
+        type: string
+      landed_by_identifier:
+        type: string
+      landed_by_task_id:
+        type: integer
+      landed_in_sha:
+        type: string
+      path:
+        type: string
+      severity:
+        type: string
+    type: object
   models.LinkSharing:
     properties:
       created:
@@ -520,8 +537,30 @@ definitions:
         description: A timestamp when this project was created. You cannot change
           this value.
         type: string
+      deleted_at:
+        description: When this project was moved to the trash. Trashed projects are
+          removed permanently 30 days later.
+        type: string
+      deleted_by:
+        allOf:
+        - $ref: '#/definitions/user.User'
+        description: The user who moved this project to the trash. Only present on
+          trashed projects.
       description:
         description: The description of the project.
+        type: string
+      discord_avatar_url:
+        type: string
+      discord_events:
+        type: string
+      discord_username:
+        description: |-
+          How the Discord relay presents this project. The webhook URL itself is
+          deliberately absent: it is a credential, it belongs in the relay's own
+          environment (MARSHAL_DISCORD_WEBHOOK), and putting it here would place
+          it in every database backup and in reach of anyone with read access to
+          the row. What lives here is only the behaviour an admin wants to change
+          without a redeploy.
         type: string
       hex_color:
         description: The hex color of this project
@@ -555,6 +594,22 @@ definitions:
         description: The position this project has when querying all projects. See
           the tasks.position property on how to use this.
         type: number
+      receipt_bot_id:
+        description: |-
+          The CI identity. While set, "done" needs a merged, passing receipt from
+          it, and the user who submitted a task for review may not close it.
+        type: integer
+      scope_app_entries:
+        type: string
+      scope_app_root:
+        type: string
+      scope_repo_roots:
+        description: |-
+          The board cannot tell a repository-root-relative path from an
+          app-relative one by looking at it, so the repository tells it. Marshal
+          publishes both from the checkout it has; while scope_repo_roots is empty
+          nothing is enforced and every path is accepted as before.
+        type: string
       subscription:
         allOf:
         - $ref: '#/definitions/models.Subscription'
@@ -629,6 +684,13 @@ definitions:
         - manual
         - filter
         type: string
+      claim_bucket_id:
+        description: |-
+          Entering this bucket is the ownership lock: the move is refused while a
+          blocker is open or an owned path is leased elsewhere, and on success the
+          task's paths_owned are leased to its assignee. Without it only the claim
+          endpoint enforces that, and a drag on the board bypasses it.
+        type: integer
       created:
         description: A timestamp when this reaction was created. You cannot change
           this value.
@@ -873,6 +935,10 @@ definitions:
           A timestamp when this task was deleted. Soft-deleted tasks are kept for 30 days before they are removed permanently.
           omitzero keeps the field out of the JSON of regular tasks — it only ever appears on soft-deleted ones (the later trash listing).
         type: string
+      deleted_by:
+        allOf:
+        - $ref: '#/definitions/user.User'
+        description: Null for tasks soft-deleted before this was tracked.
       description:
         description: The task description.
         type: string
@@ -917,6 +983,18 @@ definitions:
         items:
           $ref: '#/definitions/models.Label'
         type: array
+      lag:
+        allOf:
+        - $ref: '#/definitions/models.TaskLag'
+        description: |-
+          How far the task's branch has fallen behind the integration branch, in
+          the files it holds. Only present when requested via the lag expand option.
+      leases:
+        description: The path leases the task currently holds. Only present when requested
+          via the leases expand option.
+        items:
+          $ref: '#/definitions/models.TaskPathLease'
+        type: array
       percent_done:
         description: Determines how far a task is left from being done
         type: number
@@ -927,12 +1005,18 @@ definitions:
           Positions are always saved per view. They will automatically be set if you request the tasks through a view
           endpoint, otherwise they will always be 0. To update them, take a look at the Task Position endpoint.
         type: number
+      positions:
+        items:
+          $ref: '#/definitions/models.TaskPosition'
+        type: array
       priority:
         description: The task priority. Can be anything you want, it is possible to
           sort by this later.
         type: integer
       project_id:
-        description: The project this task belongs to.
+        description: |-
+          The project this task belongs to.
+          Must precede done/due_date: xorm orders composite index columns by struct field order.
         type: integer
       reactions:
         allOf:
@@ -959,6 +1043,11 @@ definitions:
           is marked as done: 0 = repeats after the amount specified in repeat_after,
           1 = repeats all dates each months (ignoring repeat_after), 3 = repeats from
           the current date rather than the last set date.'
+      scope:
+        allOf:
+        - $ref: '#/definitions/models.TaskScope'
+        description: 'The task''s scope: the files and endpoints it touches. Only
+          present when requested via the scope expand option.'
       start_date:
         description: When this task starts.
         type: string
@@ -1006,6 +1095,13 @@ definitions:
       bucket:
         $ref: '#/definitions/models.Bucket'
       bucket_id:
+        type: integer
+      moved_at:
+        type: string
+      moved_by_id:
+        description: |-
+          Who last moved the task into this bucket, so "the one who submitted for
+          review is not the one who closes" can be checked.
         type: integer
       project_view_id:
         description: |-
@@ -1065,6 +1161,67 @@ definitions:
         allOf:
         - $ref: '#/definitions/models.Task'
         description: The duplicated task
+    type: object
+  models.TaskLag:
+    properties:
+      base:
+        type: string
+      base_sha:
+        type: string
+      branch:
+        type: string
+      collisions:
+        items:
+          $ref: '#/definitions/models.LagCollision'
+        type: array
+      commits_behind:
+        type: integer
+      computed_at:
+        type: string
+      created:
+        type: string
+      id:
+        type: integer
+      merge_base_sha:
+        type: string
+      severity:
+        type: string
+      task_id:
+        type: integer
+      updated:
+        type: string
+    type: object
+  models.TaskPathLease:
+    properties:
+      created:
+        type: string
+      id:
+        type: integer
+      last_active:
+        description: |-
+          LastActive moves whenever the holder touches the task (claim, update,
+          comment, heartbeat); it is what tells a live agent from a dead one.
+        type: string
+      owner:
+        allOf:
+        - $ref: '#/definitions/user.User'
+        description: |-
+          Owner is the human behind a bot holder — the person to ask about the
+          lease. Empty when the holder is a human.
+      pattern:
+        type: string
+      project_id:
+        type: integer
+      stale:
+        type: boolean
+      task:
+        $ref: '#/definitions/models.Task'
+      task_id:
+        type: integer
+      user:
+        $ref: '#/definitions/user.User'
+      user_id:
+        type: integer
     type: object
   models.TaskPosition:
     properties:
@@ -1135,6 +1292,31 @@ definitions:
     - TaskRepeatModeDefault
     - TaskRepeatModeMonth
     - TaskRepeatModeFromCurrentDate
+  models.TaskScope:
+    properties:
+      created:
+        type: string
+      endpoints:
+        items:
+          type: string
+        type: array
+      id:
+        type: integer
+      notes:
+        type: string
+      paths_affected:
+        items:
+          type: string
+        type: array
+      paths_owned:
+        items:
+          type: string
+        type: array
+      task_id:
+        type: integer
+      updated:
+        type: string
+    type: object
   models.TaskUnreadStatus:
     properties:
       taskID:
@@ -1230,6 +1412,10 @@ definitions:
         description: Whether the member is an admin of the team. See the docs for
           more about what a team admin can do
         type: boolean
+      bot_owner:
+        allOf:
+        - $ref: '#/definitions/user.User'
+        description: The user who created this bot. Only set for bot users.
       bot_owner_id:
         description: |-
           BotOwnerID is the ID of the owning (human) user if this user is a bot.
@@ -1343,6 +1529,10 @@ definitions:
     type: object
   models.UserWithPermission:
     properties:
+      bot_owner:
+        allOf:
+        - $ref: '#/definitions/user.User'
+        description: The user who created this bot. Only set for bot users.
       bot_owner_id:
         description: |-
           BotOwnerID is the ID of the owning (human) user if this user is a bot.
@@ -1456,6 +1646,10 @@ definitions:
     properties:
       auth_provider:
         type: string
+      bot_owner:
+        allOf:
+        - $ref: '#/definitions/user.User'
+        description: The user who created this bot. Only set for bot users.
       bot_owner_id:
         description: |-
           BotOwnerID is the ID of the owning (human) user if this user is a bot.
@@ -1511,7 +1705,18 @@ definitions:
     properties:
       imprint_url:
         type: string
+      links:
+        items:
+          $ref: '#/definitions/shared.LegalLink'
+        type: array
       privacy_policy_url:
+        type: string
+    type: object
+  shared.LegalLink:
+    properties:
+      text:
+        type: string
+      url:
         type: string
     type: object
   shared.LocalAuthInfo:
@@ -1566,6 +1771,8 @@ definitions:
         $ref: '#/definitions/shared.LegalInfo'
       link_sharing_enabled:
         type: boolean
+      marshal_url:
+        type: string
       max_file_size:
         type: string
       max_items_per_page:
@@ -1591,10 +1798,14 @@ definitions:
     properties:
       code:
         type: string
+      state:
+        type: string
     type: object
   trello.Migration:
     properties:
       code:
+        type: string
+      state:
         type: string
     type: object
   user.EmailConfirm:
@@ -1669,11 +1880,6 @@ definitions:
         description: The totp url used to be able to enroll the user later
         type: string
     type: object
-  user.TOTPPasscode:
-    properties:
-      passcode:
-        type: string
-    type: object
   user.Token:
     properties:
       created:
@@ -1685,6 +1891,10 @@ definitions:
     type: object
   user.User:
     properties:
+      bot_owner:
+        allOf:
+        - $ref: '#/definitions/user.User'
+        description: The user who created this bot. Only set for bot users.
       bot_owner_id:
         description: |-
           BotOwnerID is the ID of the owning (human) user if this user is a bot.
@@ -1781,10 +1991,23 @@ definitions:
         minLength: 3
         type: string
     type: object
+  v1.UserTOTPEnableRequest:
+    properties:
+      passcode:
+        description: A passcode generated from the enrolled secret.
+        type: string
+      password:
+        description: The current user's password.
+        type: string
+    type: object
   v1.UserWithSettings:
     properties:
       auth_provider:
         type: string
+      bot_owner:
+        allOf:
+        - $ref: '#/definitions/user.User'
+        description: The user who created this bot. Only set for bot users.
       bot_owner_id:
         description: |-
           BotOwnerID is the ID of the owning (human) user if this user is a bot.
@@ -1828,6 +2051,7 @@ definitions:
     properties:
       code:
         type: integer
+      details: {}
       i18n_params:
         additionalProperties:
           type: string
@@ -1999,8 +2223,8 @@ paths:
         name: username
         required: true
         type: string
-      - description: The size of the avatar you want to get. If bigger than the max
-          configured size this will be adjusted to the maximum size.
+      - description: The size of the avatar you want to get. Rounded up to 16, 32,
+          48, 64, 128, 256, 512 or 1024 and capped at the max configured size.
         in: query
         name: size
         type: integer
@@ -3468,7 +3692,8 @@ paths:
       - project
   /projects/{id}:
     delete:
-      description: Delets a project
+      description: Moves a project and all its sub-projects to the trash. They are
+        deleted permanently after 30 days.
       parameters:
       - description: Project ID
         in: path
@@ -3715,6 +3940,10 @@ paths:
             $ref: '#/definitions/models.Message'
         "500":
           description: Internal error
+          schema:
+            $ref: '#/definitions/models.Message'
+        "503":
+          description: The server is busy decoding other images.
           schema:
             $ref: '#/definitions/models.Message'
       security:
@@ -4354,8 +4583,8 @@ paths:
     put:
       consumes:
       - application/json
-      description: Share a project via link. The user needs to have write-access to
-        the project to be able do this.
+      description: Share a project via link. The user needs to be admin of the project
+        to be able do this.
       parameters:
       - description: Project ID
         in: path
@@ -4400,8 +4629,8 @@ paths:
     delete:
       consumes:
       - application/json
-      description: Remove a link share. The user needs to have write-access to the
-        project to be able do this.
+      description: Remove a link share. The user needs to be admin of the project
+        to be able do this.
       parameters:
       - description: Project ID
         in: path
@@ -5567,9 +5796,9 @@ paths:
         name: attachmentID
         required: true
         type: integer
-      - description: The size of the preview image. Can be sm = 100px, md = 200px,
-          lg = 400px or xl = 800px. If provided, a preview image will be returned
-          if the attachment is an image.
+      - description: 'The size of the preview image. Can be sm = 100px, md = 200px,
+          lg = 400px or xl = 800px. If provided, a preview image is returned instead
+          of the attachment: a JPEG, or a PNG when the image has transparency.'
         in: query
         name: preview_size
         type: string
@@ -5577,7 +5806,7 @@ paths:
       - application/octet-stream
       responses:
         "200":
-          description: The attachment file.
+          description: The attachment file, or its preview when preview_size is provided.
           schema:
             type: file
         "403":
@@ -5588,8 +5817,17 @@ paths:
           description: The task does not exist.
           schema:
             $ref: '#/definitions/models.Message'
+        "422":
+          description: preview_size is invalid (code 4050), or the attachment has
+            no preview (code 4049).
+          schema:
+            $ref: '#/definitions/models.Message'
         "500":
           description: Internal error
+          schema:
+            $ref: '#/definitions/models.Message'
+        "503":
+          description: Too many previews are being generated, try again later.
           schema:
             $ref: '#/definitions/models.Message'
       security:
@@ -7196,6 +7434,10 @@ paths:
           description: Internal error
           schema:
             $ref: '#/definitions/models.Message'
+        "503":
+          description: The server is busy decoding other images.
+          schema:
+            $ref: '#/definitions/models.Message'
       security:
       - JWTKeyAuth: []
       summary: Upload a user avatar
@@ -7389,9 +7631,10 @@ paths:
     post:
       consumes:
       - application/json
-      description: Disables any totp settings for the current user.
+      description: Disables any totp settings for the current user. Requires the current
+        password and a current totp passcode.
       parameters:
-      - description: The current user's password (only password is enough).
+      - description: The current user's password and a current totp passcode (totp_passcode).
         in: body
         name: totp
         required: true
@@ -7408,8 +7651,20 @@ paths:
           description: Something's invalid.
           schema:
             $ref: '#/definitions/web.HTTPError'
+        "403":
+          description: Wrong password.
+          schema:
+            $ref: '#/definitions/web.HTTPError'
         "404":
           description: User does not exist.
+          schema:
+            $ref: '#/definitions/web.HTTPError'
+        "412":
+          description: Invalid totp passcode.
+          schema:
+            $ref: '#/definitions/web.HTTPError'
+        "429":
+          description: Too many failed attempts.
           schema:
             $ref: '#/definitions/web.HTTPError'
         "500":
@@ -7426,14 +7681,14 @@ paths:
       consumes:
       - application/json
       description: Enables a previously enrolled totp setting by providing a totp
-        passcode.
+        passcode and the current password.
       parameters:
-      - description: The totp passcode.
+      - description: The totp passcode and the current password.
         in: body
         name: totp
         required: true
         schema:
-          $ref: '#/definitions/user.TOTPPasscode'
+          $ref: '#/definitions/v1.UserTOTPEnableRequest'
       produces:
       - application/json
       responses:
@@ -7445,12 +7700,20 @@ paths:
           description: Something's invalid.
           schema:
             $ref: '#/definitions/web.HTTPError'
+        "403":
+          description: Wrong password.
+          schema:
+            $ref: '#/definitions/web.HTTPError'
         "404":
           description: User does not exist.
           schema:
             $ref: '#/definitions/web.HTTPError'
         "412":
           description: TOTP is not enrolled.
+          schema:
+            $ref: '#/definitions/web.HTTPError'
+        "429":
+          description: Too many failed attempts.
           schema:
             $ref: '#/definitions/web.HTTPError'
         "500":
@@ -7468,7 +7731,14 @@ paths:
       - application/json
       description: Creates an initial setup for the user in the db. After this step,
         the user needs to verify they have a working totp setup with the "enable totp"
-        endpoint.
+        endpoint. Requires the current password.
+      parameters:
+      - description: The current user's password.
+        in: body
+        name: password
+        required: true
+        schema:
+          $ref: '#/definitions/v1.UserPasswordConfirmation'
       produces:
       - application/json
       responses:
@@ -7480,8 +7750,16 @@ paths:
           description: Something's invalid.
           schema:
             $ref: '#/definitions/web.HTTPError'
+        "403":
+          description: Wrong password.
+          schema:
+            $ref: '#/definitions/web.HTTPError'
         "404":
           description: User does not exist.
+          schema:
+            $ref: '#/definitions/web.HTTPError'
+        "429":
+          description: Too many failed attempts.
           schema:
             $ref: '#/definitions/web.HTTPError'
         "500":
@@ -7707,9 +7985,10 @@ paths:
           schema:
             $ref: '#/definitions/auth.Token'
         "401":
-          description: Invalid or expired refresh token.
+          description: Invalid, expired or already-used refresh token, or no refresh
+            token cookie sent (codes 16002-16005).
           schema:
-            $ref: '#/definitions/models.Message'
+            $ref: '#/definitions/web.HTTPError'
       summary: Refresh user token
       tags:
       - auth

@@ -19,6 +19,7 @@ package migration
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"code.vikunja.io/api/pkg/web"
@@ -136,6 +137,24 @@ func (err *ErrImportItemLimitExceeded) HTTPError() web.HTTPError {
 	}
 }
 
+type ErrImportTooManyViews struct {
+	MaxViews int64
+}
+
+func (err *ErrImportTooManyViews) Error() string {
+	return fmt.Sprintf("A project in the import has more than %d views", err.MaxViews)
+}
+
+const ErrCodeImportTooManyViews = 14020
+
+func (err *ErrImportTooManyViews) HTTPError() web.HTTPError {
+	return web.HTTPError{
+		HTTPCode: http.StatusBadRequest,
+		Code:     ErrCodeImportTooManyViews,
+		Message:  fmt.Sprintf("A project in the import has more than %d views.", err.MaxViews),
+	}
+}
+
 type ErrInvalidOAuthState struct{}
 
 func (err *ErrInvalidOAuthState) Error() string {
@@ -228,6 +247,48 @@ func (err *ErrCSVConfigRequired) HTTPError() web.HTTPError {
 		HTTPCode: http.StatusBadRequest,
 		Code:     ErrCodeCSVConfigRequired,
 		Message:  "CSV import requires a configuration with column mappings. Use the /migration/csv/detect endpoint to get suggested mappings, then call /migration/csv/migrate with a config form field.",
+	}
+}
+
+type ErrCSVDuplicateColumnMapping struct {
+	Column int
+}
+
+func (err *ErrCSVDuplicateColumnMapping) Error() string {
+	return fmt.Sprintf("CSV column %d is mapped more than once", err.Column)
+}
+
+const ErrCodeCSVDuplicateColumnMapping = 14041
+
+func (err *ErrCSVDuplicateColumnMapping) HTTPError() web.HTTPError {
+	return web.HTTPError{
+		HTTPCode:   http.StatusBadRequest,
+		Code:       ErrCodeCSVDuplicateColumnMapping,
+		Message:    fmt.Sprintf("Column %d is mapped more than once. Map each column to one attribute only.", err.Column),
+		I18nParams: map[string]string{"column": strconv.Itoa(err.Column)},
+	}
+}
+
+type ErrCSVTooManyLabels struct {
+	Row       int
+	MaxLabels int
+}
+
+func (err *ErrCSVTooManyLabels) Error() string {
+	return fmt.Sprintf("CSV row %d has more than %d labels", err.Row, err.MaxLabels)
+}
+
+const ErrCodeCSVTooManyLabels = 14042
+
+func (err *ErrCSVTooManyLabels) HTTPError() web.HTTPError {
+	return web.HTTPError{
+		HTTPCode: http.StatusBadRequest,
+		Code:     ErrCodeCSVTooManyLabels,
+		Message:  fmt.Sprintf("Row %d of the CSV file has more than %d labels.", err.Row, err.MaxLabels),
+		I18nParams: map[string]string{
+			"row": strconv.Itoa(err.Row),
+			"max": strconv.Itoa(err.MaxLabels),
+		},
 	}
 }
 

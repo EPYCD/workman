@@ -1,8 +1,10 @@
 <template>
 	<div class="datepicker">
 		<SimpleButton
+			:id="triggerId"
 			ref="triggerButton"
 			class="show"
+			:aria-labelledby="ariaLabelledby ? `${ariaLabelledby} ${triggerId}` : undefined"
 			:disabled="disabled || undefined"
 			@click.stop="toggleDatePopup"
 		>
@@ -42,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref, onMounted, onBeforeUnmount, toRef, watch, nextTick} from 'vue'
+import {ref, onMounted, onBeforeUnmount, toRef, watch, nextTick, useId} from 'vue'
 
 import CustomTransition from '@/components/misc/CustomTransition.vue'
 import DatepickerInline from '@/components/input/DatepickerInline.vue'
@@ -60,6 +62,7 @@ const props = withDefaults(defineProps<{
 	showShortcuts?: boolean,
 	// When the value is null, show this (italic) instead of chooseDateLabel.
 	emptyLabel?: string,
+	ariaLabelledby?: string,
 }>(), {
 	chooseDateLabel: () => {
 		const {t} = useI18n({useScope: 'global'})
@@ -68,6 +71,7 @@ const props = withDefaults(defineProps<{
 	disabled: false,
 	showShortcuts: true,
 	emptyLabel: '',
+	ariaLabelledby: undefined,
 })
 
 const emit = defineEmits<{
@@ -112,6 +116,7 @@ function toggleDatePopup() {
 }
 
 const datepickerPopup = ref<HTMLElement | null>(null)
+const triggerId = useId()
 const triggerButton = ref<InstanceType<typeof SimpleButton> | null>(null)
 
 // nextTick: the popup only exists once the v-if transition renders it.

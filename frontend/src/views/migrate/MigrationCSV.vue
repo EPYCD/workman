@@ -335,6 +335,7 @@ async function handleFileUpload() {
 async function updatePreview() {
 	if (!selectedFile.value) return
 
+	error.value = ''
 	isLoading.value = true
 	try {
 		previewResult.value = await csvService.preview(selectedFile.value, config.value)

@@ -6,16 +6,19 @@ import {useBaseStore} from '@/stores/base'
 import {useProjectStore} from '@/stores/projects'
 import {useAuthStore} from '@/stores/auth'
 
-import {saveProjectView} from '@/helpers/projectView'
+import {getDefaultProjectView, saveProjectView} from '@/helpers/projectView'
 import ProjectService from '@/services/project'
 
 import ProjectList from '@/components/project/views/ProjectList.vue'
 import ProjectGantt from '@/components/project/views/ProjectGantt.vue'
 import ProjectTable from '@/components/project/views/ProjectTable.vue'
 import ProjectKanban from '@/components/project/views/ProjectKanban.vue'
+import ProjectInTrashNotice from '@/components/project/ProjectInTrashNotice.vue'
 
-import {DEFAULT_PROJECT_VIEW_SETTINGS} from '@/modelTypes/IProjectView'
+import {projectInTrashFromError, type ProjectInTrash} from '@/client/queries/trashErrors'
+import {useFocusAfterRemoval} from '@/composables/useFocusAfterRemoval'
 import {saveProjectToHistory} from '@/modules/projectHistory'
+import type {IProject} from '@/modelTypes/IProject'
 
 const props = defineProps<{
 	projectId: number,
@@ -37,28 +40,43 @@ const currentView = computed(() => {
 const projectService = shallowReactive(new ProjectService())
 const isLoadingProject = computed(() => projectService.loading)
 const loadedProjectId = ref(0)
+const projectInTrash = ref<ProjectInTrash | null>(null)
+useFocusAfterRemoval(() => projectInTrash.value !== null, () => document.getElementById('main-content'))
+
+async function loadProject(projectIdToLoad: number) {
+	console.debug('Loading project, $route.params =', route.params, `, loadedProjectId = ${loadedProjectId.value}, currentProject = `, currentProject.value)
+
+	try {
+		const loadedProject = await projectService.get({id: projectIdToLoad})
+		projectInTrash.value = null
+
+		// Here, we only set the new project in the projectStore.
+		// Setting that projet as the current one in the baseStore is handled by the watcher below.
+		projectStore.setProject(loadedProject)
+	} catch (e) {
+		const inTrash = projectInTrashFromError(e)
+		if (!inTrash) {
+			throw e
+		}
+		projectInTrash.value = inTrash
+		// Trashed elsewhere: drop it from the sidebar too.
+		const stale = projectStore.projects[projectIdToLoad]
+		if (stale) {
+			projectStore.removeProjectById(stale as IProject)
+		}
+	} finally {
+		loadedProjectId.value = projectIdToLoad
+	}
+}
 
 watch(
 	() => props.projectId,
-	// loadProject
 	async (projectIdToLoad, oldProjectIdToLoad) => {
-
-		console.debug('Loading project, $route.params =', route.params, `, loadedProjectId = ${loadedProjectId.value}, currentProject = `, currentProject.value)
-
-
 		if (projectIdToLoad !== oldProjectIdToLoad) {
 			loadedProjectId.value = 0
+			projectInTrash.value = null
 		}
-
-		try {
-			const loadedProject = await projectService.get({id: projectIdToLoad})
-
-			// Here, we only set the new project in the projectStore.
-			// Setting that projet as the current one in the baseStore is handled by the watcher below.
-			projectStore.setProject(loadedProject)
-		} finally {
-			loadedProjectId.value = projectIdToLoad
-		}
+		await loadProject(projectIdToLoad)
 	},
 	{immediate: true},
 )
@@ -83,20 +101,11 @@ watch(
 
 function redirectToDefaultViewIfNecessary() {
 	if (props.viewId === 0 || !currentView.value) {
-		// Ideally, we would do that in the router redirect, but the projects (and therefore, the views) 
-		// are not always loaded then.
-
-		const defaultView  = authStore.settings.frontendSettings.defaultView
-
-		let view
-		if (defaultView !== DEFAULT_PROJECT_VIEW_SETTINGS.FIRST) {
-			view = currentProject.value?.views.find(v => v.viewKind === defaultView)
-		}
-
-		// Use the first view as fallback if the default view is not available
-		if (view === undefined && currentProject.value?.views?.length > 0) {
-			view = currentProject.value?.views[0]
-		}
+		// Project views may arrive after the router resolves.
+		const view = getDefaultProjectView(
+			currentProject.value?.views ?? [],
+			authStore.settings.frontendSettings.defaultView,
+		)
 
 		if (view) {
 			router.replace({
@@ -133,28 +142,39 @@ watchEffect(() => baseStore.setCurrentProjectViewId(props.viewId))
 </script>
 
 <template>
-	<ProjectList
-		v-if="currentView?.viewKind === 'list'"
-		:project-id="projectId"
-		:is-loading-project="isLoadingProject"
-		:view-id
-	/>
-	<ProjectGantt
-		v-if="currentView?.viewKind === 'gantt'"
-		:route
-		:is-loading-project="isLoadingProject"
-		:view-id
-	/>
-	<ProjectTable
-		v-if="currentView?.viewKind === 'table'"
-		:project-id="projectId"
-		:is-loading-project="isLoadingProject"
-		:view-id
-	/>
-	<ProjectKanban
-		v-if="currentView?.viewKind === 'kanban'"
-		:project-id="projectId"
-		:is-loading-project="isLoadingProject"
-		:view-id
-	/>
+	<div
+		v-if="projectInTrash"
+		class="content is-max-width-desktop"
+	>
+		<ProjectInTrashNotice
+			:in-trash="projectInTrash"
+			@restored="loadProject(projectId)"
+		/>
+	</div>
+	<template v-else>
+		<ProjectList
+			v-if="currentView?.viewKind === 'list'"
+			:project-id="projectId"
+			:is-loading-project="isLoadingProject"
+			:view-id
+		/>
+		<ProjectGantt
+			v-if="currentView?.viewKind === 'gantt'"
+			:route
+			:is-loading-project="isLoadingProject"
+			:view-id
+		/>
+		<ProjectTable
+			v-if="currentView?.viewKind === 'table'"
+			:project-id="projectId"
+			:is-loading-project="isLoadingProject"
+			:view-id
+		/>
+		<ProjectKanban
+			v-if="currentView?.viewKind === 'kanban'"
+			:project-id="projectId"
+			:is-loading-project="isLoadingProject"
+			:view-id
+		/>
+	</template>
 </template>

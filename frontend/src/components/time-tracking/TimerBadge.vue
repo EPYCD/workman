@@ -10,6 +10,12 @@
 			:title="$t('timeTracking.title')"
 		>
 			{{ elapsed }}
+			<span
+				v-if="timeTrackingStore.activeTimer && isPrivateEntry(timeTrackingStore.activeTimer)"
+				class="timer-badge__label"
+			>
+				{{ $t('timeTracking.noProject') }}
+			</span>
 		</RouterLink>
 		<BaseButton
 			v-tooltip="$t('timeTracking.stop')"
@@ -24,30 +30,19 @@
 </template>
 
 <script setup lang="ts">
-import {ref, computed, onMounted, onUnmounted} from 'vue'
+import {ref, onMounted, onUnmounted} from 'vue'
 
 import BaseButton from '@/components/base/BaseButton.vue'
 import {useTimeTrackingStore} from '@/stores/timeTracking'
 import {useConfigStore} from '@/stores/config'
 import {PRO_FEATURE} from '@/constants/proFeatures'
+import {useElapsed} from '@/composables/useElapsed'
+import {isPrivateEntry} from '@/services/timeEntry'
 
 const timeTrackingStore = useTimeTrackingStore()
 const configStore = useConfigStore()
 
-const now = ref(new Date())
-let interval: ReturnType<typeof setInterval> | undefined
-
-const elapsed = computed(() => {
-	const timer = timeTrackingStore.activeTimer
-	if (timer === null) {
-		return ''
-	}
-	const seconds = Math.max(0, Math.floor((now.value.getTime() - timer.startTime.getTime()) / 1000))
-	const pad = (n: number) => n.toString().padStart(2, '0')
-	const hours = Math.floor(seconds / 3600)
-	const mmss = `${pad(Math.floor((seconds % 3600) / 60))}:${pad(seconds % 60)}`
-	return hours >= 1 ? `${hours}:${mmss}` : mmss
-})
+const elapsed = useElapsed(() => timeTrackingStore.activeTimer?.startTime)
 
 const isStopping = ref(false)
 async function stop() {
@@ -70,16 +65,10 @@ onMounted(() => {
 	if (configStore.isProFeatureEnabled(PRO_FEATURE.TIME_TRACKING)) {
 		timeTrackingStore.hydrateActiveTimer()
 	}
-	interval = setInterval(() => {
-		now.value = new Date()
-	}, 1000)
 })
 
 onUnmounted(() => {
 	timeTrackingStore.unsubscribeFromTimerEvents()
-	if (interval !== undefined) {
-		clearInterval(interval)
-	}
 })
 </script>
 
@@ -98,6 +87,12 @@ onUnmounted(() => {
 	font-size: var(--wm-text-xs);
 	font-variant-numeric: tabular-nums;
 	font-weight: 500;
+}
+
+.timer-badge__label {
+	margin-inline-start: .25rem;
+	color: var(--grey-600);
+	font-weight: normal;
 }
 
 .timer-badge__stop {

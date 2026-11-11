@@ -11,17 +11,44 @@ export function getRedirectUrlFromCurrentFrontendPath(provider: IProvider): stri
 	return `${url.protocol}//${url.host}${base}auth/openid/${provider.key}`
 }
 
-export const redirectToProvider = (provider: IProvider) => {
+const LINKING_KEY = 'openidLinking'
 
+function isNonEmptyString(state: unknown): state is string {
+	return typeof state === 'string' && state !== ''
+}
+
+export function isLinkingIdentity(state: unknown): boolean {
+	return isNonEmptyString(state) && localStorage.getItem(LINKING_KEY) === state
+}
+
+// Consumes only this flow's entries: Back/reload then fails the state check, other tabs' flows survive.
+export function endOpenIdFlow(state: unknown) {
+	if (!isNonEmptyString(state)) {
+		return
+	}
+	for (const key of [LINKING_KEY, 'state']) {
+		if (localStorage.getItem(key) === state) {
+			localStorage.removeItem(key)
+		}
+	}
+}
+
+// Linking reuses the login redirect URI so admins don't have to register a second one at the provider.
+export const redirectToProvider = (provider: IProvider, {linking = false}: {linking?: boolean} = {}) => {
 	const redirectUrl = getRedirectUrlFromCurrentFrontendPath(provider)
 	const state = createRandomID(24)
 	localStorage.setItem('state', state)
+	if (linking) {
+		localStorage.setItem(LINKING_KEY, state)
+	} else {
+		localStorage.removeItem(LINKING_KEY)
+	}
 
 	let scope = 'openid email profile'
 	if (provider.scope !== null){
 		scope = provider.scope
 	}
-	window.location.href = `${provider.authUrl}?client_id=${provider.clientId}&redirect_uri=${redirectUrl}&response_type=code&scope=${scope}&state=${state}`
+	window.location.href = `${provider.authUrl}?client_id=${provider.clientId}&redirect_uri=${redirectUrl}&response_type=code&scope=${scope}&state=${state}${linking ? '&prompt=select_account' : ''}`
 }
 
 export const redirectToProviderOnLogout = (provider: IProvider): boolean => {

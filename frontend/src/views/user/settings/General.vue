@@ -140,7 +140,7 @@
 			>
 				<FormSelect
 					v-model.number="settings.weekStart"
-					v-cy="'weekStartSelect'"
+					data-cy="weekStartSelect"
 					:options="weekStartOptions"
 				/>
 			</FormField>
