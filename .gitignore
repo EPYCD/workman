@@ -72,4 +72,9 @@ deploy/*/.env
 deploy/.env.bak*
 deploy/*.token
 deploy/.*-token
+# A pre-deploy database dump is every account row on the board. The README now
+# writes them outside the checkout, but an old habit or an old copy of the
+# instructions still drops one here, and 2026-09-22's sat untracked for days.
+deploy/*.sql
+deploy/*.sql.gz
 .marshal/

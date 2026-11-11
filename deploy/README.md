@@ -150,7 +150,8 @@ cd <this checkout>
 git pull origin main
 
 cd deploy
-docker compose exec db pg_dump -U workman workman > backup-$(date +%F).sql
+docker compose exec -T db pg_dump -U workman workman \
+  | gzip > ~/srv/backups/manual/workman-predeploy-$(date -u +%Y%m%dT%H%M%SZ).sql.gz
 docker compose up -d --build
 docker compose logs -f workman        # migrations apply during startup
 ```
@@ -163,6 +164,12 @@ new code is running.
 **Take the dump first.** Migrations apply themselves when the API starts
 (`pkg/initialize`) and they do not roll back, so the backup has to predate
 the new container.
+
+The dump goes to `~/srv/backups/manual/`, beside the nightly runs, not into
+this checkout: it carries every account row, and a file here is one
+`git add -A` away from being published. `-T` stops `exec` allocating a
+TTY, which has no business in a byte stream headed for `gzip`. Check the dump
+restores into a throwaway Postgres before trusting it.
 
 `WORKMAN_IMAGE` and `MARSHAL_IMAGE` exist for the day these are published to
 a registry. Nothing publishes them today — the upstream release pipeline is
