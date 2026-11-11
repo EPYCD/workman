@@ -43,13 +43,15 @@
 						v-model="newTaskRelation.task"
 						v-focus
 						:placeholder="$t('task.relation.searchPlaceholder')"
-						:loading="taskService.loading"
+						:loading="isSearching"
 						:search-results="mappedFoundTasks"
+						:show-empty="true"
 						label="title"
 						:creatable="true"
 						:create-placeholder="$t('task.relation.createPlaceholder')"
 						@search="findTasks"
 						@create="createAndRelateTask"
+						@focusin="suggestionsRequested = true"
 					>
 						<template #searchResult="{option: task}">
 							<span 
@@ -194,6 +196,7 @@ import {useI18n} from 'vue-i18n'
 import {useRoute} from 'vue-router'
 
 import TaskService from '@/services/task'
+import TaskCollectionService from '@/services/taskCollection'
 import TaskModel from '@/models/task'
 import type {ITask} from '@/modelTypes/ITask'
 import type {ITaskRelation} from '@/modelTypes/ITaskRelation'
@@ -256,6 +259,34 @@ const showCreate = computed(() => Object.keys(relatedTasks.value).length === 0 |
 const query = ref('')
 const foundTasks = ref<ITask[]>([])
 
+// Before anything is typed, offer the project's most recently updated tasks.
+const SUGGESTION_COUNT = 10
+const suggestionsRequested = ref(false)
+const suggestedTasks = ref<ITask[]>([])
+const taskCollectionService = shallowReactive(new TaskCollectionService())
+const isSearching = computed(() => query.value === ''
+	? taskCollectionService.loading
+	: taskService.loading)
+
+watch(suggestionsRequested, async requested => {
+	if (!requested) {
+		return
+	}
+	try {
+		const result = await taskCollectionService.getAll({projectId: props.projectId}, {
+			sort_by: ['updated'],
+			order_by: ['desc'],
+			// One extra so dropping the current task still leaves a full list.
+			per_page: SUGGESTION_COUNT + 1,
+		}) as ITask[]
+		suggestedTasks.value = result
+			.filter(t => t.id !== props.taskId)
+			.slice(0, SUGGESTION_COUNT)
+	} catch (e) {
+		error(e)
+	}
+})
+
 async function findTasks(newQuery: string) {
 	query.value = newQuery
 	const result = await taskService.getAll({}, {
@@ -302,7 +333,9 @@ const mappedRelatedTasks = computed(() => Object.entries(relatedTasks.value).map
 		kind: kind as IRelationKind,
 	}),
 ))
-const mappedFoundTasks = computed(() => mapRelatedTasks(foundTasks.value.filter(t => t.id !== props.taskId)))
+const mappedFoundTasks = computed(() => query.value === ''
+	? mapRelatedTasks(suggestedTasks.value)
+	: mapRelatedTasks(foundTasks.value.filter(t => t.id !== props.taskId)))
 
 const taskRelationService = shallowReactive(new TaskRelationService())
 const saved = ref(false)
