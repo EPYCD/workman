@@ -40,15 +40,15 @@
 				class="task-columns"
 				:class="{'mbs-2': !isModal}"
 			>
+				<BaseButton
+					v-if="!isModal"
+					class="back-button"
+					@click="goBack()"
+				>
+					<Icon icon="arrow-left" />
+					{{ $t('task.detail.back') }}
+				</BaseButton>
 				<header class="task-header">
-					<BaseButton
-						v-if="!isModal"
-						class="back-button"
-						@click="goBack()"
-					>
-						<Icon icon="arrow-left" />
-						{{ $t('task.detail.back') }}
-					</BaseButton>
 					<Heading
 						ref="heading"
 						:task="task"
@@ -1427,15 +1427,20 @@ h2 .button {
 
 .task-columns {
 	display: grid;
-	grid-template-areas: "header" "sidebar" "content";
+	grid-template-areas: "back" "header" "sidebar" "content";
 
 	@media screen and (min-width: $tablet) {
 		// Same widths as Bulma's is-two-thirds / is-one-third columns.
 		grid-template-columns: calc(200% / 3 - .5rem) minmax(0, 1fr);
-		grid-template-rows: auto 1fr;
-		grid-template-areas: "header sidebar" "content sidebar";
-		gap: .75rem 1.5rem;
+		grid-template-rows: auto auto 1fr;
+		grid-template-areas: "back ." "header sidebar" "content sidebar";
+		column-gap: 1.5rem;
 	}
+}
+
+.back-button {
+	grid-area: back;
+	justify-self: start;
 }
 
 .task-header {
@@ -1447,9 +1452,7 @@ h2 .button {
 	grid-area: content;
 	min-inline-size: 0;
 
-	@media screen and (max-width: $tablet), print {
-		padding-block-start: .75rem;
-	}
+	padding-block-start: .75rem;
 }
 
 .task-sidebar {
@@ -1489,6 +1492,12 @@ h2 .button {
 	align-items: stretch;
 	gap: var(--wm-space-2);
 	margin-block-end: var(--wm-space-3);
+
+	// centers the buttons on the title's first line
+	@media screen and (min-width: $tablet) {
+		min-block-size: $task-title-height;
+		align-content: center;
+	}
 
 	.button--mark-done {
 		flex: 1 1 10rem;
