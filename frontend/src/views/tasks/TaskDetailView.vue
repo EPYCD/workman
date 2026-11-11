@@ -36,61 +36,66 @@
 			v-else-if="visible"
 			class="task-view"
 		>
-			<BaseButton
-				v-if="!isModal"
-				class="back-button mbs-2"
-				@click="goBack()"
+			<div
+				class="task-columns"
+				:class="{'mbs-2': !isModal}"
 			>
-				<Icon icon="arrow-left" />
-				{{ $t('task.detail.back') }}
-			</BaseButton>
-			<Heading
-				ref="heading"
-				:task="task"
-				:can-write="canWrite"
-				:has-close="isModal"
-				@update:task="Object.assign(task, $event)"
-				@close="$emit('close')"
-			/>
-			<nav
-				v-if="project?.id"
-				aria-label="Breadcrumb"
-				class="subtitle"
-			>
-				<template
-					v-for="p in projectStore.getAncestors(project)"
-					:key="p.id"
-				>
-					<a
-						v-if="router.options.history.state?.back?.includes('/projects/'+p.id+'/') || false"
-						v-shortcut="p.id === project?.id ? SHORTCUTS.taskDetail.openProject : ''"
-						@click="router.back()"
+				<header class="task-header">
+					<BaseButton
+						v-if="!isModal"
+						class="back-button"
+						@click="goBack()"
 					>
-						{{ getProjectTitle(p) }}
-					</a>
-					<RouterLink
-						v-else
-						v-shortcut="p.id === project?.id ? SHORTCUTS.taskDetail.openProject : ''"
-						:to="{ name: 'project.index', params: { projectId: p.id } }"
+						<Icon icon="arrow-left" />
+						{{ $t('task.detail.back') }}
+					</BaseButton>
+					<Heading
+						ref="heading"
+						:task="task"
+						:can-write="canWrite"
+						:has-close="isModal"
+						@update:task="Object.assign(task, $event)"
+						@close="$emit('close')"
+					/>
+					<nav
+						v-if="project?.id"
+						aria-label="Breadcrumb"
+						class="subtitle"
 					>
-						{{ getProjectTitle(p) }}
-					</RouterLink>
-					<span
-						v-if="p.id !== project?.id"
-						class="has-text-grey-light"
-					> &gt; </span>
-				</template>
-				<BucketSelect
-					:task="task"
-					:can-write="canWrite"
-					@update:task="Object.assign(task, $event)"
-				/>
-			</nav>
+						<template
+							v-for="p in projectStore.getAncestors(project)"
+							:key="p.id"
+						>
+							<a
+								v-if="router.options.history.state?.back?.includes('/projects/'+p.id+'/') || false"
+								v-shortcut="p.id === project?.id ? SHORTCUTS.taskDetail.openProject : ''"
+								@click="router.back()"
+							>
+								{{ getProjectTitle(p) }}
+							</a>
+							<RouterLink
+								v-else
+								v-shortcut="p.id === project?.id ? SHORTCUTS.taskDetail.openProject : ''"
+								:to="{ name: 'project.index', params: { projectId: p.id } }"
+							>
+								{{ getProjectTitle(p) }}
+							</RouterLink>
+							<span
+								v-if="p.id !== project?.id"
+								class="has-text-grey-light"
+							> &gt; </span>
+						</template>
+						<BucketSelect
+							:task="task"
+							:can-write="canWrite"
+							@update:task="Object.assign(task, $event)"
+						/>
+					</nav>
 
-			<ChecklistSummary :task="task" />
+					<ChecklistSummary :task="task" />
+				</header>
 
-			<div class="columns task-columns mbs-2">
-				<div class="column is-two-thirds detail-content">
+				<div class="detail-content">
 					<!-- Description -->
 					<div class="details content description">
 						<Description
@@ -234,7 +239,7 @@
 
 				<aside
 					ref="sidebar"
-					class="column is-one-third action-buttons task-sidebar"
+					class="action-buttons task-sidebar"
 					:style="{'--sidebar-height': `${sidebarHeight}px`}"
 				>
 					<div
@@ -1409,8 +1414,8 @@ h2 .button {
 	--sidebar-top: 1rem;
 }
 
-// keep the title clear of the modal's fixed close button
-.is-modal .heading {
+// keep the toolbar clear of the modal's fixed close button
+.is-modal .sidebar-toolbar {
 	@media screen and (min-width: $tablet) and (max-width: $desktop) {
 		padding-inline-end: 3.5rem;
 	}
@@ -1420,21 +1425,35 @@ h2 .button {
 	padding-inline-start: var(--wm-space-1);
 }
 
-.detail-content {
-	@media print {
-		inline-size: 100% !important;
+.task-columns {
+	display: grid;
+	grid-template-areas: "header" "sidebar" "content";
+
+	@media screen and (min-width: $tablet) {
+		// Same widths as Bulma's is-two-thirds / is-one-third columns.
+		grid-template-columns: calc(200% / 3 - .5rem) minmax(0, 1fr);
+		grid-template-rows: auto 1fr;
+		grid-template-areas: "header sidebar" "content sidebar";
+		gap: .75rem 1.5rem;
 	}
 }
 
-// Bulma stacks columns as blocks on narrow screens, so flex is needed for `order`.
-.task-columns {
+.task-header {
+	grid-area: header;
+	min-inline-size: 0;
+}
+
+.detail-content {
+	grid-area: content;
+	min-inline-size: 0;
+
 	@media screen and (max-width: $tablet), print {
-		display: flex;
-		flex-direction: column;
+		padding-block-start: .75rem;
 	}
 }
 
 .task-sidebar {
+	grid-area: sidebar;
 	container: task-sidebar / inline-size;
 
 	--sidebar-top: #{$navbar-height + 1.5rem};
@@ -1447,12 +1466,10 @@ h2 .button {
 	}
 
 	@media screen and (max-width: $tablet), print {
-		order: -1;
+		padding-block: .75rem;
 	}
 
 	@media print {
-		inline-size: 100% !important;
-
 		.property:not(.is-set),
 		.remove,
 		.chevron,
