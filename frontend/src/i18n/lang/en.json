@@ -408,7 +408,8 @@
       "poweredByUnsplash": "Powered by Unsplash",
       "loadMore": "Load more photos",
       "success": "The background has been set successfully!",
-      "removeSuccess": "The background has been removed successfully!"
+      "removeSuccess": "The background has been removed successfully!",
+      "retry": "Try again"
     },
     "delete": {
       "title": "Delete \"{project}\"",
