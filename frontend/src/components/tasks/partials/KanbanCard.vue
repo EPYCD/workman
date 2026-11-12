@@ -10,7 +10,6 @@
 		}"
 		:style="{'background-color': color ?? undefined}"
 		:data-task-id="task.id"
-		:data-project-id="task.projectId"
 		:data-is-overdue="isOverdue || undefined"
 		@click.exact="openTaskDetail()"
 		@click.ctrl="() => toggleTaskDone(task)"
