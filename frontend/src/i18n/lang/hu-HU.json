@@ -9,7 +9,7 @@
 		"welcomeDay": "Szia {username}!",
 		"welcomeEvening": "Jó estét {username}!",
 		"lastViewed": "Utoljára megtekintve",
-		"addToHomeScreen": "Alkalmazás hozzáadása a kezdőképernyőhöz, gyorsabb hozzáférés és jobb élmény érdekében.",
+		"addToHomeScreen": "A gyorsabb hozzáférés és kényelmesebb használat érdekében add hozzá a Vikunját alkalmazásként a kezdőképernyődhöz!",
 		"goToOverview": "Tovább az áttekintéshez",
 		"project": {
 			"importText": "Projektjeid és feladataid importálása más szolgáltatásokból Vikunjába:",
@@ -98,6 +98,25 @@
 				"enterPassword": "Kérlek, írd be jelszavad!",
 				"disable": "Kétlépcsős azonosítás kikapcsolása",
 				"disableSuccess": "A kétlépcsős azonosítást sikeresen kikapcsoltuk."
+			},
+			"linkedAccounts": {
+				"title": "Kapcsolt fiókok",
+				"description": "Kapcsold a fiókod egy szolgáltatóhoz, hogy azzal is bejelentkezhess.",
+				"provider": "Szolgáltató",
+				"linkedAt": "Kapcsolva:",
+				"none": "Még nem kapcsoltál külső fiókot.",
+				"link": "{provider} kapcsolása",
+				"unlink": "Szétkapcsolás",
+				"unlinkHeader": "{provider} szétkapcsolása",
+				"unlinkText": "Többé nem tudsz majd ezzel a külső fiókkal bejelentkezni. Megerősítéshez írd be a jelszavad!",
+				"linkSuccess": "Fiók kapcsolva.",
+				"unlinkSuccess": "Fiók szétkapcsolva.",
+				"confirmTitle": "{provider} kapcsolása a fiókodhoz",
+				"confirmAccount": "Kapcsolandó fiók:",
+				"confirmText": "Írd be jelszavad, hogy összekapcsold {provider} fiókodat Vikunja fiókoddal. Utána bármelyikkel be tudsz jelentkezni.",
+				"confirm": "Fiók kapcsolása",
+				"noSession": "Be kell jelentkezz, hogy összekapcsolhasd fiókod. Lépj be jelszóval, majd kezdd újra a kapcsolást a beállításoknál.",
+				"backToLinkedAccounts": "Vissza a kapcsolt fiókokhoz"
 			},
 			"caldav": {
 				"title": "CalDAV",
@@ -200,7 +219,7 @@
 			"addProjectRequired": "Adjon meg egy projektet, vagy állítson be egy alapértelmezett projektet a beállításokban."
 		},
 		"archive": {
-			"title": "\"{project}\" archiválása.",
+			"title": "„{project}” archiválása.",
 			"archive": "Projekt archiválása",
 			"unarchive": "Projekt visszaállítása archívumból",
 			"success": "A projekt sikeresen archiválva."
@@ -216,8 +235,17 @@
 			"removeSuccess": "A háttérkép sikeresen eltávolítva!"
 		},
 		"delete": {
-			"title": "\"{project}\" törlése",
-			"header": "Projekt törlése"
+			"title": "„{project}” törlése",
+			"header": "Projekt törlése",
+			"success": "A projekt a szemétbe került.",
+			"toTrash": "A projekt és benne {tasks} a szemétbe kerül, ahonnan {days} nap múlva végleg törlődnek.",
+			"toTrashFallback": "A projekt és benne minden a szemétbe kerül, ahonnan {days} nap múlva végleg törlődik.",
+			"toTrashWithSubProjects": "A projekt és benne {subProjects} valamint {tasks} a szemétbe kerül, ahonnan {days} nap múlva végleg törlődik.",
+			"subProjects": "{count} alprojekt | {count} alprojekt",
+			"tasks": "nulla feladat | {count} feladat | {count} feladat",
+			"timeEntries": "{entries} időbejegyzés {people} felhasználótól megmarad, de függetlenítve lesz a projekttől {days} nap múlva.",
+			"timeEntryCount": "{count} | {count}",
+			"people": "{count} | {count}"
 		},
 		"duplicate": {
 			"title": "Duplikálja a projektet",
@@ -227,7 +255,7 @@
 		},
 		"edit": {
 			"header": "Projekt szerkesztése",
-			"title": "\"{project}\" szerkesztése",
+			"title": "„{project}” szerkesztése",
 			"titlePlaceholder": "Írja be a projekt címét...",
 			"identifierTooltip": "A projektazonosító használható egy feladat egyedi azonosítására a projektek között. A letiltáshoz üresre állíthatja.",
 			"identifier": "Projektazonosító",
@@ -239,7 +267,7 @@
 		},
 		"share": {
 			"header": "Projekt megosztása",
-			"title": "\"{project}\" megosztása",
+			"title": "„{project}” megosztása",
 			"share": "Megosztás",
 			"links": {
 				"title": "Hivatkozások megosztása",
@@ -315,7 +343,8 @@
 			"deleteBucketSuccess": "A vödör sikeresen törölve.",
 			"bucketTitleSavedSuccess": "A vödör címe sikeresen elmentve.",
 			"bucketLimitSavedSuccess": "A vödör limit sikeresen elmentve.",
-			"collapse": "Összecsukás"
+			"collapse": "Összecsukás",
+			"bucketLimitReachedShort": "Elérted a méretkorlátot"
 		},
 		"pseudo": {
 			"favorites": {
@@ -328,6 +357,7 @@
 			"targetUrlInvalid": "Kérlek, adj meg egy érvényes URL-t!",
 			"events": "Események",
 			"mustSelectEvents": "Legalább egy eseményt ki kell választania.",
+			"selectAllEvents": "Összes kijelölése",
 			"delete": "Webhook törlése",
 			"deleteText": "Biztosan törli ezt a webhook-ot? A külső célpontok többé nem kapnak értesítést az eseményeiről.",
 			"deleteSuccess": "A webhook törlése sikeresen megtörtént.",
@@ -566,6 +596,33 @@
 				"fixTables": "Táblázatok javítása"
 			}
 		},
+		"emojiPicker": {
+			"title": "Emojiválasztó",
+			"search": "Emoji keresése",
+			"skinTone": "Bőrszín",
+			"categories": "Emoji kategóriák",
+			"results": "Keresési eredmények",
+			"loadError": "Emoji betöltése sikertelen.",
+			"tones": {
+				"light": "Fehér",
+				"mediumLight": "Világos",
+				"medium": "Barna",
+				"mediumDark": "Sötétbarna",
+				"dark": "Fekete"
+			},
+			"groups": {
+				"recent": "Nemrég használt",
+				"smileys": "Smiley-k és emotikonok",
+				"people": "Emberek & testrészek",
+				"nature": "Állatok & természet",
+				"food": "Étel & ital",
+				"travel": "Utazás & helyek",
+				"activities": "Tevékenységek",
+				"objects": "Tárgyak",
+				"symbols": "Jelképek",
+				"flags": "Lobogók"
+			}
+		},
 		"multiselect": {
 			"selectPlaceholder": "Kiválasztáshoz klikkelj, vagy nyomj entert"
 		},
@@ -668,16 +725,29 @@
 			"updated": "Frissítve: {0}",
 			"doneAt": "Befejezve: {0}",
 			"updateSuccess": "A feladat mentése sikeres volt.",
+			"deleteSuccess": "A feladat a szemétbe került.",
 			"belongsToProject": "Ez a feladat a(z) „{project}” projekthez tartozik",
 			"due": "Határidő {at}",
+			"overdue": "Elmaradásban",
 			"actions": {
+				"attachments": "Csatolmány",
 				"repeatAfter": "Állítsa be az ismétlési intervallumot",
 				"moveProject": "Áthelyezés",
-				"delete": "Törlés"
+				"delete": "Törlés",
+				"favorite": "Kedvencnek jelölés",
+				"unfavorite": "Levétel kedvencek közül",
+				"relatedTasks": "Kapcsolat"
+			},
+			"removeColor": "Szín eltávolítása",
+			"moreActions": "Továbbiak",
+			"properties": {
+				"dueDate": "Határidő",
+				"startDate": "Kezdődátum",
+				"endDate": "Végdátum"
 			}
 		},
 		"attributes": {
-			"assignees": "Hozzárendelt személyek",
+			"assignees": "Hozzárendelések",
 			"color": "Szín",
 			"created": "Létrehozva",
 			"createdBy": "Létrehozta",
@@ -686,7 +756,7 @@
 			"dueDate": "Határidő",
 			"endDate": "Befejezés dátuma",
 			"labels": "Címkék",
-			"percentDone": "Előrehaladás",
+			"percentDone": "Haladás",
 			"priority": "Prioritás",
 			"relatedTasks": "Kapcsolódó feladatok",
 			"reminders": "Emlékeztetők",
@@ -745,7 +815,8 @@
 			"placeholder": "Írja be a leírást, nyomja meg a '/' gombot a további lehetőségekért…"
 		},
 		"assignee": {
-			"placeholder": "Gépelje be a felhasználót a hozzárendeléséhez…",
+			"placeholder": "Írj be egy felhasználót…",
+			"placeholderMore": "További hozzárendelése...",
 			"selectPlaceholder": "Felhasználó hozzárendelése",
 			"assignSuccess": "Felhasználó hozzárendelve a feladathoz.",
 			"unassignSuccess": "Felhasználó levéve a feladatról."
@@ -767,7 +838,7 @@
 			"medium": "Közepes",
 			"high": "Magas",
 			"urgent": "Sürgős",
-			"doNow": "CSINÁLD AZONNAL"
+			"doNow": "AZONNALI"
 		},
 		"relation": {
 			"add": "Új feladatkapcsolat hozzáadása",
@@ -793,24 +864,34 @@
 			}
 		},
 		"reminder": {
-			"before": "{amount} {unit} előtte {type}",
+			"before": "{type} előtt {amount} {unit} ",
 			"after": "{amount} {unit} utána {type}",
-			"beforeShort": "előtte",
+			"beforeShort": "előtt",
 			"afterShort": "utána",
-			"onDueDate": "Az határidő napján",
+			"onDueDate": "A határidő napján",
 			"onStartDate": "A kezdési dátumon",
 			"onEndDate": "A befejező dátumon",
 			"custom": "Egyéni",
 			"dateAndTime": "Dátum és idő"
 		},
 		"repeat": {
-			"mode": "Ismétlés típusa",
+			"everyDay": "Naponta",
+			"everyWeek": "Hetente",
+			"every30d": "30 naponta",
+			"summary": {
+				"minutes": "Percenként | {count} percenként",
+				"hours": "Óránként | {count} óránként",
+				"days": "Naponta | {count} naponta",
+				"weeks": "Hetente | {count} hetente",
+				"fromCurrentDate": "Végdátumtól {interval}"
+			},
+			"mode": "Ismétlés módja",
 			"monthly": "Havi",
-			"each": "Minden egyes",
-			"specifyAmount": "Adja meg a mennyiséget…",
-			"hours": "Órák",
-			"days": "Napok",
-			"weeks": "Hetek",
+			"each": "Minden",
+			"specifyAmount": "Adj egy mennyiséget…",
+			"hours": "Órában",
+			"days": "Napon",
+			"weeks": "Héten",
 			"invalidAmount": "Kérlek, 0-nál többet adj meg!"
 		},
 		"quickAddMagic": {
@@ -1060,7 +1141,18 @@
 		"success": "Siker",
 		"0001": "Nincs jogosultsága ehhez.",
 		"14010": "A megadott fájlt nem lehet feldolgozni. Kérlek, győződj meg róla, hogy érvényes exportfájl!",
-		"14205": "A Planka URL privát vagy helyi webcímre mutat, amit a Vikunja alapból blokkol. Egy rendszergazda enegedélyezheti az 'outgoingrequests.allownonroutableips' igazra állításával."
+		"14205": "A Planka URL privát vagy helyi webcímre mutat, amit a Vikunja alapból blokkol. Egy rendszergazda enegedélyezheti az 'outgoingrequests.allownonroutableips' igazra állításával.",
+		"15002": "A szolgáltató ezen fiókja már egy másik Vikunja fiókhoz van kapcsolva!",
+		"15003": "Már kapcsoltál egy fiókot ettől a szolgáltatótól. Előbb azt kapcsold szét!",
+		"15004": "Lehet, hogy keresünk egy kapcsolt fiókot, ami nem létezik!",
+		"3018": "Ez a projekt a szemétben van. Állítsd vissza!",
+		"3019": "A szülőprojekt a szemétben van. Állítsd vissza!",
+		"3020": "Ez a projekthierarchia túl szerteágazó ahhoz, hogy bepakold a kiválasztott szülőprojekt alá!",
+		"4040": "Ez a feladat a szemétben van!",
+		"4041": "Ez a feladathierarchia túl szerteágazó ahhoz, hogy további al- vagy szülőfeladatot adj hozzá!",
+		"14020": "Egy import projektnek a megengedettnél több nézete van!",
+		"14041": "A(z) {column}. oszlop egynél többször van leképezve. Egy oszlopot csak egy attribútumhoz rendelj!",
+		"14042": "A CSV fájl {row}. sorában több, mint {max} címke van!"
 	},
 	"about": {
 		"title": "Névjegy",
@@ -1072,8 +1164,10 @@
 	"timeTracking": {
 		"title": "Időmérés",
 		"stop": "Időmérő leállítása",
+		"running": "Időmérés zajlik",
 		"logTime": "Idő rögzítése",
 		"editEntry": "Bejegyzés szerkesztése",
+		"commentLabel": "Komment",
 		"form": {
 			"task": "Feladat",
 			"taskSearch": "Feladat keresése…",
@@ -1082,7 +1176,8 @@
 			"startTimer": "Időmérő elindítása",
 			"update": "Bejegyzés frissítése",
 			"smartFill": "Kitöltés az utolsó bejegyzésből",
-			"endsSpanningEntriesAt": "Új időmérő indítása megállítja az átfedő bejegyzéseket itt: {time}"
+			"endsSpanningEntriesAt": "Új időmérő indítása megállítja az átfedő bejegyzéseket itt: {time}",
+			"privateHint": "Projekt vagy feladat híján csak ezt a bejegyzést látod."
 		},
 		"list": {
 			"emptyTask": "Ehhez a feladathoz még nem lett idő rögzítve.",
@@ -1095,16 +1190,67 @@
 		"browse": {
 			"selectRange": "Tartomány kiválasztása",
 			"userSearch": "Felhasználó keresése…"
-		}
+		},
+		"noProject": "Nincs projekt"
 	},
 	"time": {
 		"units": {
 			"seconds": "másodperc|másodpercek",
 			"minutes": "perc|percek",
-			"hours": "óra|órák",
-			"days": "nap|napok",
+			"hours": "óra|óra",
+			"days": "nap|nap",
 			"weeks": "hét|hetek",
 			"years": "év|évek"
 		}
+	},
+	"trash": {
+		"restoreSuccess": "Feladat visszaállítva.",
+		"deleteForeverSuccess": "Feladat végleg törölve.",
+		"emptySuccess": "Szemetes kiürítve.",
+		"title": "Szemetes",
+		"restore": "Visszaállítás",
+		"deleteForever": "Végleges törlés",
+		"empty": "Szemetes ürítése",
+		"noTasks": "Nincs feladat a szemétben.",
+		"deletedBy": "{since} törölte {user}",
+		"deleted": "{since} törölve",
+		"daysLeft": "Ma végleg törlődik | {count} nap múlva végleg törlődik | {count} nap múlva végleg törlődik",
+		"deleteForeverModal": {
+			"header": "Feladat végleges törlése",
+			"text": "„{task}” végleges törlése, annak minden kommentjével, csatolmányával, emlékeztetőjével, és kapcsolatával egyetemben. Az időbejegyzések a projektnél maradnak. Nem visszavonható!"
+		},
+		"emptyModal": {
+			"text": "Nincs törölhető feladat. | Véglegesen törölsz egy feladatot. Nem visszavonható! | Véglegesen törölsz {count} feladatot. Nem visszavonható!",
+			"byOthers": "Valaki más miatt ebből egy a szemétben landolt. | Valaki más miatt ebből {count} a szemétben landolt.",
+			"includeOthers": "Töröld a mások által kukázott feladatokat is"
+		},
+		"open": "Szemetes",
+		"taskInTrash": "Ez a feladat {since} került a szemétbe.",
+		"taskInTrashBy": "Ez a feladat a szemétben van. {since} kukázta {user}.",
+		"taskInTrashTitle": "Feladat a szemétben",
+		"inTrash": "Szemétben",
+		"daysLeftShort": "végleges törlés ma | {count} nap múlva | {count} nap múlva",
+		"deletedByYou": "{since} kukáztad",
+		"taskInTrashByYou": "Ez a feladat a szemétben van. {since} kukáztad.",
+		"tabs": {
+			"label": "Szemét kategóriák"
+		},
+		"restoreProjectSuccess": "Projekt visszaállítva.",
+		"restoreParentProject": "Szülőprojekt visszaállítása",
+		"deleteProjectForeverSuccess": "Projekt véglegesen törölve.",
+		"noProjects": "Nincs projekt a szemetesben.",
+		"subProjects": "+{count} alprojekt | +{count} alprojekt",
+		"deleteProjectForeverModal": {
+			"header": "Projekt végleges törlése",
+			"text": "„{project}” végleges törlése, annak minden alprojektjével, feladatával, nézetével, és megosztásával egyetemben. Az időbejegyzések a felhasználóknál maradnak bejegyezve, a projekt nélkül. Nem visszavonható!"
+		},
+		"emptyProjectsModal": {
+			"text": "Nincs törölhető projekt. | Véglegesen törölsz egy projektet, benne mindennel. Nem visszavonható! | Véglegesen törölsz {count} projektet, bennük mindennel. Nem visszavonható!",
+			"byOthers": "Egyet közülük valaki más helyezett a szemétbe. | {count}-t közülük valaki más helyezett a szemétbe.",
+			"includeOthers": "Mások által szemétbe helyezett projektek törlése szintén"
+		},
+		"projectInTrash": "Ez a projekt a szemétben van. {since} kukázva.",
+		"projectInTrashBy": "Ez a projekt a szemétben van. {since} kukázta {user}.",
+		"projectInTrashByYou": "Ez a projekt a szemétben van. {since} kukáztad."
 	}
 }
