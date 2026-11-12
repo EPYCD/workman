@@ -274,6 +274,7 @@ jobs:
           MYSQL_DATABASE: vikunjatest
         ports:
           - 3306:3306
+        options: --tmpfs /var/lib/mysql:rw
       db-mysql:
         image: ${{ matrix.db == 'mysql' && 'mysql:8@sha256:da906917ca4ace3ba55538b7c2ee97a9bc865ef14a4b6920b021f0249d603f3d' || '' }}
         env:
@@ -281,6 +282,7 @@ jobs:
           MYSQL_DATABASE: vikunjatest
         ports:
           - 3306:3306
+        options: --tmpfs /var/lib/mysql:rw
       db-postgres:
         image: ${{ matrix.db == 'postgres' && 'postgres:18@sha256:edb0c08dc33befd0262ab3b5cf1c4f3f8cfd8b09e88c05b45adee29d6761ddb6' || '' }}
         env:
