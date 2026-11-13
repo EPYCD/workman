@@ -71,7 +71,7 @@ ul.teams {
   li {
     list-style: none;
     margin: 0;
-    border-inline-end: 1px solid var(--grey-200);
+    border-block-end: 1px solid var(--grey-200);
 
     a {
       color: var(--text);
@@ -86,7 +86,7 @@ ul.teams {
   }
 
   li:last-child {
-    border-inline-end: none;
+    border-block-end: none;
   }
 }
 </style>
