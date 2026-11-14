@@ -920,7 +920,6 @@
 		"explainer": "當您訂閱的動作、專案或任務發生時，通知將會顯示在此處。"
 	},
 	"quickActions": {
-		"hint": "您可以使用 {project} 將搜尋範圍限制在特定專案。將 {project} 或 {label}（標籤）與搜尋查詢結合，可搜尋具有這些標籤或屬於該專案的任務。使用 {assignee} 則僅搜尋團隊。",
 		"projects": "項目",
 		"newProject": "輸入新專案的標題…",
 		"createTask": "在目前專案（{title}）中建立任務",
