@@ -187,7 +187,8 @@
           "12h": "12-hour (AM/PM)",
           "24h": "24-hour (HH:mm)"
         },
-        "externalUserNameChange": "Your name is managed by your login provider ({provider}). To change it, please update it there instead."
+        "externalUserNameChange": "Your name is managed by your login provider ({provider}). To change it, please update it there instead.",
+        "showKanbanCardUpdated": "Show when a task was last changed on Kanban cards"
       },
       "sections": {
         "personalInformation": "Personal Information",

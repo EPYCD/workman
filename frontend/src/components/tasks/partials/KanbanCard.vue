@@ -145,6 +145,17 @@
 					:task="task"
 					class="checklist"
 				/>
+				<span
+					v-if="showUpdated"
+					v-tooltip="{content: updatedTooltip, popperClass: 'is-multiline'}"
+					class="updated"
+				>
+					<Icon :icon="['far', 'clock']" />
+					<span class="is-sr-only">{{ updatedLabel }}</span>
+					<time :datetime="formatISO(task.updated)">
+						{{ formatDateSince(task.updated) }}
+					</time>
+				</span>
 			</div>
 		</div>
 	</div>
@@ -153,6 +164,7 @@
 <script lang="ts" setup>
 import {computed, onBeforeUnmount, onMounted, ref, useTemplateRef, watch} from 'vue'
 import {useRouter} from 'vue-router'
+import {useI18n} from 'vue-i18n'
 
 import {useGlobalNow} from '@/composables/useGlobalNow'
 
@@ -170,8 +182,9 @@ import {READINESS_REASON, type TaskReadinessWithRank} from '@/client/queries/tas
 import type {IProject} from '@/modelTypes/IProject'
 import {canPreviewImage} from '@/models/attachment'
 import AttachmentService, {PREVIEW_SIZE} from '@/services/attachment'
+import {getDisplayName} from '@/models/user'
 
-import {formatDateLong, formatDisplayDate, formatISO} from '@/helpers/time/formatDate'
+import {formatDateLong, formatDateSince, formatDisplayDate, formatISO} from '@/helpers/time/formatDate'
 import {colorIsDark} from '@/helpers/color/colorIsDark'
 import {useTaskStore} from '@/stores/tasks'
 import AssigneeList from '@/components/tasks/partials/AssigneeList.vue'
@@ -179,6 +192,7 @@ import {playPopSound} from '@/helpers/playPop'
 import {isEditorContentEmpty} from '@/helpers/editorContentEmpty'
 import {useProjectStore} from '@/stores/projects'
 import {TASK_REPEAT_MODES} from '@/types/IRepeatMode'
+import {useAuthStore} from '@/stores/auth'
 
 const props = withDefaults(defineProps<{
 	task: ITask,
@@ -209,6 +223,8 @@ const leaseCount = computed(() => props.task.leases?.length ?? 0)
 const leasePatterns = computed(() => (props.task.leases ?? []).map(l => l.pattern).join('\n'))
 
 const router = useRouter()
+const {t} = useI18n({useScope: 'global'})
+const authStore = useAuthStore()
 
 const loadingInternal = ref(false)
 
@@ -234,6 +250,21 @@ const isOverdue = computed(() => (
 	props.task.dueDate.getTime() > 0 &&
 	props.task.dueDate.getTime() <= now.value.getTime()
 ))
+
+const showUpdated = computed(() => authStore.settings.frontendSettings.showKanbanCardUpdated)
+
+// The server sets updated to created on creation, so equal values mean the task was never changed.
+const wasUpdated = computed(() => +new Date(props.task.created ?? 0) !== +new Date(props.task.updated ?? 0))
+
+const updatedLabel = computed(() => t(wasUpdated.value ? 'task.attributes.updated' : 'task.attributes.created'))
+
+const updatedTooltip = computed(() => {
+	const created = t('task.detail.created', [formatDateLong(props.task.created), getDisplayName(props.task.createdBy)])
+	if (!wasUpdated.value) {
+		return created
+	}
+	return `${t('task.detail.updated', [formatDateLong(props.task.updated)])}\n${created}`
+})
 
 async function toggleTaskDone(task: ITask) {
 	const isRecurringTask = task.repeatAfter.amount > 0 || task.repeatMode === TASK_REPEAT_MODES.REPEAT_MODE_MONTH
@@ -492,6 +523,15 @@ onBeforeUnmount(() => {
 		}
 	}
 
+	.updated {
+		display: flex;
+		align-items: center;
+		gap: .25rem;
+		padding: 0 .25rem;
+		font-size: .75rem;
+		color: var(--wm-text-tertiary);
+	}
+
 	.footer .icon {
 		color: var(--wm-text-tertiary);
 	}
@@ -529,6 +569,7 @@ onBeforeUnmount(() => {
 		.project-title,
 		.due-date,
 		.footer,
+		.updated,
 		.footer .icon {
 			color: inherit;
 		}
@@ -553,6 +594,7 @@ onBeforeUnmount(() => {
 		.project-title,
 		.due-date,
 		.footer,
+		.updated,
 		.footer .icon {
 			color: inherit;
 		}

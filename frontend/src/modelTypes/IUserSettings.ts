@@ -12,6 +12,7 @@ import type {IRelationKind} from '@/types/IRelationKind'
 
 export interface IFrontendSettings {
 	playSoundWhenDone: boolean
+	showKanbanCardUpdated: boolean
 	quickAddMagicMode: PrefixMode
 	colorSchema: BasicColorSchema
 	allowIconChanges: boolean

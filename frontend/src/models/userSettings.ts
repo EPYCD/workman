@@ -22,6 +22,7 @@ export default class UserSettingsModel extends AbstractModel<IUserSettings> impl
 	language = getBrowserLanguage() 
 	frontendSettings: IFrontendSettings = {
 		playSoundWhenDone: true,
+		showKanbanCardUpdated: false,
 		quickAddMagicMode: PrefixMode.Default,
 		colorSchema: 'auto',
 		allowIconChanges: true,
