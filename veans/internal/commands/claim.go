@@ -25,6 +25,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"code.vikunja.io/veans/internal/client"
 	"code.vikunja.io/veans/internal/output"
 	"code.vikunja.io/veans/internal/status"
 )
@@ -59,62 +60,15 @@ again once you are on the branch, or pass --branch to name it up front.`,
 			if err != nil {
 				return err
 			}
-
-			inProgress, err := status.BucketID(status.InProgress, rt.cfg.Buckets)
+			task, err := runClaim(cmd.Context(), rt, id, &claimOptions{
+				ref:    args[0],
+				force:  force,
+				branch: branch,
+				warn:   cmd.ErrOrStderr(),
+			})
 			if err != nil {
 				return err
 			}
-			expected := rt.cfg.Buckets.Todo
-			if force {
-				expected = 0
-			}
-
-			// One request does the check, the bucket move and the assignment
-			// in a single server-side transaction; a 409 here means we lost
-			// the race and must not touch the task further.
-			if _, err := rt.client.ClaimTask(cmd.Context(), id, rt.cfg.ViewID, inProgress, expected); err != nil {
-				var oe *output.Error
-				if errors.As(err, &oe) && oe.Code == output.CodeConflict {
-					return output.Wrap(output.CodeConflict, err,
-						"cannot claim task %s: %v — it is held by someone else, left Todo, is blocked, or owns a path another task has leased; run `veans ready` and pick another (use --force to claim from another bucket)",
-						args[0], err)
-				}
-				return err
-			}
-
-			task, err := rt.client.GetTask(cmd.Context(), id)
-			if err != nil {
-				return err
-			}
-
-			// Tag with the branch label, if there is a branch worth recording.
-			// A label is bookkeeping, not part of the claim, so it stays
-			// outside the transaction. Checked against the task first: a claim
-			// runs on every start of work, and re-attaching a label the task
-			// already carries is rejected by the server.
-			//
-			// Re-claiming is how the label arrives late: a worker who claims
-			// first and branches second claims again afterwards, and this
-			// attaches the real branch then.
-			if branch == "" {
-				branch = claimBranch(cmd.Context(), cmd.ErrOrStderr())
-			}
-			if branch != "" {
-				labelTitle := branchLabel(branch)
-				if !taskHasLabel(task, labelTitle) {
-					l, err := getOrCreateLabelByTitle(cmd.Context(), rt.client, labelTitle)
-					if err != nil {
-						return err
-					}
-					if err := rt.client.AddLabelToTask(cmd.Context(), id, l.ID); err != nil {
-						return err
-					}
-					if task, err = rt.client.GetTask(cmd.Context(), id); err != nil {
-						return err
-					}
-				}
-			}
-
 			rt.withURLs(task)
 			return json.NewEncoder(cmd.OutOrStdout()).Encode(task)
 		},
@@ -122,6 +76,87 @@ again once you are on the branch, or pass --branch to name it up front.`,
 	cmd.Flags().BoolVar(&force, "force", false, "claim even if the task is not in the Todo bucket (never overrides another user's claim)")
 	cmd.Flags().StringVar(&branch, "branch", "", "branch to record in the veans:branch: label (default: the current branch, unless it is the repository's default)")
 	return cmd
+}
+
+type claimOptions struct {
+	// ref is the task as the caller typed it, for error messages.
+	ref    string
+	force  bool
+	branch string
+	warn   io.Writer
+}
+
+// runClaim takes the task and records the branch. It is safe to repeat:
+// claiming a task the caller already holds is answered by the server as a
+// no-op inside the same transaction that would have made the claim, and the
+// branch label is only attached when the task does not carry it yet. Nothing
+// here decides "is it already mine" on the client — that check-then-act is
+// the race the atomic endpoint exists to close.
+func runClaim(ctx context.Context, rt *runtime, id int64, o *claimOptions) (*client.Task, error) {
+	inProgress, err := status.BucketID(status.InProgress, rt.cfg.Buckets)
+	if err != nil {
+		return nil, err
+	}
+	expected := rt.cfg.Buckets.Todo
+	if o.force {
+		expected = 0
+	}
+
+	// One request does the check, the bucket move and the assignment
+	// in a single server-side transaction; a 409 here means we lost
+	// the race and must not touch the task further.
+	claimed, err := rt.client.ClaimTask(ctx, id, rt.cfg.ViewID, inProgress, expected)
+	if err != nil {
+		var oe *output.Error
+		if errors.As(err, &oe) && oe.Code == output.CodeConflict {
+			return nil, output.Wrap(output.CodeConflict, err,
+				"cannot claim task %s: %v — it is held by someone else, left Todo, is blocked, or owns a path another task has leased; run `veans ready` and pick another (use --force to claim from another bucket)",
+				o.ref, err)
+		}
+		return nil, err
+	}
+
+	// From here on the task is ours, so a failure reports what already
+	// happened instead of looking like a claim that never took.
+	progress := &steps{task: rt.cfg.FormatTaskID(claimed.Index), completed: []string{"claim"}}
+
+	task, err := rt.client.GetTask(ctx, id)
+	if err != nil {
+		return nil, progress.fail("read task", err)
+	}
+
+	// Tag with the branch label, if there is a branch worth recording.
+	// A label is bookkeeping, not part of the claim, so it stays
+	// outside the transaction. Checked against the task first: a claim
+	// runs on every start of work, and re-attaching a label the task
+	// already carries is rejected by the server.
+	//
+	// Re-claiming is how the label arrives late: a worker who claims
+	// first and branches second claims again afterwards, and this
+	// attaches the real branch then.
+	branch := o.branch
+	if branch == "" {
+		branch = claimBranch(ctx, o.warn)
+	}
+	if branch != "" {
+		labelTitle := branchLabel(branch)
+		if !taskHasLabel(task, labelTitle) {
+			step := "label " + labelTitle
+			l, err := getOrCreateLabelByTitle(ctx, rt.client, labelTitle)
+			if err != nil {
+				return nil, progress.fail(step, err)
+			}
+			if err := rt.client.AddLabelToTask(ctx, id, l.ID); err != nil {
+				return nil, progress.fail(step, err)
+			}
+			progress.done(step)
+			if task, err = rt.client.GetTask(ctx, id); err != nil {
+				return nil, progress.fail("read task", err)
+			}
+		}
+	}
+
+	return task, nil
 }
 
 // claimBranch decides what the veans:branch: label should say, and returns ""
