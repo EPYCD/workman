@@ -18,7 +18,6 @@ package commands
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -33,6 +32,7 @@ import (
 func newClaimCmd() *cobra.Command {
 	var force bool
 	var branch string
+	var fieldsRaw string
 	cmd := &cobra.Command{
 		Use:   "claim <id>",
 		Short: "Claim a task: assign the bot, move to In Progress, tag with branch",
@@ -52,6 +52,10 @@ the next reader nothing while making "veans list --branch" under-report. Claim
 again once you are on the branch, or pass --branch to name it up front.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			fields, err := parseFields(fieldsRaw)
+			if err != nil {
+				return err
+			}
 			rt, err := loadRuntime(cmd.Context())
 			if err != nil {
 				return err
@@ -69,12 +73,12 @@ again once you are on the branch, or pass --branch to name it up front.`,
 			if err != nil {
 				return err
 			}
-			rt.withURLs(task)
-			return json.NewEncoder(cmd.OutOrStdout()).Encode(task)
+			return rt.printTask(cmd.OutOrStdout(), fields, task)
 		},
 	}
 	cmd.Flags().BoolVar(&force, "force", false, "claim even if the task is not in the Todo bucket (never overrides another user's claim)")
 	cmd.Flags().StringVar(&branch, "branch", "", "branch to record in the veans:branch: label (default: the current branch, unless it is the repository's default)")
+	addFieldsFlag(cmd, &fieldsRaw)
 	return cmd
 }
 

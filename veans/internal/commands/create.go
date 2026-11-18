@@ -18,7 +18,6 @@ package commands
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -39,6 +38,7 @@ type createFlags struct {
 
 func newCreateCmd() *cobra.Command {
 	f := &createFlags{}
+	var fieldsRaw string
 	cmd := &cobra.Command{
 		Use:     "create <title>",
 		Aliases: []string{"c"},
@@ -65,6 +65,10 @@ is exclusion enforced by comparing strings: two spellings of one file are two
 claims that cannot see each other.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			fields, err := parseFields(fieldsRaw)
+			if err != nil {
+				return err
+			}
 			rt, err := loadRuntime(cmd.Context())
 			if err != nil {
 				return err
@@ -75,8 +79,7 @@ claims that cannot see each other.`,
 			if err != nil {
 				return err
 			}
-			rt.withURLs(task)
-			return json.NewEncoder(cmd.OutOrStdout()).Encode(task)
+			return rt.printTask(cmd.OutOrStdout(), fields, task)
 		},
 	}
 	cmd.Flags().StringVarP(&f.description, "description", "d", "", "task description (HTML; see `veans prime` for canonical TipTap shapes)")
@@ -86,6 +89,7 @@ claims that cannot see each other.`,
 	cmd.Flags().StringVar(&f.parent, "parent", "", "parent task ID (creates parenttask relation)")
 	cmd.Flags().StringSliceVar(&f.blockedBy, "blocked-by", nil, "task IDs that block this one (repeatable)")
 	f.scope.bind(cmd)
+	addFieldsFlag(cmd, &fieldsRaw)
 	return cmd
 }
 
