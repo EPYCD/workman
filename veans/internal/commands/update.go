@@ -225,6 +225,17 @@ func runUpdate(ctx context.Context, rt *runtime, id int64, f *updateFlags) (*cli
 		progress.done("set bucket")
 	}
 
+	// The board frees a task's path leases when it flips to done, and scrapped
+	// is not a done flip. Abandoned work must not keep its files locked, so
+	// release them here. Skipped when the task holds none: the release posts
+	// an event either way, and there is nothing to announce.
+	if newStatus == status.Scrapped && len(current.Leases) > 0 {
+		if err := rt.client.ReleaseTaskLeases(ctx, id); err != nil {
+			return nil, progress.fail("release leases", err)
+		}
+		progress.done("release leases")
+	}
+
 	// Label add/remove run after the field update so a status transition
 	// can't clobber freshly-attached labels.
 	for _, raw := range f.addLabels {

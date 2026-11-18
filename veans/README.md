@@ -257,10 +257,16 @@ through to its file backend.
 | `in-progress` | In Progress    | false     | `veans claim` / `update -s in-progress`  |
 | `in-review`   | In Review      | false     | the agent, when work is finished         |
 | `completed`   | Done           | true      | the merge hook when the PR lands, or a human |
-| `scrapped`    | Scrapped       | true      | the agent, with `--reason`               |
+| `scrapped`    | Scrapped       | false     | the agent, with `--reason`               |
 
 The agent never moves tasks to `completed` itself — it parks them in
 `In Review`, and merging the PR closes them (see *Merge hook* below).
+
+`scrapped` is not `done`: the board ties the done flag to the Done bucket.
+`veans update -s scrapped` releases the task's path leases itself, and
+Marshal counts a task in the Scrapped bucket as closed. The server's ready
+queue does not: a task blocked by a scrapped one stays blocked until the
+relation is removed.
 
 ## Claiming is atomic
 

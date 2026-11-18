@@ -124,6 +124,16 @@ oddly, suspect one of these:
   **`PUT /projects/{p}/views/{v}/buckets/{b}/tasks`** with a `{"task_id":N}`
   body (project/view/bucket all come from the URL). The Update path on the
   server only auto-moves on `done` flips.
+- **`done` is tied to the view's done bucket.** Setting done=true moves the
+  task into it, and moving a done task out un-marks it. So `scrapped` is
+  done=false in the Scrapped bucket. Create honors `bucket_id` on current
+  servers. Workman differs from upstream in two ways. Readiness is decided
+  by the server (`pkg/models/task_readiness.go`), which only counts a
+  blocker as resolved when it is done — a scrapped blocker keeps blocking
+  until the relation is removed. And leases are released by the server only
+  on a done flip, so `update -s scrapped` and Marshal's `report_status`
+  release them explicitly; Marshal's snapshot files Scrapped-bucket tasks
+  with the closed ones.
 - **Bot user creation is `POST /user/bots`**, not `/bots` — the routes
   are registered under the `/user` subgroup. Same prefix for
   `GET /user/bots`.
