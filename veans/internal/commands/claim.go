@@ -30,11 +30,14 @@ import (
 )
 
 func newClaimCmd() *cobra.Command {
-	var force bool
-	var branch string
-	var fieldsRaw string
+	var (
+		force     bool
+		branch    string
+		fieldsRaw string
+		taskIDArg int64
+	)
 	cmd := &cobra.Command{
-		Use:   "claim <id>",
+		Use:   "claim <PROJ-NN|#NN|NN> | claim --id <task id>",
 		Short: "Claim a task: assign the bot, move to In Progress, tag with branch",
 		Long: `Atomically takes a task. The server refuses with CONFLICT if another user
 already holds it, or if it has left the Todo bucket since you listed it — so
@@ -50,7 +53,6 @@ repository's default branch attaches nothing and says so: claiming before
 branching is the natural order, and a label reading veans:branch:main tells
 the next reader nothing while making "veans list --branch" under-report. Claim
 again once you are on the branch, or pass --branch to name it up front.`,
-		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fields, err := parseFields(fieldsRaw)
 			if err != nil {
@@ -60,12 +62,18 @@ again once you are on the branch, or pass --branch to name it up front.`,
 			if err != nil {
 				return err
 			}
-			id, err := rt.resolveTaskID(cmd.Context(), args[0])
+			id, err := rt.taskID(cmd.Context(), args, taskIDArg)
 			if err != nil {
 				return err
 			}
+			// What the caller typed, for the refusal message; with --id there
+			// is no positional reference to quote.
+			ref := fmt.Sprintf("--id %d", taskIDArg)
+			if len(args) > 0 {
+				ref = args[0]
+			}
 			task, err := runClaim(cmd.Context(), rt, id, &claimOptions{
-				ref:    args[0],
+				ref:    ref,
 				force:  force,
 				branch: branch,
 				warn:   cmd.ErrOrStderr(),
@@ -78,6 +86,7 @@ again once you are on the branch, or pass --branch to name it up front.`,
 	}
 	cmd.Flags().BoolVar(&force, "force", false, "claim even if the task is not in the Todo bucket (never overrides another user's claim)")
 	cmd.Flags().StringVar(&branch, "branch", "", "branch to record in the veans:branch: label (default: the current branch, unless it is the repository's default)")
+	cmd.Args = addTaskIDFlag(cmd, &taskIDArg)
 	addFieldsFlag(cmd, &fieldsRaw)
 	return cmd
 }
