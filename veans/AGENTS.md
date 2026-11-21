@@ -134,6 +134,9 @@ oddly, suspect one of these:
   on a done flip, so `update -s scrapped` and Marshal's `report_status`
   release them explicitly; Marshal's snapshot files Scrapped-bucket tasks
   with the closed ones.
+- **Attachment upload answers 201 even when the file is rejected.** `POST
+  /tasks/{id}/attachments` (multipart, field `files`) reports per-file
+  failures in `errors`; `UploadTaskAttachment` turns those into an error.
 - **Bot user creation is `POST /user/bots`**, not `/bots` — the routes
   are registered under the `/user` subgroup. Same prefix for
   `GET /user/bots`.

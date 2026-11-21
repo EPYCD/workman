@@ -118,10 +118,10 @@ veans init                     OAuth/login → create bot → mint token → wri
 veans prime                    emit system prompt for agents (silent if no .veans.yml)
 veans list                     filtered list (--ready, --mine, --branch, --filter, --status); emits JSON
 veans show <id>                view a task (JSON)
-veans create "title"           --description, --label, --status, --priority, --parent, --blocked-by
+veans create "title"           --description, --label, --status, --priority, --parent, --blocked-by, --attach
 veans update <id>              --status, --title, --priority, --label-add/remove,
                                --description, --description-replace-old/new, --description-append,
-                               --comment, --reason, --if-unchanged-since
+                               --comment, --reason, --if-unchanged-since, --attach
 veans claim <id>               assign the bot, move to In Progress, tag with current branch label, lease paths_owned
                                (no label when on the default branch; --branch names one explicitly)
 veans ready                    ready queue with reasons (assigned / blocked / lease_conflict)

@@ -33,6 +33,7 @@ type createFlags struct {
 	labels      []string
 	parent      string
 	blockedBy   []string
+	attach      []string
 	scope       scopeFlags
 }
 
@@ -89,6 +90,7 @@ claims that cannot see each other.`,
 	cmd.Flags().StringVar(&f.parent, "parent", "", "parent task ID (creates parenttask relation)")
 	cmd.Flags().StringSliceVar(&f.blockedBy, "blocked-by", nil, "task IDs that block this one (repeatable)")
 	f.scope.bind(cmd)
+	addAttachFlag(cmd, &f.attach)
 	addFieldsFlag(cmd, &fieldsRaw)
 	return cmd
 }
@@ -112,6 +114,9 @@ func runCreate(ctx context.Context, rt *runtime, title string, f *createFlags) (
 	}
 	blockerIDs, err := resolveRefs(ctx, rt, f.blockedBy)
 	if err != nil {
+		return nil, err
+	}
+	if err := checkAttachPaths(f.attach); err != nil {
 		return nil, err
 	}
 
@@ -180,6 +185,10 @@ func runCreate(ctx context.Context, rt *runtime, title string, f *createFlags) (
 			return nil, progress.fail("scope", err)
 		}
 		progress.done("scope")
+	}
+
+	if err := attachFiles(ctx, rt, created.ID, f.attach, progress); err != nil {
+		return nil, err
 	}
 
 	// Re-fetch so the response reflects the labels and any post-create state.
