@@ -73,6 +73,8 @@ Humans skim tasks. Every description and comment must be short:
 ## WHILE you work
 - Check off checklist items with `--description-replace-old` /
   `--description-replace-new` (exact, unique match).
+- Files worth keeping (screenshots, logs): `--attach PATH` on `create` or
+  `update`, repeatable.
 - Sub-work that could be assigned separately: a subtask via `--parent`.
 
 ## BEFORE you open a PR
@@ -189,7 +191,8 @@ error has `task`, `completed` and `failed`: retry only the failed steps with
 `--fields identifier,url` limits output to those keys. Key fields: `id`
 (internal; use with `--id` or `api` — a bare number means the project index),
 `index`, `url`, `done`, `title`, `description`, `buckets[]`, `assignees[]`,
-`labels[]`. `related_tasks` omit `description`.
+`labels[]`, `attachments[]` (`file.name`, `file.mime`, `file.size`).
+`related_tasks` omit `description`.
 
 - `scope` — `{paths_owned[], paths_affected[], endpoints[], notes}`;
   absent when the task has no scope
@@ -207,12 +210,12 @@ veans list [--mine|--branch|--filter "priority > 3"]
 veans list --ready                 # ready to start, in queue order (board drag order)
 veans list --ready --first         # the one task at the top of the queue — claim this
 veans show {{ .TaskIDExample }}
-veans create "title" -s in-progress -d "<p>…</p>" [--label bug --priority 4 --parent {{ .TaskIDExample }} --blocked-by {{ .TaskIDExample }}]
+veans create "title" -s in-progress -d "<p>…</p>" [--label bug --priority 4 --parent {{ .TaskIDExample }} --blocked-by {{ .TaskIDExample }} --attach PATH]
 veans create "title" --paths-owned pkg/models/** --paths-affected pkg/routes/** --endpoint "POST /api/v2/tasks/{id}/claim"
 veans update {{ .TaskIDExample }} [-s STATUS] [--comment HTML] [--description-append HTML]
   [--description-replace-old OLD --description-replace-new NEW]
   [--label-add X --label-remove Y] [--parent ID | --no-parent]
-  [--blocked-by-add ID --blocked-by-remove ID]
+  [--blocked-by-add ID --blocked-by-remove ID] [--attach PATH]
 veans claim {{ .TaskIDExample }}                 # atomic: assign yourself + In Progress + branch label + lease paths_owned; CONFLICT if held/blocked/leased
 veans claim --force {{ .TaskIDExample }}         # claim from a bucket other than Todo (never overrides another user)
 veans ready                        # ready queue with reasons (assigned / blocked / lease_conflict)
