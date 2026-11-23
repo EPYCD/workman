@@ -971,7 +971,8 @@
       "thisWeekend": "This Weekend",
       "laterThisWeek": "Later This Week",
       "nextWeek": "Next Week",
-      "chooseDate": "Choose a date"
+      "chooseDate": "Choose a date",
+      "clear": "Clear"
     },
     "editor": {
       "edit": "Edit",

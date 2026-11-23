@@ -10,6 +10,7 @@ import {UserProjectFactory} from '../../factories/users_project'
 import {TaskAssigneeFactory} from '../../factories/task_assignee'
 import {ProjectViewFactory} from '../../factories/project_view'
 
+// The fork saves through v1, where PUT creates and POST updates.
 async function openFilters(page: Page) {
 	await page.locator('.filter-container button').filter({hasText: 'Filters'}).click()
 }
@@ -224,7 +225,7 @@ test('creates saved filters in Simple and reloads them for editing', async ({aut
 		exact: true,
 	}).pressSequentially('First')
 	await page.getByRole('option', {name: /First Project/}).click()
-	const created = page.waitForResponse(response => response.url().endsWith('/api/v2/filters') && response.request().method() === 'POST')
+	const created = page.waitForResponse(response => response.url().endsWith('/filters') && response.request().method() === 'PUT')
 	await page.locator('button.is-primary.is-fullwidth').click()
 	const response = await created
 	expect(response.ok()).toBe(true)
@@ -251,7 +252,7 @@ test('preserves unknown label and project ids when another field changes', async
 	await expect(editor).toContainText('Unknown label #999')
 	await expect(editor).toContainText('Unknown project #999')
 	await editor.getByText('Show completed tasks', {exact: true}).click()
-	const saved = page.waitForResponse(response => response.url().endsWith('/api/v2/filters/1') && response.request().method() === 'PUT')
+	const saved = page.waitForResponse(response => response.url().endsWith('/filters/1') && response.request().method() === 'POST')
 	await page.locator('footer.card-footer .button').filter({hasText: /^Save$/}).click()
 	expect((await saved).ok()).toBe(true)
 	const stored = await apiContext.get('filters/1', {headers: {Authorization: `Bearer ${userToken}`}})
@@ -292,7 +293,7 @@ test('saves the typed search when Enter is pressed in a saved filter', async ({a
 		name: 'Simple',
 		exact: true,
 	})).toHaveAttribute('aria-selected', 'true')
-	const saved = page.waitForResponse(response => response.url().endsWith('/api/v2/filters/1') && response.request().method() === 'PUT')
+	const saved = page.waitForResponse(response => response.url().endsWith('/filters/1') && response.request().method() === 'POST')
 	const search = editor.getByRole('searchbox', {name: 'Search tasks'})
 	await search.fill('Task 1')
 	await search.press('Enter')
@@ -416,7 +417,7 @@ test('saves a view filter through the shared Simple editor', async ({authenticat
 		exact: true,
 	}).pressSequentially('Important')
 	await form.getByRole('option', {name: /Important/}).click()
-	const saved = page.waitForResponse(response => response.url().endsWith('/api/v2/projects/1/views/1') && response.request().method() === 'PUT')
+	const saved = page.waitForResponse(response => response.url().endsWith('/projects/1/views/1') && response.request().method() === 'POST')
 	await form.getByRole('button', {
 		name: 'Save',
 		exact: true,
