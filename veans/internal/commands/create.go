@@ -172,11 +172,12 @@ func runCreate(ctx context.Context, rt *runtime, title string, f *createFlags) (
 	if f.scope.any() {
 		scope, err := f.scope.apply(nil)
 		if err != nil {
-			return nil, err
+			return nil, progress.fail("scope", err)
 		}
 		if _, err := rt.client.PutTaskScope(ctx, created.ID, scope); err != nil {
-			return nil, err
+			return nil, progress.fail("scope", err)
 		}
+		progress.done("scope")
 	}
 
 	// Re-fetch so the response reflects the labels and any post-create state.
