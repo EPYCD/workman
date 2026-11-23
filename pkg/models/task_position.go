@@ -118,7 +118,12 @@ func taskFitsView(s *xorm.Session, a web.Auth, view *ProjectView, taskID int64) 
 	if view.ViewKind == ProjectViewKindKanban {
 		return false, nil
 	}
-	return s.Exist(&ProjectAncestor{AncestorID: view.ProjectID, ProjectID: task.ProjectID})
+	// Workman has no project_ancestors table: walk up parent_project_id instead.
+	ancestorIDs, err := projectAncestorIDs(s, task.ProjectID)
+	if err != nil {
+		return false, err
+	}
+	return slices.Contains(ancestorIDs, view.ProjectID), nil
 }
 
 // Reuse fetch matching so relative dates use the saved filter owner's timezone.
@@ -449,7 +454,8 @@ func RecalculateTaskPositions(s *xorm.Session, view *ProjectView, a web.Auth) (e
 	if view.ProjectID > 0 && view.ViewKind != ProjectViewKindKanban {
 		// Ignores access so the rows do not depend on who triggers the recalc.
 		descendantIDs, err := subtreeIDs(s, view.ProjectID, builder.And(
-			builder.Gt{"project_ancestors.depth": 0},
+			// subtreeIDs includes the project itself, which is already in the list.
+			builder.Neq{"projects.id": view.ProjectID},
 			builder.IsNull{"projects.deleted_at"},
 		))
 		if err != nil {
