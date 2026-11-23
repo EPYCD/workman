@@ -118,10 +118,10 @@ veans init                     OAuth/login → create bot → mint token → wri
 veans prime                    emit system prompt for agents (silent if no .veans.yml)
 veans list                     filtered list (--ready, --mine, --branch, --filter, --status); emits JSON
 veans show <id>                view a task (JSON)
-veans create "title"           --description, --label, --status, --priority, --parent, --blocked-by
+veans create "title"           --description, --label, --status, --priority, --parent, --blocked-by, --attach
 veans update <id>              --status, --title, --priority, --label-add/remove,
                                --description, --description-replace-old/new, --description-append,
-                               --comment, --reason, --if-unchanged-since
+                               --comment, --reason, --if-unchanged-since, --attach
 veans claim <id>               assign the bot, move to In Progress, tag with current branch label, lease paths_owned
                                (no label when on the default branch; --branch names one explicitly)
 veans ready                    ready queue with reasons (assigned / blocked / lease_conflict)
@@ -204,6 +204,8 @@ Resolved in order on every command:
 3. **`~/.config/veans/credentials.yml`** (mode 0600) — automatic fallback
    when the keychain is unavailable.
 
+Set `VEANS_NO_KEYRING=1` to skip the keychain entirely.
+
 ## Trusted servers
 
 `.veans.yml` is checked into the repo, so veans only talks to its `server`
@@ -257,10 +259,16 @@ through to its file backend.
 | `in-progress` | In Progress    | false     | `veans claim` / `update -s in-progress`  |
 | `in-review`   | In Review      | false     | the agent, when work is finished         |
 | `completed`   | Done           | true      | the merge hook when the PR lands, or a human |
-| `scrapped`    | Scrapped       | true      | the agent, with `--reason`               |
+| `scrapped`    | Scrapped       | false     | the agent, with `--reason`               |
 
 The agent never moves tasks to `completed` itself — it parks them in
 `In Review`, and merging the PR closes them (see *Merge hook* below).
+
+`scrapped` is not `done`: the board ties the done flag to the Done bucket.
+`veans update -s scrapped` releases the task's path leases itself, and
+Marshal counts a task in the Scrapped bucket as closed. The server's ready
+queue does not: a task blocked by a scrapped one stays blocked until the
+relation is removed.
 
 ## Claiming is atomic
 
