@@ -173,7 +173,8 @@ onBeforeUnmount(() => {
 .vue-notification {
 	z-index: 9999;
 	// On the toast, not the group: a padded group stays visible when empty.
-	margin: 0 .75rem .75rem;
+	// Bottom margin matches UpdateNotification, so a toast beside the banner shares its baseline.
+	margin: 0 .75rem var(--wm-space-4);
 	border: 1px solid;
 	border-radius: $radius;
 	color: var(--text);

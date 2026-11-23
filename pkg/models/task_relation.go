@@ -391,7 +391,7 @@ func checkImportedRelationFamilyCycles(relations []*TaskRelation, forward, inver
 	parentCount := make(map[int64]int)
 	for _, rel := range relations {
 		var e edge
-		switch rel.RelationKind {
+		switch rel.RelationKind { //nolint:exhaustive // forward and inverse are variables; every other kind is skipped
 		case forward:
 			e = edge{parent: rel.TaskID, child: rel.OtherTaskID}
 		case inverse:

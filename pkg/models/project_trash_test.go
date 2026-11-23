@@ -325,6 +325,7 @@ func TestProject_ReadTrashed(t *testing.T) {
 	require.ErrorAs(t, err, &inTrash)
 }
 
+//nolint:unparam // every caller shares with user 2 today; the helper stays general
 func shareProjectForTest(t *testing.T, projectID, userID int64, permission Permission) {
 	t.Helper()
 	s := db.NewSession()

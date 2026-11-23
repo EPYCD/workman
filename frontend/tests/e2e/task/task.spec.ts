@@ -586,7 +586,8 @@ test.describe('Task', () => {
 			await expect(assignees).toHaveCount(1)
 
 			const saved = page.waitForResponse(r =>
-				r.url().includes(`/tasks/${task.id}`) && r.request().method() === 'PATCH',
+				// The fork saves through v1: POST, not upstream's PATCH.
+				r.url().includes(`/tasks/${task.id}`) && r.request().method() === 'POST',
 			)
 			await page.locator('.task-view .property-priority').locator('.select select').selectOption('Urgent')
 			await saved
@@ -823,7 +824,6 @@ test.describe('Task', () => {
 
 			const datepickerShow = page.locator('.task-view .property-due-date').locator('.datepicker .show')
 			await expect(datepickerShow).toBeVisible()
-			await datepickerShow.click()
 
 			const todayButton = page.locator('.datepicker-popup .flatpickr-innerContainer .flatpickr-days .flatpickr-day.today')
 			await expect(todayButton).toBeVisible()
@@ -866,7 +866,6 @@ test.describe('Task', () => {
 
 			const datepickerShow = page.locator('.task-view .property-due-date').locator('.datepicker .show')
 			await expect(datepickerShow).toBeVisible()
-			await datepickerShow.click()
 
 			const dateButton = page.locator(`.datepicker-popup .flatpickr-innerContainer .flatpickr-days [aria-label="${today.toLocaleString('en-US', {month: 'long'})} ${today.getDate()}, ${today.getFullYear()}"]`)
 			await expect(dateButton).toBeVisible()

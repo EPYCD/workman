@@ -22,7 +22,7 @@
 				role="dialog"
 				:aria-label="chooseDateLabel"
 				tabindex="-1"
-				@keydown.esc.stop="closeViaEsc"
+				@keydown.esc.stop.prevent="closeViaEsc"
 			>
 				<DatepickerInline
 					v-model="date"

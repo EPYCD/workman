@@ -630,6 +630,7 @@ import type {IRepeatAfter, IRepeatType} from '@/types/IRepeatAfter'
 import {useTaskStore} from '@/stores/tasks'
 import {useKanbanStore} from '@/stores/kanban'
 import {useProjectStore} from '@/stores/projects'
+import {getDefaultProjectView, getProjectViewId} from '@/helpers/projectView'
 import {useAuthStore} from '@/stores/auth'
 import {useBaseStore} from '@/stores/base'
 import {useConfigStore} from '@/stores/config'
@@ -1158,8 +1159,15 @@ useTaskDetailShortcuts({
 async function deleteTask() {
 	const id = task.value.id
 	const projectId = task.value.projectId
+	// Resolve the view up front: going through project.index redirects again once the project
+	// loads, and the list mounting that late steals focus back from the undo toast.
+	const views = projectStore.projects[projectId]?.views ?? []
+	const view = views.find(view => view.id === getProjectViewId(projectId))
+		?? getDefaultProjectView(views, authStore.settings.frontendSettings.defaultView)
 	await taskStore.delete(task.value)
-	await router.push({name: 'project.index', params: {projectId}})
+	await router.push(view
+		? {name: 'project.view', params: {projectId, viewId: view.id}}
+		: {name: 'project.index', params: {projectId}})
 	success({message: t('task.detail.deleteSuccess')}, [{
 		title: t('task.undo'),
 		callback: () => undoTaskDelete(id),
