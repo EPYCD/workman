@@ -21,6 +21,7 @@
 			class="filter-popup"
 			:change-immediately="false"
 			:filter-from-view="filterFromView"
+			:view
 			show-close
 			@close="modalOpen = false"
 			@showResults="showResults"
@@ -37,6 +38,7 @@ import {type TaskFilterParams} from '@/services/taskCollection'
 import {type IProjectView} from '@/modelTypes/IProjectView'
 import {type IProject} from '@/modelTypes/IProject'
 import {useProjectStore} from '@/stores/projects'
+import {useIncludeSubprojects} from '@/composables/useIncludeSubprojects'
 
 const props = defineProps<{
 	modelValue: TaskFilterParams,
@@ -66,7 +68,8 @@ watch(
 
 const hasFilters = computed(() => {
 	return value.value.filter !== '' ||
-		value.value.s !== ''
+		value.value.s !== '' ||
+		overridesView.value
 })
 
 const modalOpen = ref(false)
@@ -89,18 +92,17 @@ function showResults() {
 	modalOpen.value = false
 }
 
-const filterFromView = computed(() => {
+const view = computed(() => {
 	if (!props.projectId || !props.viewId) {
 		return
 	}
-	
-	const project = projectStore.projects[props.projectId]
-	if (!project) {
-		return
-	}
-	const view = project.views.find(v => v.id === props.viewId)
-	return view?.filter?.filter
+
+	return projectStore.projects[props.projectId]?.views.find(v => v.id === props.viewId)
 })
+
+const {overridesView} = useIncludeSubprojects(() => view.value)
+
+const filterFromView = computed(() => view.value?.filter?.filter)
 </script>
 
 <style scoped lang="scss">

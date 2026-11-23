@@ -64,7 +64,7 @@ watch(() => [props.user, props.avatarSize], loadAvatar, { immediate: true })
 <style lang="scss" scoped>
 .user {
 	display: flex;
-	justify-items: center;
+	align-items: center;
 
 	&.is-inline {
 		display: inline-flex;

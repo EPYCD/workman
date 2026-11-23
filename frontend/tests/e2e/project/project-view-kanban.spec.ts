@@ -6,6 +6,7 @@ import {TaskFactory} from '../../factories/task'
 import {ProjectViewFactory} from '../../factories/project_view'
 import {TaskBucketFactory} from '../../factories/task_buckets'
 import {createTasksWithPriorities, createTasksWithSearch} from '../../support/filterTestHelpers'
+import {updateUserSettings} from '../../support/updateUserSettings'
 
 async function createSingleTaskInBucket(count = 1, attrs = {}) {
 	const projects = await ProjectFactory.create(1)
@@ -142,6 +143,48 @@ test.describe('Project View Kanban', () => {
 
 		await expect(page.locator('.kanban .bucket:nth-child(2) .tasks')).toContainText(tasks[0].title)
 		await expect(page.locator('.kanban .bucket:nth-child(1) .tasks')).not.toContainText(tasks[0].title)
+	})
+
+	test('Hides when a card was last changed by default', async ({authenticatedPage: page}) => {
+		const [task] = await TaskFactory.create(1, {project_id: 1})
+		await TaskBucketFactory.create(1, {
+			task_id: task.id,
+			bucket_id: buckets[0].id,
+			project_view_id: buckets[0].project_view_id,
+		}, false)
+		await page.goto('/projects/1/4')
+
+		const card = page.locator('.kanban .task').filter({hasText: task.title})
+		await expect(card).toBeVisible()
+		await expect(card.locator('.updated')).toHaveCount(0)
+	})
+
+	test('Shows when a card was last changed when the setting is enabled', async ({authenticatedPage: page, apiContext, userToken}) => {
+		await updateUserSettings(apiContext, userToken, {
+			frontend_settings: {
+				show_kanban_card_updated: true,
+			},
+		})
+		const day = 86_400_000
+		const [task] = await TaskFactory.create(1, {
+			project_id: 1,
+			created: new Date(Date.now() - 10 * day).toISOString(),
+			updated: new Date(Date.now() - 2 * day).toISOString(),
+		})
+		await TaskBucketFactory.create(1, {
+			task_id: task.id,
+			bucket_id: buckets[0].id,
+			project_view_id: buckets[0].project_view_id,
+		}, false)
+		await page.goto('/projects/1/4')
+
+		const updated = page.locator('.kanban .task').filter({hasText: task.title}).locator('.updated')
+		await expect(updated).toContainText('2 days ago')
+
+		await updated.hover()
+		const tooltip = page.locator('.v-popper__popper.is-multiline')
+		await expect(tooltip).toContainText('Updated')
+		await expect(tooltip).toContainText('Created')
 	})
 
 	test('Expands a collapsed bucket while dragging a task over it', async ({authenticatedPage: page}) => {

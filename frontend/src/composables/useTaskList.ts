@@ -15,6 +15,7 @@ import {useAuthStore} from '@/stores/auth'
 import {useViewFiltersStore} from '@/stores/viewFilters'
 import type {IProjectView} from '@/modelTypes/IProjectView'
 import {lastRestoredTask} from '@/helpers/taskRestored'
+import {INCLUDE_SUBPROJECTS_QUERY_PARAM, useIncludeSubprojects, type IncludeSubprojectsView} from '@/composables/useIncludeSubprojects'
 
 export type Order = 'asc' | 'desc' | 'none'
 
@@ -68,6 +69,7 @@ interface TaskListQueryState {
 	filter: string | undefined
 	s: string | undefined
 	page: number
+	includeSubprojects?: string
 }
 
 export function buildStoredQuery(state: TaskListQueryState): LocationQueryRaw {
@@ -76,6 +78,7 @@ export function buildStoredQuery(state: TaskListQueryState): LocationQueryRaw {
 	if (state.filter) query.filter = state.filter
 	if (state.s) query.s = state.s
 	if (state.page > 1) query.page = String(state.page)
+	if (state.includeSubprojects) query[INCLUDE_SUBPROJECTS_QUERY_PARAM] = state.includeSubprojects
 	return query
 }
 
@@ -109,6 +112,7 @@ export function useTaskList(
 	projectViewIdGetter: ComputedGetter<IProjectView['id']>,
 	sortByDefault: SortBy = SORT_BY_DEFAULT,
 	expandGetter: ComputedGetter<ExpandTaskFilterParam> = () => 'subtasks',
+	viewGetter: ComputedGetter<IncludeSubprojectsView> = () => undefined,
 ) {
 	
 	const projectId = computed(() => projectIdGetter())
@@ -122,6 +126,7 @@ export function useTaskList(
 	const page = useRouteQuery('page', '1', { transform: Number })
 	const filter = useRouteQuery('filter')
 	const s = useRouteQuery('s')
+	const {includeSubprojects, queryParam: includeSubprojectsParam} = useIncludeSubprojects(viewGetter)
 
 	watch(filter, v => { params.value.filter = v ?? '' }, { immediate: true })
 	watch(s, v => { params.value.s = v ?? '' }, { immediate: true })
@@ -146,15 +151,15 @@ export function useTaskList(
 	// Sidebar links omit the query, and project views are reused across navigation.
 	let lastSyncedViewId: number | undefined
 	watch(
-		[projectViewId, sortQuery, filter, s, page],
-		([viewId, sortValue, filterValue, sValue, pageValue]) => {
+		[projectViewId, sortQuery, filter, s, page, includeSubprojectsParam],
+		([viewId, sortValue, filterValue, sValue, pageValue, includeValue]) => {
 			const viewIdChanged = viewId !== lastSyncedViewId
 			lastSyncedViewId = viewId
 
 			// An invalid `?page=` becomes NaN via `transform: Number`; treat it as
 			// the default so it neither blocks restoration nor wipes stored state.
 			const currentPage = Number.isInteger(pageValue) ? pageValue : 1
-			const urlIsEmpty = !sortValue && !filterValue && !sValue && currentPage === 1
+			const urlIsEmpty = !sortValue && !filterValue && !sValue && currentPage === 1 && !includeValue
 			if (viewIdChanged && urlIsEmpty) {
 				const storedQuery = viewFiltersStore.getViewQuery(viewId)
 				if (Object.keys(storedQuery).length > 0) {
@@ -178,6 +183,7 @@ export function useTaskList(
 				filter: filterValue as string | undefined,
 				s: sValue as string | undefined,
 				page: currentPage,
+				includeSubprojects: includeValue,
 			})
 			if (Object.keys(query).length > 0) {
 				viewFiltersStore.setViewQuery(viewId, query)
@@ -203,7 +209,7 @@ export function useTaskList(
 	})
 
 	watch(
-		[params, sortBy, page],
+		[params, sortBy, page, includeSubprojects],
 		([, , newPage], [, , oldPage]) => {
 			// A redundant page write can cancel the navigation restoring a saved sort.
 			if (newPage === oldPage && newPage !== 1) {
@@ -223,6 +229,7 @@ export function useTaskList(
 			},
 			{
 				...allParams.value,
+				...(includeSubprojects.value ? {include_subprojects: true} : {}),
 				filter_timezone: authStore.settings.timezone,
 				expand: expandGetter(),
 			},
@@ -277,5 +284,6 @@ export function useTaskList(
 		loadTasks,
 		params,
 		sortByParam: sortBy,
+		includeSubprojects,
 	}
 }

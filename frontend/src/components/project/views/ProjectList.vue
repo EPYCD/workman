@@ -50,7 +50,7 @@
 					<draggable
 						v-if="tasks && tasks.length > 0"
 						v-model="tasks"
-						:group="{name: 'tasks', put: false}"
+						:group="taskDragGroup"
 						:disabled="!canDragTasks || !isPositionSorting"
 						item-key="id"
 						tag="ul"
@@ -123,6 +123,7 @@ import {isSavedFilter, useSavedFilter} from '@/services/savedFilter'
 
 import {useBaseStore} from '@/stores/base'
 import {useTaskStore} from '@/stores/tasks'
+import {useProjectStore} from '@/stores/projects'
 
 import type {IProject} from '@/modelTypes/IProject'
 import type {IProjectView} from '@/modelTypes/IProjectView'
@@ -135,6 +136,9 @@ const props = defineProps<{
         viewId: IProjectView['id'],
 }>()
 
+// Must keep its identity: a new group object mid-drag makes Sortable reject the reorder.
+const taskDragGroup = {name: 'tasks', put: false}
+
 const projectId = toRef(props, 'projectId')
 
 defineOptions({name: 'List'})
@@ -142,6 +146,8 @@ defineOptions({name: 'List'})
 const ctaVisible = ref(false)
 
 const drag = ref(false)
+
+const projectStore = useProjectStore()
 
 const {
 	tasks: allTasks,
@@ -151,6 +157,7 @@ const {
 	loadTasks,
 	params,
 	sortByParam,
+	includeSubprojects,
 } = useTaskList(
 	() => projectId.value,
 	() => props.viewId,
@@ -158,6 +165,7 @@ const {
 	() => projectId.value === -1
 		? ['comment_count', 'is_unread']
 		: ['subtasks', 'comment_count', 'is_unread'],
+	() => projectStore.projects[projectId.value]?.views.find(v => v.id === props.viewId),
 )
 
 const taskPositionService = ref(new TaskPositionService())
@@ -249,10 +257,18 @@ async function saveTaskPosition(e: { originalEvent?: MouseEvent, to: HTMLElement
 
 	// Check if dropped on a sidebar project
 	const {moved} = await handleTaskDropToProject(e, (task) => {
+		// The target project may still be in this list, so let the reload decide.
+		if (includeSubprojects.value) {
+			return
+		}
+
 		tasks.value = tasks.value.filter(t => t.id !== task.id)
 	})
 
 	if (moved) {
+		if (includeSubprojects.value) {
+			await loadTasks(false)
+		}
 		return
 	}
 

@@ -3178,6 +3178,12 @@ const docTemplate = `{
                         "required": true
                     },
                     {
+                        "type": "boolean",
+                        "description": "If true, also returns tasks from all descendant subprojects the user can access. Their position in this view is stored separately from the one in their own project's views.",
+                        "name": "include_subprojects",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "The page number. Used for pagination. If not provided, the first page of results is returned.",
                         "name": "page",
@@ -10462,6 +10468,9 @@ const docTemplate = `{
                 },
                 "filter_include_nulls": {
                     "description": "If set to true, the result will also include null values",
+                    "type": "boolean"
+                },
+                "include_subprojects": {
                     "type": "boolean"
                 },
                 "order_by": {

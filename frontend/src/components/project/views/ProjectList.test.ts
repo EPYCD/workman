@@ -24,6 +24,7 @@ vi.mock('@/composables/useTaskList', () => ({
 		loadTasks: vi.fn(),
 		params: ref({}),
 		sortByParam: ref({position: 'asc'}),
+		includeSubprojects: ref(false),
 	}),
 }))
 
@@ -38,6 +39,10 @@ vi.mock('@/stores/base', () => ({
 		currentProject: {id: 1, maxPermission: 2},
 		setHasTasks: vi.fn(),
 	}),
+}))
+
+vi.mock('@/stores/projects', () => ({
+	useProjectStore: () => ({projects: {}}),
 }))
 
 vi.mock('@/stores/tasks', () => ({

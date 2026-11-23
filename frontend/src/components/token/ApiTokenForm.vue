@@ -53,6 +53,8 @@ const apiTokenTitle = ref()
 
 interface TokenPreset {
 	id: string
+	// A product name shown as-is instead of a translated preset title.
+	label?: string
 	groups: Record<string, string[] | '*'>
 }
 
@@ -91,6 +93,33 @@ const presets: TokenPreset[] = [
 			'projects_views_tasks': '*',
 			'tasks': ['read_one', 'read_all'],
 			'teams': ['read_one', 'read_all'],
+		},
+	},
+	{
+		// Keep in sync with PermissionsForBot in veans/internal/client/routes.go.
+		// Names the server does not offer are ignored when the preset is applied.
+		id: 'veans',
+		label: 'Veans',
+		groups: {
+			tasks: [
+				'read_one', 'read_all', 'create', 'update', 'position', 'read', 'update_bulk', 'claim',
+				'scope', 'scope_get', 'scope_update', 'scope_put', 'scope_delete',
+				'leases', 'leases_delete', 'leases_heartbeat', 'receipts',
+				'lag', 'lag_get', 'lag_update', 'lag_put', 'lag_delete',
+			],
+			projects: [
+				'read_one', 'read_all', 'tasks_by_index', 'tasks_by-index',
+				'views_buckets', 'views_buckets_create', 'views_buckets_update', 'views_buckets_delete',
+				'views_buckets_tasks', 'views_buckets_tasks_update',
+				'views_buckets_put', 'views_buckets_post', 'views_buckets_tasks_put',
+				'leases', 'views_readiness', 'scope_check', 'plan', 'plan_create', 'plan_get', 'agents',
+			],
+			projects_views: ['read_one', 'read_all'],
+			labels: ['read_one', 'read_all', 'create', 'update', 'delete'],
+			tasks_comments: ['read_one', 'read_all', 'create', 'update', 'delete'],
+			tasks_relations: ['create', 'delete'],
+			tasks_assignees: ['read_all', 'create', 'delete', 'update_bulk'],
+			tasks_labels: ['create', 'delete', 'read_all', 'update_bulk'],
 		},
 	},
 	{
@@ -366,7 +395,7 @@ async function createToken() {
 						type="button"
 						@click="applyPreset(preset)"
 					>
-						{{ $t(`user.settings.apiTokens.presets.${preset.id}`) }}
+						{{ preset.label ?? $t(`user.settings.apiTokens.presets.${preset.id}`) }}
 					</XButton>
 				</div>
 			</div>

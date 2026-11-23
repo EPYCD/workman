@@ -8,6 +8,8 @@ export interface IFilters {
 	filter: string,
 	filter_include_nulls: boolean,
 	s: string,
+	// Only read for a project view's own filter.
+	include_subprojects?: boolean,
 }
 
 export interface ISavedFilter extends IAbstract {

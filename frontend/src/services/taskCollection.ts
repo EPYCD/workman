@@ -7,7 +7,7 @@ import BucketModel from '@/models/bucket'
 export type ExpandTaskFilterParam = 'subtasks' | 'buckets' | 'reactions' | 'comment_count' | 'is_unread' | null
 
 export interface TaskFilterParams {
-	sort_by: ('start_date' | 'end_date' | 'due_date' | 'done' | 'id' | 'position' | 'title' | 'relevance')[],
+	sort_by: ('start_date' | 'end_date' | 'due_date' | 'done' | 'id' | 'position' | 'title' | 'relevance' | 'updated' | 'priority')[],
 	order_by: ('asc' | 'desc')[],
 	filter: string,
 	filter_include_nulls: boolean,
@@ -15,6 +15,7 @@ export interface TaskFilterParams {
 	s: string,
 	per_page?: number,
 	expand?: ExpandTaskFilterParam,
+	include_subprojects?: boolean,
 }
 
 export function getDefaultTaskFilterParams(): TaskFilterParams {

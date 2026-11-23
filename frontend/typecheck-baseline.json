@@ -1,5 +1,5 @@
 {
-	"total": 1562,
+	"total": 1564,
 	"files": {
 		"src/components/home/ContentAuth.vue": 2,
 		"src/components/home/ProjectsNavigation.vue": 4,
@@ -24,7 +24,7 @@
 		"src/components/project/views/ProjectList.vue": 22,
 		"src/components/project/views/ProjectTable.vue": 18,
 		"src/components/project/views/ViewEditForm.test.ts": 1,
-		"src/components/project/views/ViewEditForm.vue": 36,
+		"src/components/project/views/ViewEditForm.vue": 40,
 		"src/components/quick-actions/QuickActions.vue": 46,
 		"src/components/sharing/LinkSharing.vue": 6,
 		"src/components/sharing/UserTeam.vue": 104,
@@ -144,7 +144,7 @@
 		"src/views/migrate/Migration.vue": 2,
 		"src/views/migrate/MigrationCSV.vue": 8,
 		"src/views/migrate/MigrationHandler.vue": 12,
-		"src/views/project/helpers/useGanttFilters.ts": 6,
+		"src/views/project/helpers/useGanttFilters.ts": 4,
 		"src/views/project/helpers/useGanttTaskList.ts": 2,
 		"src/views/project/ListProjects.vue": 2,
 		"src/views/project/NewProject.vue": 4,

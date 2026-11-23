@@ -129,7 +129,7 @@ func FinishMigration(status *Status) (err error) {
 
 // GetMigrationStatus returns the migration status for a migration and a user
 func GetMigrationStatus(m MigratorName, u *user.User) (status *Status, err error) {
-	s := db.NewSession()
+	s := db.NewReadSession()
 	defer s.Close()
 
 	status = &Status{}
@@ -142,7 +142,7 @@ func GetMigrationStatus(m MigratorName, u *user.User) (status *Status, err error
 
 // GetMigrationStatusByID returns the migration status with the given id.
 func GetMigrationStatusByID(id int64) (status *Status, err error) {
-	s := db.NewSession()
+	s := db.NewReadSession()
 	defer s.Close()
 
 	status = &Status{}

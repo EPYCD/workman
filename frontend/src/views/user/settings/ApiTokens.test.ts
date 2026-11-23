@@ -5,6 +5,7 @@ import {createI18n} from 'vue-i18n'
 import {createRouter, createMemoryHistory} from 'vue-router'
 import ApiTokens from '@/views/user/settings/ApiTokens.vue'
 import Modal from '@/components/misc/Modal.vue'
+import ApiTokenForm from '@/components/token/ApiTokenForm.vue'
 import testid from '@/directives/testid'
 import en from '@/i18n/lang/en.json'
 
@@ -40,13 +41,13 @@ vi.mock('@/services/apiToken', () => ({
 
 const i18n = createI18n({legacy: false, locale: 'en', messages: {en}})
 
-async function mountPage() {
+async function mountPage(path = '/user/settings/api-tokens') {
 	const errors: unknown[] = []
 	const router = createRouter({
 		history: createMemoryHistory(),
 		routes: [{path: '/user/settings/api-tokens', name: 'user.settings.apiTokens', component: ApiTokens}],
 	})
-	await router.push('/user/settings/api-tokens')
+	await router.push(path)
 	await router.isReady()
 
 	const wrapper = mount(ApiTokens, {
@@ -63,6 +64,7 @@ async function mountPage() {
 				BaseButton: {template: '<a v-bind="$attrs"><slot /></a>'},
 				Message: {template: '<div class="message"><slot /></div>'},
 				Icon: true,
+				ApiTokenForm: true,
 			},
 			config: {
 				errorHandler(err) {
@@ -149,5 +151,18 @@ describe('ApiTokens settings page', () => {
 		expect(del).toHaveBeenCalledTimes(1)
 		expect(del).toHaveBeenCalledWith(expect.objectContaining({id: 1}))
 		expect(runtimeErrorMessages(errors)).toEqual([])
+	})
+
+	it('shows the created token in a code element', async () => {
+		const mounted = await mountPage('/user/settings/api-tokens?title=new-token')
+		wrapper = mounted.wrapper
+
+		wrapper.findComponent(ApiTokenForm).vm.$emit('created', {...tokens[0], token: 'tk_secret'})
+		await flushPromises()
+
+		const message = wrapper.find('.message')
+		expect(message.text()).toContain('Here is your new api token:')
+		expect(message.find('code').text()).toBe('tk_secret')
+		expect(runtimeErrorMessages(mounted.errors)).toEqual([])
 	})
 })
