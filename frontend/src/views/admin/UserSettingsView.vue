@@ -118,5 +118,7 @@ async function save(settings: IUserSettings) {
 	inset-block-start: $navbar-height;
 	z-index: 5;
 	margin-block-end: var(--wm-space-4);
+	// The message tint is translucent and the form scrolls underneath.
+	background-color: var(--wm-canvas);
 }
 </style>

@@ -257,6 +257,9 @@ test('preserves unknown label and project ids when another field changes', async
 	expect((await saved).ok()).toBe(true)
 	const stored = await apiContext.get('filters/1', {headers: {Authorization: `Bearer ${userToken}`}})
 	expect((await stored.json()).filters.filter).toBe('done = false && labels in 999 && project in 999')
+	// The fork closes the edit modal with router.back() once the projects reloaded; a navigation
+	// started before that would be overtaken by it.
+	await expect(page).not.toHaveURL(/settings\/edit/)
 	await page.goto('/projects/-2/settings/edit')
 	await expect(editor).toContainText('Unknown label #999')
 	await expect(editor).toContainText('Unknown project #999')

@@ -24,6 +24,14 @@ export interface AdminSettingsUser {
 	authProvider?: string
 }
 
+// The v2 api rejects properties it does not know, and the settings model carries a few of its own.
+function settingsBody(settings: IUserSettings) {
+	const body: Record<string, unknown> = {...settings}
+	delete body.maxPermission
+	delete body.extraSettingsLinks
+	return body
+}
+
 export default class AdminUserService extends AbstractService<IAdminUser> {
 	constructor() {
 		super({
@@ -58,7 +66,8 @@ export default class AdminUserService extends AbstractService<IAdminUser> {
 	// General settings of another user; like the password endpoints these only exist on /api/v2.
 	async getSettings(id: IAdminUser['id']): Promise<{settings: IUserSettings, user: AdminSettingsUser}> {
 		const {data} = await this.http.get(apiV2Url(`admin/users/${id}/settings/general`))
-		const {user, ...settings} = data
+		// $schema is response metadata, not a setting.
+		const {user, $schema: _schema, ...settings} = data
 		return {
 			settings: new UserSettingsModel(settings),
 			user: {id: user?.id, username: user?.username, authProvider: user?.auth_provider},
@@ -69,7 +78,7 @@ export default class AdminUserService extends AbstractService<IAdminUser> {
 		// A merge patch: only what is sent changes, and frontend_settings merges key by key.
 		await this.http.patch(
 			apiV2Url(`admin/users/${id}/settings/general`),
-			objectToSnakeCase({...settings}),
+			objectToSnakeCase(settingsBody(settings)),
 			{headers: {'Content-Type': 'application/merge-patch+json'}},
 		)
 	}
