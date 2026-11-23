@@ -23,6 +23,7 @@ export default class UserSettingsModel extends AbstractModel<IUserSettings> impl
 	frontendSettings: IFrontendSettings = {
 		playSoundWhenDone: true,
 		showKanbanCardUpdated: false,
+		filterEditorMode: 'simple',
 		quickAddMagicMode: PrefixMode.Default,
 		colorSchema: 'auto',
 		allowIconChanges: true,

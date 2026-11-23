@@ -2,6 +2,9 @@ import AbstractService from '@/services/abstractService'
 import AdminUserModel from '@/models/adminUser'
 import type {IAdminUser} from '@/modelTypes/IAdminUser'
 import {apiV2Url} from '@/helpers/fetcher'
+import {objectToSnakeCase} from '@/helpers/case'
+import UserSettingsModel from '@/models/userSettings'
+import type {IUserSettings} from '@/modelTypes/IUserSettings'
 
 export interface CreateAdminUserBody {
 	username: string
@@ -14,6 +17,20 @@ export interface CreateAdminUserBody {
 }
 
 export type DeleteUserMode = 'now' | 'scheduled'
+
+export interface AdminSettingsUser {
+	id: number
+	username: string
+	authProvider?: string
+}
+
+// The v2 api rejects properties it does not know, and the settings model carries a few of its own.
+function settingsBody(settings: IUserSettings) {
+	const body: Record<string, unknown> = {...settings}
+	delete body.maxPermission
+	delete body.extraSettingsLinks
+	return body
+}
 
 export default class AdminUserService extends AbstractService<IAdminUser> {
 	constructor() {
@@ -44,6 +61,26 @@ export default class AdminUserService extends AbstractService<IAdminUser> {
 
 	async sendPasswordResetEmail(id: IAdminUser['id']) {
 		await this.http.post(apiV2Url(`admin/users/${id}/password-reset-email`))
+	}
+
+	// General settings of another user; like the password endpoints these only exist on /api/v2.
+	async getSettings(id: IAdminUser['id']): Promise<{settings: IUserSettings, user: AdminSettingsUser}> {
+		const {data} = await this.http.get(apiV2Url(`admin/users/${id}/settings/general`))
+		// $schema is response metadata, not a setting.
+		const {user, $schema: _schema, ...settings} = data
+		return {
+			settings: new UserSettingsModel(settings),
+			user: {id: user?.id, username: user?.username, authProvider: user?.auth_provider},
+		}
+	}
+
+	async updateSettings(id: IAdminUser['id'], settings: IUserSettings) {
+		// A merge patch: only what is sent changes, and frontend_settings merges key by key.
+		await this.http.patch(
+			apiV2Url(`admin/users/${id}/settings/general`),
+			objectToSnakeCase(settingsBody(settings)),
+			{headers: {'Content-Type': 'application/merge-patch+json'}},
+		)
 	}
 
 	async createUser(body: CreateAdminUserBody) {

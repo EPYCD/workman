@@ -25,6 +25,7 @@
 			show-close
 			@close="modalOpen = false"
 			@showResults="showResults"
+			@update:modelValue="updateFilters"
 		/>
 	</Modal>
 </template>
@@ -83,12 +84,13 @@ watch(modalOpen, (isOpen) => {
 	}
 })
 
+// Simple mode, the search and the checkboxes apply as they change.
+function updateFilters(newValue: TaskFilterParams = value.value) {
+	emit('update:modelValue', {...newValue})
+}
+
 function showResults() {
-	emit('update:modelValue', {
-		...value.value,
-		filter: value.value.filter,
-		s: value.value.s,
-	})
+	updateFilters()
 	modalOpen.value = false
 }
 
