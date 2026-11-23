@@ -172,8 +172,8 @@ func TestClaimBranch_OutsideARepository(t *testing.T) {
 	})
 }
 
-// claimServer answers the atomic claim and the reads around it. held decides
-// what POST /tasks/42/claim says: nil for a claim that takes (or re-takes) the
+// claimServer answers the atomic claim and the reads around it. refuse decides
+// what POST /tasks/42/claim says: 0 for a claim that takes (or re-takes) the
 // task, an HTTP status for a refusal.
 func claimServer(t *testing.T, labels []string, refuse int) (*httptest.Server, *[]recordedCall) {
 	t.Helper()
