@@ -5,8 +5,10 @@
 		:search-results="foundProjects"
 		label="title"
 		:select-placeholder="$t('project.searchSelect')"
-		:model-value="project"
-		@update:modelValue="(val) => val === null ? select(null) : Object.assign(project, val)"
+		:model-value="multiple ? modelValue as IProject[] : project"
+		:multiple="multiple"
+		:close-after-select="!multiple"
+		@update:modelValue="update"
 		@select="select"
 		@search="findProjects"
 	>
@@ -22,7 +24,7 @@
 	</Multiselect>
 </template>
 
-<script lang="ts" setup>
+<script lang="ts" setup generic="Multiple extends boolean = false">
 import {reactive, ref, watch} from 'vue'
 
 import type {IProject} from '@/modelTypes/IProject'
@@ -33,25 +35,30 @@ import {getProjectTitle} from '@/helpers/getProjectTitle'
 import ProjectModel from '@/models/project'
 import Multiselect from '@/components/input/Multiselect.vue'
 
+type Selection = Multiple extends true ? IProject[] : IProject | null
+
 const props = withDefaults(defineProps<{
-	modelValue?: IProject
+	modelValue?: Selection
+	// `& boolean` keeps Vue's runtime Boolean casting for a bare `multiple` attribute.
+	multiple?: Multiple & boolean
 	savedFiltersOnly?: boolean
 	filter?: (project: IProject) => boolean,
 }>(), {
-	modelValue: () => new ProjectModel(),
+	modelValue: undefined,
+	multiple: undefined,
 	savedFiltersOnly: false,
 	filter: () => true,
 })
 
 const emit = defineEmits<{
-	'update:modelValue': [value: IProject | null]
+	'update:modelValue': [value: Selection]
 }>()
 
 const project: IProject = reactive(new ProjectModel())
 
 watch(
-	() => props.modelValue,
-	(newProject) => Object.assign(project, newProject),
+	() => props.multiple ? null : props.modelValue as IProject | null | undefined,
+	(newProject) => Object.assign(project, newProject ?? new ProjectModel()),
 	{
 		immediate: true,
 		deep: true,
@@ -62,7 +69,7 @@ const projectStore = useProjectStore()
 
 const foundProjects = ref<IProject[]>([])
 function findProjects(query: string) {
-	if (query === '') {
+	if (query === '' && !props.multiple) {
 		select(null)
 	}
 	
@@ -76,13 +83,26 @@ function findProjects(query: string) {
 	foundProjects.value = found.filter(props.filter)
 }
 
+function update(value: IProject | IProject[] | null) {
+	if (Array.isArray(value)) {
+		emit('update:modelValue', value as Selection)
+	} else if (value === null) {
+		select(null)
+	} else {
+		Object.assign(project, value)
+	}
+}
+
 function select(p: IProject | null) {
+	if (props.multiple) {
+		return
+	}
 	if (p === null) {
 		Object.assign(project, new ProjectModel())
-		emit('update:modelValue', null)
+		emit('update:modelValue', null as Selection)
 		return
 	}
 	Object.assign(project, p)
-	emit('update:modelValue', project)
+	emit('update:modelValue', project as Selection)
 }
 </script>

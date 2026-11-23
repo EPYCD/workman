@@ -4,14 +4,11 @@ import {onBeforeMount, ref, watch} from 'vue'
 import type {IProjectView} from '@/modelTypes/IProjectView'
 import type {IFilters} from '@/modelTypes/ISavedFilter'
 
-import {hasFilterQuery, transformFilterStringForApi, transformFilterStringFromApi} from '@/helpers/filters'
-import {useLabels} from '@/composables/useLabels'
-import {useProjectStore} from '@/stores/projects'
+import {hasFilterQuery} from '@/helpers/filters'
 
 import XButton from '@/components/input/Button.vue'
 import FancyCheckbox from '@/components/input/FancyCheckbox.vue'
-import FilterInputDocs from '@/components/input/filter/FilterInputDocs.vue'
-import FilterInput from '@/components/input/filter/FilterInput.vue'
+import FilterEditor from '@/components/input/filter/FilterEditor.vue'
 import FormField from '@/components/input/FormField.vue'
 
 const props = withDefaults(defineProps<{
@@ -32,20 +29,14 @@ type LoadedProjectView = Omit<IProjectView, 'filter'> & {filter: IFilters & {inc
 
 const view = ref<LoadedProjectView>()
 
-const {isPending, getLabelByExactTitle, getLabelById} = useLabels()
-const projectStore = useProjectStore()
-
 const transformFilterFromApi = (filterInput?: IFilters): IFilters => {
 	const camelCaseFilter = filterInput as unknown as {
 		sortBy?: IFilters['sort_by'],
 		orderBy?: IFilters['order_by'],
 		filterIncludeNulls?: boolean,
 	} | undefined
-	const filterString = transformFilterStringFromApi(
-		filterInput?.filter ?? '',
-		labelId => getLabelById(labelId)?.title || null,
-		projectId => projectStore.projects[projectId]?.title || null,
-	)
+	// The editor takes and returns the api form of a query; it resolves titles itself.
+	const filterString = filterInput?.filter ?? ''
 
 	const filter: IFilters = {
 		sort_by: filterInput?.sort_by ?? camelCaseFilter?.sortBy ?? [],
@@ -96,47 +87,6 @@ onBeforeMount(() => {
 		view.value = transformed
 	}
 
-	const initialFilter = transformed.filter.filter
-	const initialBuckets = transformed.bucketConfiguration.map(bucket => ({
-		title: bucket.title,
-		filter: bucket.filter.filter,
-	}))
-
-	watch(isPending, pending => {
-		if (pending || !view.value) {
-			return
-		}
-
-		const resolved = transformViewFromApi(props.modelValue)
-		if (view.value.filter.filter === initialFilter) {
-			view.value.filter = {
-				...view.value.filter,
-				filter: resolved.filter.filter,
-			}
-		}
-
-		view.value.bucketConfiguration = view.value.bucketConfiguration.map((bucket, index) => {
-			const initial = initialBuckets[index]
-			const resolvedBucket = resolved.bucketConfiguration[index]
-			if (
-				!initial ||
-				!resolvedBucket ||
-				bucket.title !== initial.title ||
-				bucket.filter.filter !== initial.filter
-			) {
-				return bucket
-			}
-
-			return {
-				...bucket,
-				filter: {
-					...bucket.filter,
-					filter: resolvedBucket.filter.filter,
-				},
-			}
-		})
-	}, {immediate: true})
-
 	watch(() => view.value?.viewKind, kind => {
 		if (kind === 'kanban' && view.value?.bucketConfigurationMode === 'none') {
 			view.value.bucketConfigurationMode = 'manual'
@@ -150,14 +100,7 @@ function save() {
 	}
 
 	const transformFilterForApi = (filterInput?: IFilters): IFilters => {
-		const filterString = transformFilterStringForApi(
-			filterInput?.filter || '',
-			labelTitle => getLabelByExactTitle(labelTitle)?.id || null,
-			projectTitle => {
-				const found = projectStore.findProjectByExactname(projectTitle)
-				return found?.id || null
-			},
-		)
+		const filterString = filterInput?.filter || ''
 		const filter: IFilters = {
 			sort_by: filterInput?.sort_by ?? [],
 			order_by: filterInput?.order_by ?? [],
@@ -241,22 +184,15 @@ function handleBubbleSave() {
 			</template>
 		</FormField>
 
-		<label
-			class="label"
-			for="filter"
-		>
+		<p class="label">
 			{{ $t('project.views.filter') }}
-		</label>
-		<FilterInput
-			id="filter"
+		</p>
+		<FilterEditor
 			v-model="view.filter.filter"
+			:label="$t('project.views.filter')"
 			:project-id="view.projectId"
 			class="mbe-1"
 		/>
-
-		<div class="is-size-7 mbe-2">
-			<FilterInputDocs />
-		</div>
 
 		<div
 			v-if="view.viewKind !== 'kanban'"
@@ -340,16 +276,12 @@ function handleBubbleSave() {
 							:placeholder="$t('project.share.links.namePlaceholder')"
 						/>
 
-						<FilterInput
+						<FilterEditor
 							v-model="view.bucketConfiguration[index].filter.filter"
+							:label="$t('project.views.bucketFilter', {title: view.bucketConfiguration[index].title})"
 							:project-id="view.projectId"
-							:input-label="$t('project.views.filter')"
 							class="mbe-2"
 						/>
-
-						<div class="is-size-7 mbe-2">
-							<FilterInputDocs />
-						</div>
 
 						<div class="field mbe-3">
 							<FancyCheckbox
