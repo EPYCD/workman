@@ -188,21 +188,17 @@ func runUpdate(ctx context.Context, rt *runtime, id int64, f *updateFlags) (*cli
 		dirty = true
 	}
 
-	progress := &steps{task: rt.cfg.FormatTaskID(current.Index)}
-
 	// Comment first when transitioning to scrapped — the reason is part of
 	// the audit trail and should appear before the bucket move in the log.
 	if newStatus == status.Scrapped {
 		if _, err := rt.client.AddTaskComment(ctx, id, "<strong>Scrapped:</strong> "+strings.TrimSpace(f.reason)); err != nil {
-			return nil, progress.fail("scrapped comment", err)
+			return nil, err
 		}
-		progress.done("scrapped comment")
 	}
 	if f.comment != "" {
 		if _, err := rt.client.AddTaskComment(ctx, id, f.comment); err != nil {
-			return nil, progress.fail("comment", err)
+			return nil, err
 		}
-		progress.done("comment")
 	}
 
 	// Apply the field update if anything changed.
@@ -210,43 +206,37 @@ func runUpdate(ctx context.Context, rt *runtime, id int64, f *updateFlags) (*cli
 	if dirty {
 		u, err := rt.client.UpdateTask(ctx, id, body)
 		if err != nil {
-			return nil, progress.fail("update fields", err)
+			return nil, err
 		}
 		updated = u
-		progress.done("update fields")
 	}
 
 	// Move the task between buckets after the field update.
 	if bucketTransitionTarget != 0 {
 		if err := rt.client.MoveTaskToBucket(ctx,
 			rt.cfg.ProjectID, rt.cfg.ViewID, bucketTransitionTarget, id); err != nil {
-			return nil, progress.fail("set bucket", err)
+			return nil, err
 		}
-		progress.done("set bucket")
 	}
 
 	// Label add/remove run after the field update so a status transition
 	// can't clobber freshly-attached labels.
 	for _, raw := range f.addLabels {
 		title := normalizeLabelTitle(raw)
-		step := "label-add " + title
 		l, err := getOrCreateLabelByTitle(ctx, rt.client, title)
 		if err != nil {
-			return nil, progress.fail(step, err)
+			return nil, err
 		}
 		if err := rt.client.AddLabelToTask(ctx, id, l.ID); err != nil {
-			return nil, progress.fail(step, err)
+			return nil, err
 		}
-		progress.done(step)
 	}
 	for _, raw := range f.removeLabels {
 		title := normalizeLabelTitle(raw)
 		if l := findLabelOnTask(updated, title); l != nil {
-			step := "label-remove " + title
 			if err := rt.client.RemoveLabelFromTask(ctx, id, l.ID); err != nil {
-				return nil, progress.fail(step, err)
+				return nil, err
 			}
-			progress.done(step)
 		}
 	}
 
