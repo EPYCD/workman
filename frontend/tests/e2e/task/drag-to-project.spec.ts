@@ -130,7 +130,9 @@ test.describe('Drag Task to Project in Sidebar', () => {
 			const rows = page.locator('.tasks .single-task')
 			await expect(rows).toHaveText([/Task in the subproject/, /Parent task 1/, /Parent task 2/])
 
-			const positionSaved = page.waitForResponse(r => r.url().includes(`/tasks/${task.id}/position`) && r.request().method() === 'PUT')
+			const positionSaved = page.waitForResponse(r =>
+				// The fork saves positions through v1: POST, not upstream's PUT.
+				r.url().includes(`/tasks/${task.id}/position`) && r.request().method() === 'POST')
 			const parentTask1 = rows.filter({hasText: 'Parent task 1'})
 			const parentTask1Box = (await parentTask1.boundingBox())!
 			await rows.filter({hasText: task.title}).dragTo(parentTask1, {targetPosition: {x: parentTask1Box.width / 2, y: parentTask1Box.height * 0.4}})
