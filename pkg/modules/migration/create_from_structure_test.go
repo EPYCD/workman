@@ -422,6 +422,27 @@ func TestInsertFromStructure(t *testing.T) {
 			assert.Equal(t, int64(4), count, "task %q must keep position %v in all views", title, position)
 		}
 	})
+	t.Run("skips null positions and task buckets", func(t *testing.T) {
+		db.LoadAndAssertFixtures(t)
+
+		structure := []*models.ProjectWithTasksAndBuckets{{
+			Project: models.Project{
+				Title: "Null positions",
+				Views: []*models.ProjectView{{
+					ID:                      100,
+					Title:                   "Kanban",
+					ViewKind:                models.ProjectViewKindKanban,
+					BucketConfigurationMode: models.BucketConfigurationModeManual,
+				}},
+			},
+			Tasks:       []*models.TaskWithComments{{Task: models.Task{ID: 10, Title: "task"}}},
+			Buckets:     []*models.Bucket{{ID: 200, Title: "Backlog", ProjectViewID: 100}},
+			Positions:   []*models.TaskPosition{nil},
+			TaskBuckets: []*models.TaskBucket{nil},
+		}}
+
+		require.NoError(t, InsertFromStructure(structure, u))
+	})
 	t.Run("assignees from a foreign instance", func(t *testing.T) {
 		db.LoadAndAssertFixtures(t)
 
@@ -514,6 +535,41 @@ func TestInsertFromStructureFileProvider(t *testing.T) {
 	})
 }
 
+type panickingAttachmentProvider struct {
+	testFileProvider
+}
+
+func (p *panickingAttachmentProvider) OpenAttachment(_ *models.TaskAttachment) (io.ReadSeekCloser, int64, error) {
+	panic("attachment")
+}
+
+func TestInsertFromStructurePanicCleanup(t *testing.T) {
+	db.LoadAndAssertFixtures(t)
+	u := &user.User{ID: 1}
+
+	unrelated, err := files.Create(bytes.NewReader([]byte("unrelated")), "unrelated", 9, u)
+	require.NoError(t, err)
+	newBackgroundID := unrelated.ID + 1
+	background := &trackedReadSeekCloser{Reader: bytes.NewReader(testBackground(t))}
+	provider := &panickingAttachmentProvider{testFileProvider{background: background}}
+	structure := []*models.ProjectWithTasksAndBuckets{{
+		Project: models.Project{Title: "panic cleanup", BackgroundFileID: unrelated.ID},
+		Tasks: []*models.TaskWithComments{{Task: models.Task{
+			Title:       "task",
+			Attachments: []*models.TaskAttachment{{File: &files.File{Name: "boom"}}},
+		}}},
+	}}
+
+	require.Panics(t, func() {
+		_ = InsertFromStructureWithFileProvider(structure, u, provider)
+	})
+	require.Equal(t, newBackgroundID, structure[0].Project.BackgroundFileID, "background must be stored before the panic")
+
+	_, err = files.FileStat(&files.File{ID: newBackgroundID})
+	require.ErrorIs(t, err, fs.ErrNotExist, "a panicking import must remove its stored blobs")
+	db.AssertMissing(t, "projects", map[string]interface{}{"title": "panic cleanup"})
+}
+
 func TestInsertFromStructureItemLimit(t *testing.T) {
 	db.LoadAndAssertFixtures(t)
 	config.MigrationMaxItems.Set(3)
@@ -534,4 +590,24 @@ func TestInsertFromStructureItemLimit(t *testing.T) {
 	var limitErr *ErrImportItemLimitExceeded
 	require.ErrorAs(t, err, &limitErr)
 	db.AssertMissing(t, "projects", map[string]interface{}{"title": "item limit project"})
+}
+
+func TestInsertFromStructureRejectsViewTaskFanOut(t *testing.T) {
+	db.LoadAndAssertFixtures(t)
+	config.MigrationMaxItems.Set(100)
+	t.Cleanup(func() { config.MigrationMaxItems.Set(100000) })
+
+	p := &models.ProjectWithTasksAndBuckets{Project: models.Project{Title: "view fan-out project"}}
+	for i := range 20 {
+		p.Tasks = append(p.Tasks, &models.TaskWithComments{Task: models.Task{Title: fmt.Sprintf("task %d", i)}})
+	}
+	for i := range 20 {
+		p.Views = append(p.Views, &models.ProjectView{ID: int64(i + 1), Title: "view", ViewKind: models.ProjectViewKindList})
+	}
+
+	// 41 items without positions, 400 position rows on top.
+	err := InsertFromStructure([]*models.ProjectWithTasksAndBuckets{p}, &user.User{ID: 1})
+	var limitErr *ErrImportItemLimitExceeded
+	require.ErrorAs(t, err, &limitErr)
+	db.AssertMissing(t, "projects", map[string]interface{}{"title": "view fan-out project"})
 }

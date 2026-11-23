@@ -3,9 +3,13 @@
 		<div
 			v-for="(r, index) in reminders"
 			:key="index"
-			:data-is-overdue="r.reminder && r.reminder < now || undefined"
+			:data-is-overdue="isOverdue(r) || undefined"
 			class="reminder-input"
 		>
+			<OverdueIndicator
+				v-if="isOverdue(r)"
+				class="reminder-overdue mie-2"
+			/>
 			<ReminderDetail
 				v-model="reminders[index]"
 				class="reminder-detail"
@@ -25,7 +29,7 @@
 		</div>
 
 		<ReminderDetail
-			:disabled="disabled"
+			v-if="!disabled"
 			:clear-after-update="true"
 			:default-relative-to="defaultRelativeTo"
 			:allow-absolute="allowAbsolute"
@@ -42,6 +46,7 @@ import type {IReminderPeriodRelativeTo} from '@/types/IReminderPeriodRelativeTo'
 
 import BaseButton from '@/components/base/BaseButton.vue'
 import ReminderDetail from '@/components/tasks/partials/ReminderDetail.vue'
+import OverdueIndicator from '@/components/tasks/partials/OverdueIndicator.vue'
 import {useNow} from '@vueuse/core'
 
 const props = withDefaults(defineProps<{
@@ -63,6 +68,10 @@ const emit = defineEmits<{
 const reminders = ref<ITaskReminder[]>([])
 
 const now = useNow({interval: 1000})
+
+function isOverdue(reminder: ITaskReminder): boolean {
+	return reminder.reminder !== null && reminder.reminder < now.value
+}
 
 watch(
 	() => props.modelValue,
@@ -95,7 +104,8 @@ function removeReminderByIndex(index: number) {
 	display: flex;
 	align-items: center;
 
-	&[data-is-overdue] :deep(.datepicker .show) {
+	&[data-is-overdue] :deep(.datepicker .show),
+	.reminder-overdue {
 		color: var(--danger-text);
 	}
 

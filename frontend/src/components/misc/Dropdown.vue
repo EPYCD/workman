@@ -137,6 +137,8 @@ function onKeydown(e: KeyboardEvent) {
 	if (e.key !== 'Escape' || !open.value) {
 		return
 	}
+	// preventDefault cancels a wrapping native <dialog>'s Escape close request.
+	e.preventDefault()
 	e.stopPropagation()
 	close()
 	focusTrigger()
@@ -198,7 +200,7 @@ onClickOutside(dropdown, (e) => {
 	box-shadow: var(--shadow-md);
 }
 
-.dropdown-divider {
+.dropdown-content :deep(.dropdown-divider) {
 	background-color: var(--wm-line-faint);
 	border: none;
 	display: block;

@@ -266,6 +266,8 @@
   --success-a: 1;
   --success: hsl(var(--wm-success-h), var(--wm-success-s), var(--wm-success-l));
 
+  // Darker than --success: --success as text fails WCAG contrast on white
+  --success-text: hsl(var(--wm-success-h), var(--wm-success-s), 25%);
   --danger-a: 1;
   --danger: hsl(var(--wm-danger-h), var(--wm-danger-s), var(--wm-danger-l));
   --danger-text: hsl(var(--wm-danger-h), var(--wm-danger-s), 42%);
@@ -348,6 +350,8 @@
       --grey-700: hsl(350, 4%, 76%);
       --grey-800: hsl(350, 3%, 88%);
       --grey-500-hsl: 350, 4%, 54%;
+      // Bright values already pass contrast on dark backgrounds
+      --success-text: var(--success);
 
       --tag-color: var(--wm-text-secondary);
       --table-row-hover-background-color: var(--wm-surface-hover);

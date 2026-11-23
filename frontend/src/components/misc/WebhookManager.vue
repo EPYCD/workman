@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import {ref, watch} from 'vue'
+import {computed, ref, watch} from 'vue'
 
 import type {IWebhook} from '@/modelTypes/IWebhook'
 import WebhookModel from '@/models/webhook'
@@ -47,6 +47,27 @@ const webhookIdToDelete = ref<number>()
 
 function validateTargetUrl() {
 	webhookTargetUrlValid.value = isValidHttpUrl(newWebhook.value.targetUrl)
+}
+
+const eventGroups = computed(() => {
+	const groups: Record<string, string[]> = {}
+	for (const event of props.availableEvents) {
+		const group = event.split('.')[0]
+		groups[group] ??= []
+		groups[group].push(event)
+	}
+	return groups
+})
+
+function allSelected(events: string[]) {
+	return events.length > 0 && events.every(event => newWebhookEvents.value[event])
+}
+
+function setEventsSelected(events: string[], selected: boolean) {
+	for (const event of events) {
+		newWebhookEvents.value[event] = selected
+	}
+	validateSelectedEvents()
 }
 
 function getSelectedEventsArray() {
@@ -170,14 +191,36 @@ function doDelete() {
 				</p>
 				<div class="control">
 					<FancyCheckbox
-						v-for="event in availableEvents"
-						:key="event"
-						v-model="newWebhookEvents[event]"
-						class="available-events-check"
-						@update:modelValue="validateSelectedEvents"
+						:model-value="allSelected(availableEvents)"
+						class="webhook-events-select-all has-text-weight-bold"
+						@update:modelValue="checked => setEventsSelected(availableEvents, checked)"
 					>
-						{{ event }}
+						{{ $t('project.webhooks.selectAllEvents') }}
 					</FancyCheckbox>
+					<div
+						v-for="(events, group) in eventGroups"
+						:key="group"
+						class="webhook-events-group"
+					>
+						<FancyCheckbox
+							:model-value="allSelected(events)"
+							class="webhook-events-group-toggle is-capitalized has-text-weight-bold"
+							@update:modelValue="checked => setEventsSelected(events, checked)"
+						>
+							{{ group }}
+						</FancyCheckbox>
+						<div class="mis-4">
+							<FancyCheckbox
+								v-for="event in events"
+								:key="event"
+								v-model="newWebhookEvents[event]"
+								class="available-events-check"
+								@update:modelValue="validateSelectedEvents"
+							>
+								{{ event }}
+							</FancyCheckbox>
+						</div>
+					</div>
 				</div>
 				<p
 					v-if="!selectedEventsValid"

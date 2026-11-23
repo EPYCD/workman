@@ -4,6 +4,7 @@
 			<template #trigger="{toggle}">
 				<SimpleButton
 					v-tooltip="reminder.reminder && reminder.relativeTo !== null ? formatDisplayDate(reminder.reminder) : null"
+					:disabled="disabled"
 					@click.prevent.stop="toggle()"
 				>
 					{{ reminderText }}
@@ -94,11 +95,13 @@ const props = withDefaults(defineProps<{
 	clearAfterUpdate?: boolean,
 	defaultRelativeTo?: IReminderPeriodRelativeTo | null,
 	allowAbsolute?: boolean,
+	disabled?: boolean,
 }>(), {
 	modelValue: () => new TaskReminderModel() as ITaskReminder,
 	clearAfterUpdate: false,
 	defaultRelativeTo: REMINDER_PERIOD_RELATIVE_TO_TYPES.DUEDATE,
 	allowAbsolute: true,
+	disabled: false,
 })
 
 const emit = defineEmits<{

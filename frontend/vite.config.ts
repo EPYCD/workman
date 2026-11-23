@@ -152,7 +152,12 @@ function getBuildConfig(env: Record<string, string>) {
 				// Whether to install the full set of APIs, components, etc. provided by Vue I18n.
 				// By default, all of them will be installed.
 				fullInstall: true,
-				include: resolve(dirname(pathSrc), './src/i18n/lang/**'),
+				// Vitest 5's module runner cannot resolve the plugin's precompiled
+				// locale modules (`/@id/virtual:intlify-i18n-*`), so tests load the
+				// JSON as-is and compile messages at runtime instead.
+				...(process.env.VITEST
+					? {runtimeOnly: false}
+					: {include: resolve(dirname(pathSrc), './src/i18n/lang/**')}),
 			}),
 			// https://github.com/Applelo/unplugin-inject-preload
 			UnpluginInjectPreload({

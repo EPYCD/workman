@@ -320,6 +320,7 @@ func GetTasksInBucketsForView(s *xorm.Session, view *ProjectView, projects []*Pr
 	}
 
 	originalFilter := opts.filter
+	originalSearch := opts.search
 	for id, bucket := range bucketMap {
 
 		if !strings.Contains(originalFilter, taskPropertyBucketID) {
@@ -331,6 +332,7 @@ func GetTasksInBucketsForView(s *xorm.Session, view *ProjectView, projects []*Pr
 					bucketFilter = "(" + view.BucketConfiguration[id].Filter.Filter + ")"
 				}
 
+				opts.search = originalSearch
 				if view.BucketConfiguration[id].Filter.Search != "" {
 					opts.search = view.BucketConfiguration[id].Filter.Search
 				}

@@ -68,12 +68,13 @@
 						<template #item="{element: bucket, index: bucketIndex }">
 							<li
 								class="bucket"
-								:class="{'is-collapsed': collapsedBuckets[bucket.id]}"
+								:class="{'is-collapsed': isCollapsed(bucket)}"
 								:data-bucket-id="bucket.id"
 							>
 								<div
 									class="bucket-header"
 									@click="() => unCollapseBucket(bucket)"
+									@dragenter="() => expandWhileDragging(bucket)"
 								>
 									<span
 										v-if="bucket.id !== 0 && view?.doneBucketId === bucket.id"
@@ -102,10 +103,20 @@
 										{{ bucket.title }}
 									</h2>
 									<span
-										:class="{'is-max': bucket.limit > 0 && bucket.count >= bucket.limit}"
+										v-tooltip="isBucketFull(bucket) ? $t('project.kanban.bucketLimitReached') : ''"
+										:class="{'is-max': isBucketFull(bucket)}"
 										class="limit"
 									>
+										<Icon
+											v-if="isBucketFull(bucket)"
+											icon="exclamation-circle"
+											class="mie-1"
+										/>
 										{{ bucket.limit > 0 ? `${bucket.count}/${bucket.limit}` : bucket.count }}
+										<span
+											v-if="isBucketFull(bucket)"
+											class="is-sr-only"
+										>{{ $t('project.kanban.bucketLimitReachedShort') }}</span>
 									</span>
 									<Dropdown
 										v-if="canWrite && !collapsedBuckets[bucket.id]"
@@ -296,12 +307,12 @@
 											</div>
 											<XButton
 												v-else
-												v-tooltip="bucket.limit > 0 && bucket.count >= bucket.limit ? $t('project.kanban.bucketLimitReached') : ''"
+												v-tooltip="isBucketFull(bucket) ? $t('project.kanban.bucketLimitReached') : ''"
 												class="is-fullwidth has-text-centered"
 												:shadow="false"
 												icon="plus"
 												variant="secondary"
-												:disabled="bucket.limit > 0 && bucket.count >= bucket.limit"
+												:disabled="isBucketFull(bucket)"
 												@click="toggleShowNewTaskInput(bucket.id)"
 											>
 												{{
@@ -502,6 +513,7 @@ const newTaskInputFocused = ref(false)
 
 const showSetLimitInput = ref(false)
 const collapsedBuckets = ref<CollapsedBuckets>({})
+const dragExpandedBuckets = ref(new Set<number>())
 
 // We're using this to show the loading animation only at the task when updating it
 const taskUpdating = ref<{ [id: ITask['id']]: boolean }>({})
@@ -755,6 +767,7 @@ function updateTasks(bucketId: IBucket['id'], tasks: IBucket['tasks']) {
 
 async function updateTaskPosition(e) {
 	drag.value = false
+	dragExpandedBuckets.value.clear()
 
 	// Check if dropped on a sidebar project
 	const {moved} = await handleTaskDropToProject(e, (task) => {
@@ -889,7 +902,7 @@ async function addTaskToBucket(bucketId: IBucket['id']) {
 	scrollTaskContainerToTop(bucketId)
 
 	const bucket = kanbanStore.getBucketById(bucketId)
-	if (bucket && bucket.limit && bucket.count >= bucket.limit) {
+	if (bucket && isBucketFull(bucket)) {
 		toggleShowNewTaskInput(bucketId)
 	}
 }
@@ -1042,6 +1055,10 @@ async function setBucketLimit(bucketId: IBucket['id'], now: boolean = false) {
 	setBucketLimitCancel.value = setTimeout(saveBucketLimit, 2500, bucketId, limit)
 }
 
+function isBucketFull(bucket: IBucket) {
+	return bucket.limit > 0 && bucket.count >= bucket.limit
+}
+
 function shouldAcceptDrop(bucket: IBucket) {
 	return (
 		// When dragging from a bucket who has its limit reached, dragging should still be possible
@@ -1110,6 +1127,17 @@ async function toggleClaimBucket(bucket: IBucket) {
 function collapseBucket(bucket: IBucket) {
 	collapsedBuckets.value[bucket.id] = true
 	saveCollapsedBucketState(projectIdWithFallback.value, collapsedBuckets.value)
+}
+
+function isCollapsed(bucket: IBucket) {
+	return collapsedBuckets.value[bucket.id] && !dragExpandedBuckets.value.has(bucket.id)
+}
+
+// Collapsed buckets hide their task list, leaving nothing to drop on.
+function expandWhileDragging(bucket: IBucket) {
+	if (drag.value && collapsedBuckets.value[bucket.id]) {
+		dragExpandedBuckets.value.add(bucket.id)
+	}
 }
 
 function unCollapseBucket(bucket: IBucket) {
@@ -1367,6 +1395,7 @@ $filter-container-height: '1rem - #{$switch-view-height}';
 
 			padding: 0 var(--wm-space-2);
 			color: var(--wm-text-tertiary);
+			white-space: nowrap;
 
 			&.is-max {
 				color: var(--danger-text);

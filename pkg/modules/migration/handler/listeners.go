@@ -104,7 +104,9 @@ func (s *MigrationListener) Handle(msg *message.Message) (err error) {
 		if m != nil {
 			migrationID = m.ID
 		}
-		log.Errorf("[Migration] Migration %d from %s for user %d failed. Error was: %s", migrationID, event.MigratorKind, event.User.ID, err.Error())
+		// err itself stays for classification, a redacted error loses its type.
+		redacted := migration.RedactError(err)
+		log.Errorf("[Migration] Migration %d from %s for user %d failed. Error was: %s", migrationID, event.MigratorKind, event.User.ID, redacted.Error())
 
 		var nerr error
 		if config.SentryEnabled.GetBool() && shouldReportMigrationError(err) {
@@ -113,12 +115,12 @@ func (s *MigrationListener) Handle(msg *message.Message) (err error) {
 			})
 			sentry.CaptureException(&migrationFailedError{
 				MigratorKind:  event.MigratorKind,
-				OriginalError: err,
+				OriginalError: redacted,
 			})
 		} else {
 			nerr = notifications.Notify(event.User, &MigrationFailedNotification{
 				MigratorName: ms.Name(),
-				Error:        err,
+				Error:        redacted,
 			})
 		}
 		if nerr != nil {

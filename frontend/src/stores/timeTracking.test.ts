@@ -37,6 +37,7 @@ function entry(id: number, endTime: Date | null): ITimeEntry {
 		startTime: new Date(),
 		endTime,
 		comment: '',
+		inTrash: false,
 		created: new Date(),
 		updated: new Date(),
 		maxPermission: null,

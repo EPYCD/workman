@@ -82,6 +82,17 @@
 						{{ $t('timeTracking.title') }}
 					</RouterLink>
 				</li>
+				<li v-if="!authStore.isLinkShareAuth">
+					<RouterLink
+						:to="{ name: 'trash'}"
+						:class="{'router-link-exact-active': $route.name === 'trash.tasks' || $route.name === 'trash.projects'}"
+					>
+						<span class="menu-item-icon icon">
+							<Icon icon="trash-alt" />
+						</span>
+						{{ $t('trash.title') }}
+					</RouterLink>
+				</li>
 			</menu>
 		</nav>
 
@@ -174,6 +185,7 @@ import Loading from '@/components/misc/Loading.vue'
 import {useBaseStore} from '@/stores/base'
 import {useProjectStore} from '@/stores/projects'
 import {useConfigStore} from '@/stores/config'
+import {useAuthStore} from '@/stores/auth'
 import {PRO_FEATURE} from '@/constants/proFeatures'
 import ProjectsNavigation from '@/components/home/ProjectsNavigation.vue'
 import type {IProject} from '@/modelTypes/IProject'
@@ -182,6 +194,8 @@ import {useSidebarResize} from '@/composables/useSidebarResize'
 const baseStore = useBaseStore()
 const projectStore = useProjectStore()
 const configStore = useConfigStore()
+// The trash API is not available to link shares.
+const authStore = useAuthStore()
 
 const timeTrackingEnabled = computed(() => configStore.isProFeatureEnabled(PRO_FEATURE.TIME_TRACKING))
 

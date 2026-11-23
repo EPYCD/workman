@@ -10,6 +10,25 @@ import type {MIGRATORS} from '@/views/migrate/migrators'
 import type {ProFeature} from '@/constants/proFeatures'
 import {InvalidApiUrlProvidedError} from '@/helpers/checkAndSetApiUrl'
 
+export interface LegalLink {
+	text: string,
+	url: string,
+}
+
+// APIs from before legal.links only send the deprecated urls.
+function legalLinks(legal: Partial<ConfigState['legal']>): LegalLink[] {
+	const links = legal.links ?? [
+		{text: 'Imprint', url: legal.imprintUrl ?? ''},
+		{text: 'Privacy Policy', url: legal.privacyPolicyUrl ?? ''},
+	]
+	return links
+		.map(link => ({
+			text: link.text ?? '',
+			url: navigableUrl(link.url),
+		}))
+		.filter(link => link.text !== '' && link.url !== '')
+}
+
 export interface ConfigState {
 	version: string,
 	frontendUrl: string,
@@ -25,6 +44,7 @@ export interface ConfigState {
 	legal: {
 		imprintUrl: string,
 		privacyPolicyUrl: string,
+		links: LegalLink[],
 	},
 	caldavEnabled: boolean,
 	userDeletionEnabled: boolean,
@@ -86,6 +106,7 @@ export const useConfigStore = defineStore('config', () => {
 		legal: {
 			imprintUrl: '',
 			privacyPolicyUrl: '',
+			links: [],
 		},
 		caldavEnabled: false,
 		userDeletionEnabled: true,
@@ -143,6 +164,7 @@ export const useConfigStore = defineStore('config', () => {
 		if (camelConfig.legal) {
 			camelConfig.legal.imprintUrl = navigableUrl(camelConfig.legal.imprintUrl)
 			camelConfig.legal.privacyPolicyUrl = navigableUrl(camelConfig.legal.privacyPolicyUrl)
+			camelConfig.legal.links = legalLinks(camelConfig.legal)
 		}
 		camelConfig.auth?.openidConnect?.providers?.forEach(provider => {
 			provider.authUrl = navigableUrl(provider.authUrl)

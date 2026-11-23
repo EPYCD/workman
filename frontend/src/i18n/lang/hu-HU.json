@@ -217,13 +217,7 @@
 		},
 		"delete": {
 			"title": "\"{project}\" törlése",
-			"header": "Projekt törlése",
-			"text1": "Biztosan törölni szeretnéd ezt a projektet és annak összes tartalmát?",
-			"text2": "Ez magában foglalja az összes feladatot és NEM VISSZAVONHATÓ!",
-			"success": "A projekt sikeresen törölve.",
-			"tasksToDelete": "Ezzel visszavonhatatlanul eltávolítunk kb. {count} feladatot.",
-			"tasksAndChildProjectsToDelete": "Ezzel visszavonhatatlanul eltávolítunk kb. {tasks} feladatot és {projects} projektet.",
-			"noTasksToDelete": "Ez a projekt nem tartalmaz feladatokat, biztonságosan törölhető."
+			"header": "Projekt törlése"
 		},
 		"duplicate": {
 			"title": "Duplikálja a projektet",
@@ -674,34 +668,12 @@
 			"updated": "Frissítve: {0}",
 			"doneAt": "Befejezve: {0}",
 			"updateSuccess": "A feladat mentése sikeres volt.",
-			"deleteSuccess": "A feladat sikeresen törölve.",
 			"belongsToProject": "Ez a feladat a(z) „{project}” projekthez tartozik",
 			"due": "Határidő {at}",
-			"organization": "Szervezet",
-			"management": "Menedzsment",
-			"dateAndTime": "Dátum és idő",
-			"delete": {
-				"header": "Feladat törlése",
-				"text1": "Biztos törölni akarod ezt a feladatot?",
-				"text2": "Ezzel eltávolítja a feladathoz kapcsolódó összes mellékletet, emlékeztetőt és kapcsolatot is és nem vonható vissza!"
-			},
 			"actions": {
-				"assign": "Hozzárendelés felhasználóhoz",
-				"label": "Címkék hozzáadása",
-				"priority": "Prioritás beállítása",
-				"dueDate": "Határidő beállítása",
-				"startDate": "Kezdő dátum beállítása",
-				"endDate": "Befejező dátum beállítása",
-				"reminders": "Emlékeztető beállítása",
 				"repeatAfter": "Állítsa be az ismétlési intervallumot",
-				"percentDone": "Előrehaladás beállítása",
-				"attachments": "Melléklet hozzáadása",
-				"relatedTasks": "Kapcsolat hozzáadása",
 				"moveProject": "Áthelyezés",
-				"color": "Szín beállítása",
-				"delete": "Törlés",
-				"favorite": "Hozzáadás a kedvencekhez",
-				"unfavorite": "Törlés a kedvencekből"
+				"delete": "Törlés"
 			}
 		},
 		"attributes": {
@@ -832,9 +804,6 @@
 			"dateAndTime": "Dátum és idő"
 		},
 		"repeat": {
-			"everyDay": "Minden nap",
-			"everyWeek": "Minden héten",
-			"every30d": "30 naponta",
 			"mode": "Ismétlés típusa",
 			"monthly": "Havi",
 			"each": "Minden egyes",
@@ -1095,7 +1064,38 @@
 	},
 	"about": {
 		"title": "Névjegy",
-		"version": "Verzió: {version}"
+		"version": "Verzió: {version}",
+		"frontendVersion": "Frontend verzió: {version}",
+		"apiVersion": "API verzió: {version}",
+		"proActive": "Proaktív"
+	},
+	"timeTracking": {
+		"title": "Időmérés",
+		"stop": "Időmérő leállítása",
+		"logTime": "Idő rögzítése",
+		"editEntry": "Bejegyzés szerkesztése",
+		"form": {
+			"task": "Feladat",
+			"taskSearch": "Feladat keresése…",
+			"commentPlaceholder": "Min dolgoztál?",
+			"save": "Bejegyzés mentése",
+			"startTimer": "Időmérő elindítása",
+			"update": "Bejegyzés frissítése",
+			"smartFill": "Kitöltés az utolsó bejegyzésből",
+			"endsSpanningEntriesAt": "Új időmérő indítása megállítja az átfedő bejegyzéseket itt: {time}"
+		},
+		"list": {
+			"emptyTask": "Ehhez a feladathoz még nem lett idő rögzítve.",
+			"emptyFiltered": "A kiválasztott szűrőkhöz nem lett idő rögzítve.",
+			"total": "Összesen",
+			"pageTotal": "Összesen ezen az oldalon",
+			"time": "Idő",
+			"duration": "Időtartam"
+		},
+		"browse": {
+			"selectRange": "Tartomány kiválasztása",
+			"userSearch": "Felhasználó keresése…"
+		}
 	},
 	"time": {
 		"units": {

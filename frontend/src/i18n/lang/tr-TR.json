@@ -274,7 +274,6 @@
 			"header": "Bu projeyi sil",
 			"text1": "Bu projeyi ve tüm içeriğini silmek istediğinizden emin misiniz?",
 			"text2": "Bu, tüm görevleri içerir ve GERİ ALINAMAZ!",
-			"success": "Proje başarıyla silindi.",
 			"tasksToDelete": "Bu, yaklaşık {count} görevi geri alınamaz şekilde kaldıracak.",
 			"tasksAndChildProjectsToDelete": "Bu, yaklaşık {tasks} görevi ve {projects} projeyi geri alınamaz şekilde kaldıracak.",
 			"noTasksToDelete": "Bu proje herhangi bir görev içermiyor, silmek güvenli olmalı."
@@ -782,34 +781,22 @@
 			"updated": "{0} tarihinde güncellendi",
 			"doneAt": "{0} tarihinde tamamlandı",
 			"updateSuccess": "Görev başarıyla kaydedildi.",
-			"deleteSuccess": "Görev başarıyla silindi.",
 			"belongsToProject": "Bu görev '{project}' projesine aittir",
 			"back": "Projeye geri dön",
 			"due": "{at} tarihinde bitiyor",
-			"organization": "Organizasyon",
-			"management": "Yönetim",
-			"dateAndTime": "Tarih ve saat",
 			"delete": {
 				"header": "Bu görevi sil",
 				"text1": "Bu görevi kaldırmak istediğinizden emin misiniz?",
 				"text2": "Bu, tüm ekleri, hatırlatıcıları ve bu görevle ilişkili ilişkileri de kaldırır ve geri alınamaz!"
 			},
 			"actions": {
-				"assign": "Kullanıcıya Ata",
-				"label": "Etiket Ekle",
-				"priority": "Öncelik Belirle",
-				"dueDate": "Bitiş Tarihi Belirle",
-				"startDate": "Başlangıç Tarihi Belirle",
 				"endDate": "Bitiş Tarihi Belirle",
 				"reminders": "Hatırlatıcılar Belirle",
 				"repeatAfter": "Tekrarlama Aralığı Belirle",
 				"percentDone": "İlerleme Belirle",
 				"attachments": "Ekler Ekle",
-				"relatedTasks": "İlişki Ekle",
 				"moveProject": "Taşı",
-				"color": "Renk Belirle",
 				"delete": "Sil",
-				"favorite": "Favorilere Ekle",
 				"unfavorite": "Favorilerden Kaldır"
 			}
 		},
@@ -950,8 +937,6 @@
 			"dateAndTime": "Tarih ve saat"
 		},
 		"repeat": {
-			"everyDay": "Her Gün",
-			"everyWeek": "Her Hafta",
 			"every30d": "Her 30 Gün",
 			"mode": "Tekrarlama modu",
 			"monthly": "Aylık",

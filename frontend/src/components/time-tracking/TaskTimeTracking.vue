@@ -18,6 +18,35 @@
 			</span>
 			{{ $t('timeTracking.title') }}
 		</h2>
+		<div
+			v-if="runningTimer"
+			v-cy="'taskRunningTimer'"
+			class="running-timer"
+		>
+			<div class="running-timer__info">
+				<div>
+					<span class="has-text-grey">{{ $t('timeTracking.running') }}</span>
+					<span class="running-timer__elapsed">{{ elapsed }}</span>
+				</div>
+				<div
+					v-if="runningTimer.comment"
+					class="running-timer__comment has-text-grey"
+				>
+					{{ runningTimer.comment }}
+				</div>
+			</div>
+			<XButton
+				v-cy="'stopTaskTimer'"
+				class="running-timer__stop"
+				variant="secondary"
+				icon="stop"
+				:shadow="false"
+				:loading="isStopping"
+				@click="stop"
+			>
+				{{ $t('timeTracking.stop') }}
+			</XButton>
+		</div>
 		<TimeEntryForm
 			v-if="formVisible"
 			:task-id="taskId"
@@ -46,6 +75,7 @@ import TimeEntryList from '@/components/time-tracking/TimeEntryList.vue'
 
 import {useTimeEntryService} from '@/services/timeEntry'
 import {useTimeTrackingStore} from '@/stores/timeTracking'
+import {useElapsed} from '@/composables/useElapsed'
 
 import type {ITimeEntry} from '@/modelTypes/ITimeEntry'
 
@@ -55,6 +85,9 @@ const props = defineProps<{
 
 const timeTrackingStore = useTimeTrackingStore()
 const entries = ref<ITimeEntry[]>([])
+const runningTimer = computed(() => timeTrackingStore.activeTimer?.taskId === props.taskId ? timeTrackingStore.activeTimer : null)
+const elapsed = useElapsed(() => runningTimer.value?.startTime)
+const isStopping = ref(false)
 const editingEntry = ref<ITimeEntry | null>(null)
 const showForm = ref(false)
 
@@ -67,6 +100,18 @@ async function load() {
 		perPage: 250,
 	})
 	entries.value = items
+}
+
+async function stop() {
+	if (isStopping.value) {
+		return
+	}
+	isStopping.value = true
+	try {
+		await timeTrackingStore.stopTimer()
+	} finally {
+		isStopping.value = false
+	}
 }
 
 async function onSaved() {
@@ -95,5 +140,33 @@ watch(() => timeTrackingStore.activeTimer, load)
 	&.is-active svg {
 		transform: rotate(45deg);
 	}
+}
+
+.running-timer {
+	display: flex;
+	align-items: center;
+	gap: .5rem;
+	margin-block-end: 1rem;
+}
+
+.running-timer__info {
+	min-inline-size: 0;
+}
+
+.running-timer__elapsed {
+	margin-inline-start: .5rem;
+	color: var(--primary);
+	font-variant-numeric: tabular-nums;
+	font-weight: 600;
+}
+
+.running-timer__comment {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.running-timer__stop {
+	margin-inline-start: auto;
 }
 </style>

@@ -22,18 +22,20 @@
 							:key="p.id"
 						>
 							<td>{{ p.id }}</td>
-							<td>{{ p.title }}</td>
-							<td>
+							<td class="is-breakable">
+								{{ p.title }}
+							</td>
+							<td class="is-breakable">
 								<User
 									v-if="p.owner"
 									:user="p.owner"
 									:avatar-size="24"
 								/>
 							</td>
-							<td>
+							<td class="is-nowrap admin-projects__created">
 								<TimeDisplay :date="p.created" />
 							</td>
-							<td>
+							<td class="is-nowrap">
 								<TimeDisplay :date="p.updated" />
 							</td>
 							<td class="actions">
@@ -208,6 +210,28 @@ onMounted(load)
 // `.table.has-actions` sets overflow: hidden which clips the dropdown menu.
 .admin-projects :deep(.table.has-actions) {
 	overflow: visible;
+}
+
+.admin-projects .loader-container {
+	container-type: inline-size;
+}
+
+@container (width < 40rem) {
+	.admin-projects__created {
+		display: none;
+	}
+}
+
+.admin-projects .table {
+	th,
+	.is-nowrap {
+		white-space: nowrap;
+	}
+
+	.is-breakable {
+		min-inline-size: 6rem;
+		overflow-wrap: anywhere;
+	}
 }
 </style>
 

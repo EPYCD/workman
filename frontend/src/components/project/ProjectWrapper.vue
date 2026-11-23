@@ -21,8 +21,9 @@
 				class="switch-view-dropdown"
 			>
 				<template #trigger="{ toggleOpen, open }">
-					<BaseButton
-						class="switch-view switch-view-dropdown-trigger"
+					<SwitchView
+						:is="BaseButton"
+						class="switch-view-dropdown-trigger"
 						:aria-expanded="open"
 						@click="toggleOpen"
 					>
@@ -31,7 +32,7 @@
 							icon="chevron-down"
 							class="dropdown-icon"
 						/>
-					</BaseButton>
+					</SwitchView>
 				</template>
 				<template #default="{ close }">
 					<div @click="close">
@@ -48,10 +49,9 @@
 			</Dropdown>
 
 			<!-- Inline buttons, hidden when overflowing but kept in DOM for width measurement -->
-			<div
+			<SwitchView
 				v-if="views.length > 1"
 				ref="switchViewRef"
-				class="switch-view"
 				:class="{'switch-view--hidden': isOverflowing || !overflowChecked}"
 				:aria-hidden="isOverflowing || undefined"
 			>
@@ -65,7 +65,7 @@
 				>
 					{{ getViewTitle(view) }}
 				</BaseButton>
-			</div>
+			</SwitchView>
 			<slot name="header" />
 		</div>
 		<CustomTransition name="fade">
@@ -84,7 +84,7 @@
 
 <script setup lang="ts">
 import {computed, ref, watch, nextTick, onMounted} from 'vue'
-import {useResizeObserver} from '@vueuse/core'
+import {unrefElement, useResizeObserver} from '@vueuse/core'
 import {useI18n} from 'vue-i18n'
 
 import BaseButton from '@/components/base/BaseButton.vue'
@@ -93,6 +93,7 @@ import DropdownItem from '@/components/misc/DropdownItem.vue'
 import Icon from '@/components/misc/Icon'
 import Message from '@/components/misc/Message.vue'
 import CustomTransition from '@/components/misc/CustomTransition.vue'
+import SwitchView from '@/components/misc/SwitchView.vue'
 
 import {getProjectTitle} from '@/helpers/getProjectTitle'
 import {useTitle} from '@/composables/useTitle'
@@ -117,15 +118,16 @@ const projectStore = useProjectStore()
 const viewFiltersStore = useViewFiltersStore()
 
 const switchViewContainerRef = ref<HTMLElement>()
-const switchViewRef = ref<HTMLElement>()
+const switchViewRef = ref<InstanceType<typeof SwitchView>>()
 const isOverflowing = ref(false)
 const overflowChecked = ref(false)
 
 function checkOverflow() {
-	if (!switchViewRef.value || !switchViewContainerRef.value) {
+	const switchView = unrefElement(switchViewRef)
+	if (!switchView || !switchViewContainerRef.value) {
 		return
 	}
-	const buttonsWidth = switchViewRef.value.scrollWidth
+	const buttonsWidth = switchView.scrollWidth
 	const containerWidth = switchViewContainerRef.value.clientWidth
 	isOverflowing.value = buttonsWidth > containerWidth
 	overflowChecked.value = true
@@ -203,16 +205,6 @@ function getViewRoute(view: IProjectView) {
 	}
 }
 
-// Segmented control: one hairline-outlined strip, mono labels, the active
-// segment filled with the accent. Square corners on purpose.
-.switch-view {
-	display: inline-flex;
-	align-items: stretch;
-	background: var(--wm-surface);
-	border: 1px solid var(--wm-line-strong);
-	block-size: var(--wm-control-height);
-}
-
 .switch-view--hidden {
 	position: absolute;
 	visibility: hidden;
@@ -239,41 +231,6 @@ function getViewRoute(view: IProjectView) {
 
 .dropdown-icon {
 	font-size: var(--wm-text-2xs);
-}
-
-.switch-view-button {
-	@include mono-label;
-
-	display: inline-flex;
-	align-items: center;
-	white-space: nowrap;
-	padding-inline: var(--wm-space-3);
-	color: var(--wm-text-secondary);
-	background: transparent;
-	transition:
-		background-color var(--wm-duration) var(--wm-ease),
-		color var(--wm-duration) var(--wm-ease);
-
-	&:not(:first-child) {
-		border-inline-start: 1px solid var(--wm-line);
-	}
-
-	&:hover {
-		background: var(--wm-surface-hover);
-		color: var(--wm-text);
-	}
-
-	// The ring is drawn by the global :focus-visible rule; lifting the segment
-	// keeps it from being painted over by the neighbouring segments.
-	&:focus-visible {
-		position: relative;
-		z-index: 1;
-	}
-
-	&.is-active {
-		color: var(--wm-on-accent);
-		background: var(--wm-accent);
-	}
 }
 
 // FIXME: this should be in notification and set via a prop

@@ -5,7 +5,7 @@
 	>
 		<div
 			ref="taskRoot"
-			:class="{'is-loading': taskService.loading}"
+			:class="{'is-loading': taskService.loading, 'is-readonly': readonly}"
 			class="task loader-container single-task"
 			tabindex="-1"
 			:data-is-overdue="isOverdue || undefined"
@@ -13,6 +13,7 @@
 			@keyup.enter="openTaskDetail"
 		>
 			<span
+				v-if="!readonly"
 				v-tooltip="!canMarkAsDone ? $t('task.readOnlyCheckbox') : ''"
 				class="is-inline-flex is-align-items-center"
 			>
@@ -59,7 +60,16 @@
 						class="pis-2 mie-1"
 					/>
 
-					<TaskGlanceTooltip :task="task">
+					<span
+						v-if="readonly"
+						class="task-link"
+					>
+						{{ task.title }}
+					</span>
+					<TaskGlanceTooltip
+						v-else
+						:task="task"
+					>
 						<RouterLink
 							ref="taskLinkRef"
 							:to="taskDetailRoute"
@@ -84,20 +94,31 @@
 					:inline="true"
 				/>
 
+				<time
+					v-if="readonly && task.dueDate && +new Date(task.dueDate) > 0"
+					:datetime="formatISO(task.dueDate)"
+					class="dueDate is-italic"
+				>
+					– {{ $t('task.detail.due', {at: dueDateFormatted}) }}
+				</time>
 				<Popup
-					v-if="+new Date(task.dueDate) > 0"
+					v-else-if="task.dueDate && +new Date(task.dueDate) > 0"
 				>
 					<template #trigger="{toggle, isOpen}">
 						<BaseButton
 							v-tooltip="formatDateLong(task.dueDate)"
 							class="dueDate"
 							@click.prevent.stop="toggle()"
-						>	
+						>
+							<OverdueIndicator
+								v-if="isOverdue"
+								class="mie-1"
+							/>
 							<time
 								:datetime="formatISO(task.dueDate)"
 								:aria-expanded="isOpen ? 'true' : 'false'"
 							>
-								– {{ $t('task.detail.due', {at: dueDateFormatted}) }}
+								{{ $t('task.detail.due', {at: dueDateFormatted}) }}
 							</time>
 						</BaseButton>
 					</template>
@@ -163,6 +184,7 @@
 			</RouterLink>
 
 			<BaseButton
+				v-if="!readonly"
 				:class="{'is-favorite': task.isFavorite}"
 				class="favorite"
 				@click.stop="toggleFavorite"
@@ -179,7 +201,7 @@
 			</BaseButton>
 			<slot />
 		</div>
-		<template v-if="typeof task.relatedTasks?.subtask !== 'undefined'">
+		<template v-if="expandsSubtasks && typeof task.relatedTasks?.subtask !== 'undefined'">
 			<template v-for="subtask in task.relatedTasks.subtask">
 				<template v-if="getTaskById(subtask.id)">
 					<single-task-in-project
@@ -196,8 +218,16 @@
 	</div>
 </template>
 
+<script lang="ts">
+import type {InjectionKey} from 'vue'
+
+// Subtasks form a DAG: without dedup, a task shared by several parents renders once per path.
+const MAX_SUBTASK_DEPTH = 5
+const subtaskTreeKey: InjectionKey<{expandedTaskIds: Set<number>, depth: number}> = Symbol('subtaskTree')
+</script>
+
 <script setup lang="ts">
-import {ref, watch, shallowReactive, onMounted, computed} from 'vue'
+import {ref, watch, shallowReactive, onMounted, onBeforeUnmount, computed, inject, provide} from 'vue'
 import {useI18n} from 'vue-i18n'
 
 import TaskModel, {getHexColor} from '@/models/task'
@@ -207,6 +237,7 @@ import PriorityLabel from '@/components/tasks/partials/PriorityLabel.vue'
 import Labels from '@/components/tasks/partials/Labels.vue'
 import TaskGlanceTooltip from '@/components/tasks/partials/TaskGlanceTooltip.vue'
 import DeferTask from '@/components/tasks/partials/DeferTask.vue'
+import OverdueIndicator from '@/components/tasks/partials/OverdueIndicator.vue'
 import ChecklistSummary from '@/components/tasks/partials/ChecklistSummary.vue'
 import CommentCount from '@/components/tasks/partials/CommentCount.vue'
 
@@ -238,12 +269,15 @@ const props = withDefaults(defineProps<{
 	disabled?: boolean,
 	canMarkAsDone?: boolean,
 	allTasks?: ITask[],
+	// No links or inline edits, e.g. for trashed tasks
+	readonly?: boolean,
 }>(), {
 	isArchived: false,
 	showProject: false,
 	disabled: false,
 	canMarkAsDone: true,
 	allTasks: () => [],
+	readonly: false,
 })
 
 const emit = defineEmits<{
@@ -262,6 +296,25 @@ const {t} = useI18n({useScope: 'global'})
 
 const taskService = shallowReactive(new TaskService())
 const task = ref<ITask>(new TaskModel())
+
+const parentTree = inject(subtaskTreeKey, null)
+const subtaskTree = {
+	expandedTaskIds: parentTree?.expandedTaskIds ?? new Set<number>(),
+	depth: parentTree ? parentTree.depth + 1 : 0,
+}
+provide(subtaskTreeKey, subtaskTree)
+
+// Claimed once at setup, which runs in depth-first render order, so re-renders keep the first occurrence expanded.
+function claimSubtaskExpansion(taskId: number | undefined): boolean {
+	if (taskId === undefined || subtaskTree.depth >= MAX_SUBTASK_DEPTH || subtaskTree.expandedTaskIds.has(taskId)) {
+		return false
+	}
+	subtaskTree.expandedTaskIds.add(taskId)
+	onBeforeUnmount(() => subtaskTree.expandedTaskIds.delete(taskId))
+	return true
+}
+// eslint-disable-next-line vue/no-setup-props-reactivity-loss -- claim is intentionally fixed per instance
+const expandsSubtasks = claimSubtaskExpansion(props.theTask.id)
 
 const isRepeating = computed(() => task.value.repeatAfter.amount > 0 || (task.value.repeatAfter.amount === 0 && task.value.repeatMode === TASK_REPEAT_MODES.REPEAT_MODE_MONTH))
 
@@ -390,6 +443,9 @@ function hasTextSelected() {
 }
 
 function openTaskDetail(event: MouseEvent | KeyboardEvent) {
+	if (props.readonly) {
+		return
+	}
 	if (event.target instanceof HTMLElement) {
 		const isInteractiveElement = event.target.closest('a, button, label, input[type="checkbox"], .favorite, [role="button"]')
 		if (isInteractiveElement || hasTextSelected()) {
@@ -430,6 +486,10 @@ defineExpose({
 	&:has(*:focus-visible), &:focus, &:focus-within {
 		background-color: var(--wm-accent-wash);
 		border-inline-start-color: var(--wm-accent);
+	}
+
+	&.is-readonly {
+		cursor: default;
 	}
 
 	&:has(*:focus-visible), &:focus {

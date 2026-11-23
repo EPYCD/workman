@@ -263,6 +263,18 @@ func TestHumaTask_ReadByIndex(t *testing.T) {
 		rec := get("2", "1")
 		assert.Equal(t, http.StatusForbidden, rec.Code, "body: %s", rec.Body.String())
 	})
+	t.Run("Trashed task returns ErrTaskIsInTrash", func(t *testing.T) {
+		rec := get("1", "34")
+		assert.Equal(t, http.StatusNotFound, rec.Code, "body: %s", rec.Body.String())
+		assert.Contains(t, rec.Body.String(), fmt.Sprintf(`"code":%d`, models.ErrCodeTaskIsInTrash))
+
+		// Upstream answers 403 here from its index-alias fallback, which Workman doesn't have.
+		// Workman's guarantee: an outsider sees the same 404 as for a missing index, no trash details.
+		rec = humaRequest(t, h.e, http.MethodGet, "/api/v2/projects/1/tasks/by-index/34", "", humaTokenFor(t, &testuser13), "")
+		assert.Equal(t, http.StatusNotFound, rec.Code, "body: %s", rec.Body.String())
+		assert.Contains(t, rec.Body.String(), fmt.Sprintf(`"code":%d`, models.ErrCodeTaskDoesNotExist))
+		assert.NotContains(t, rec.Body.String(), "deleted")
+	})
 }
 
 // TestHumaTask_Expand asserts the expand query param populates the extra,

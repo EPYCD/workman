@@ -115,9 +115,10 @@
 				"create": "Bot Erstellen",
 				"enable": "Aktivieren",
 				"badge": "Bot",
+				"badgeOwner": "Bot, erstellt von {user}",
 				"delete": {
 					"header": "Diesen Bot-Account löschen",
-					"text1": "Bist Du sicher, dass Du den Bot-Account \"{username}\" löschen möchtest?",
+					"text1": "Bist du sicher, dass du den Bot-Account „{username}“ löschen möchtest?",
 					"text2": "Dies ist unwiderruflich. Alle API-Token dieses Bots werden widerrufen."
 				}
 			},
@@ -218,6 +219,25 @@
 				"confirmSuccess": "Du hast die Zwei-Faktor-Authentifizierung erfolgreich eingerichtet!",
 				"disableSuccess": "Die Zwei-Faktor-Authentifizierung wurde erfolgreich deaktiviert."
 			},
+			"linkedAccounts": {
+				"title": "Verknüpfte Accounts",
+				"description": "Verknüpfe einen Account bei einem Identitätsanbieter, um dich zusätzlich zu deinem Passwort damit anzumelden.",
+				"provider": "Anbieter",
+				"linkedAt": "Verknüpft am",
+				"none": "Du hast noch keine Accounts verknüpft.",
+				"link": "{provider} verknüpfen",
+				"unlink": "Verknüpfung aufheben",
+				"unlinkHeader": "Verknüpfung mit {provider} aufheben",
+				"unlinkText": "Du wirst dich danach nicht mehr mit diesem Account anmelden können. Gib zur Bestätigung dein Passwort ein.",
+				"linkSuccess": "Der Account wurde erfolgreich verknüpft.",
+				"unlinkSuccess": "Die Verknüpfung des Accounts wurde erfolgreich aufgehoben.",
+				"confirmTitle": "{provider} mit deinem Account verknüpfen",
+				"confirmAccount": "Zu verknüpfender Account:",
+				"confirmText": "Gib dein Passwort ein, um diesen Account bei {provider} mit deinem Vikunja-Account zu verknüpfen. Danach kannst du dich mit beiden anmelden.",
+				"confirm": "Account verknüpfen",
+				"noSession": "Du musst angemeldet sein, um einen Account zu verknüpfen. Melde dich mit deinem Passwort an und starte die Verknüpfung erneut in den Einstellungen.",
+				"backToLinkedAccounts": "Zurück zu den verknüpften Accounts"
+			},
 			"caldav": {
 				"title": "CalDAV",
 				"howTo": "Du kannst Workman mit CalDAV-Clients verbinden, um alle Aufgaben mit verschiedenen Clients anzuzeigen und zu verwalten. Gebe dazu diese URL in deinen Client ein:",
@@ -295,7 +315,7 @@
 				},
 				"delete": {
 					"header": "Dieses Token löschen",
-					"text1": "Bist Du sicher, dass Du das Token \"{token}\" löschen möchtest?",
+					"text1": "Bist du sicher, dass du das Token „{token}“ löschen möchtest?",
 					"text2": "Dies wird den Zugriff des Tokens auf alle Anwendungen oder Integrationen aufheben. Du kannst dies nicht rückgängig machen."
 				},
 				"attributes": {
@@ -307,7 +327,7 @@
 			},
 			"sessions": {
 				"title": "Sitzungen",
-				"description": "Das sind alle Geräte, die gerade in deinem Konto eingeloggt sind. Du kannst jede Sitzung widerrufen, um das jeweilige Gerät abzumelden. Es kann bis zu 10 Minuten dauern, bis der Widerruf vollständig wirksam wird.",
+				"description": "Das sind alle Geräte, die gerade in deinem Account eingeloggt sind. Du kannst jede Sitzung widerrufen, um das jeweilige Gerät abzumelden. Es kann bis zu 10 Minuten dauern, bis der Widerruf vollständig wirksam wird.",
 				"deviceInfo": "Gerät",
 				"ipAddress": "IP Adresse",
 				"lastActive": "Zuletzt aktiv",
@@ -324,7 +344,7 @@
 			"title": "Lösche deinen Workman-Account",
 			"text1": "Das Löschen deines Accounts ist dauerhaft und unwiderruflich. Alle Projekte, Aufgaben und zugehörige Daten werden gelöscht.",
 			"text2": "Zum Fortfahren gib bitte dein Passwort ein. Du erhältst eine E-Mail mit weiteren Anweisungen.",
-			"text3": "Klicks zum Fortfahren auf den Button unten. Du erhältst eine E-Mail mit weiteren Anweisungen.",
+			"text3": "Klicke zum Fortfahren auf den Button unten. Du erhältst eine E-Mail mit weiteren Anweisungen.",
 			"confirm": "Meinen Account löschen",
 			"requestSuccess": "Die Anfrage war erfolgreich. Du erhältst eine E-Mail mit weiteren Anweisungen.",
 			"passwordRequired": "Bitte gib dein Passwort ein.",
@@ -394,12 +414,15 @@
 		"delete": {
 			"title": "„{project}“ löschen",
 			"header": "Dieses Projekt löschen",
-			"text1": "Bist du sicher, dass du dieses Projekt und alle seine Inhalte löschen willst?",
-			"text2": "Dies umfasst alle Aufgaben und kann NICHT rückgängig gemacht werden!",
-			"success": "Das Projekt wurde erfolgreich gelöscht.",
-			"tasksToDelete": "Dies löscht unwiderruflich ca. {count} Aufgaben.",
-			"tasksAndChildProjectsToDelete": "Dies löscht unwiderruflich ca. {tasks} Aufgaben und {projects} Projekte.",
-			"noTasksToDelete": "Dieses Projekt enthält keine Aufgaben, es kann sicher gelöscht werden."
+			"success": "Das Projekt wurde in den Papierkorb verschoben.",
+			"toTrash": "Verschiebt dieses Projekt und {tasks} in den Papierkorb. Sie werden nach {days} Tagen endgültig gelöscht.",
+			"toTrashFallback": "Verschiebt dieses Projekt mit allem, was darin ist, in den Papierkorb. Es wird nach {days} Tagen endgültig gelöscht.",
+			"toTrashWithSubProjects": "Verschiebt dieses Projekt, {subProjects} und {tasks} in den Papierkorb. Sie werden nach {days} Tagen endgültig gelöscht.",
+			"subProjects": "{count} Unterprojekt | {count} Unterprojekte",
+			"tasks": "keine Aufgaben | {count} Aufgabe | {count} Aufgaben",
+			"timeEntries": "Erfasste Zeiten ({entries} von {people}) bleiben erhalten, werden aber nach {days} Tagen vom Projekt gelöst.",
+			"timeEntryCount": "{count} Zeiteintrag | {count} Zeiteinträge",
+			"people": "{count} Person | {count} Personen"
 		},
 		"duplicate": {
 			"title": "Dupliziere dieses Projekt",
@@ -516,19 +539,19 @@
 		"kanban": {
 			"title": "Kanban",
 			"limit": "Limit: {limit}",
-			"doneBucket": "Erledigt Spalte",
+			"doneBucket": "Erledigt-Spalte",
 			"doneBucketHint": "Alle Aufgaben, die in diese Spalte verschoben werden, werden automatisch als erledigt markiert.",
-			"doneBucketHintExtended": "Alle Aufgaben, die in die Erledigt Spalte verschoben wurden, werden automatisch als erledigt markiert. Aufgaben, die in einer anderen Spalte als Erledigt markiert wurden, werden auch in diese Spalte verschoben.",
-			"doneBucketSavedSuccess": "Erledigt Spalte gespeichert.",
+			"doneBucketHintExtended": "Alle Aufgaben, die in die Erledigt-Spalte verschoben werden, werden automatisch als erledigt markiert. Aufgaben, die anderswo als erledigt markiert werden, werden ebenfalls in diese Spalte verschoben.",
+			"doneBucketSavedSuccess": "Erledigt-Spalte gespeichert.",
 			"defaultBucket": "Standard-Spalte",
 			"defaultBucketHint": "Wenn Aufgaben ohne Angabe einer Spalte erstellt werden, werden sie zu dieser Spalte hinzugefügt.",
 			"defaultBucketSavedSuccess": "Die Standardspalte wurde erfolgreich gespeichert.",
 			"deleteLast": "Du kannst die letzte Spalte nicht entfernen.",
-			"addTaskPlaceholder": "Gebe einen Aufgabentitel ein …",
+			"addTaskPlaceholder": "Gib einen Aufgabentitel ein …",
 			"addTask": "Eine Aufgabe hinzufügen",
 			"addAnotherTask": "Weitere Aufgabe hinzufügen",
-			"addBucket": "Bucket erstellen",
-			"addBucketPlaceholder": "Gebe einen Spaltentitel ein…",
+			"addBucket": "Spalte erstellen",
+			"addBucketPlaceholder": "Gib einen Spaltentitel ein …",
 			"deleteHeaderBucket": "Spalte löschen",
 			"deleteBucketText1": "Bist du sicher, dass du diese Spalte löschen möchtest?",
 			"deleteBucketText2": "Dies löscht keine Aufgaben, sondern verschiebt sie in die Standardspalte.",
@@ -536,8 +559,9 @@
 			"bucketTitleSavedSuccess": "Der Spaltenname wurde erfolgreich gespeichert.",
 			"bucketLimitSavedSuccess": "Das Spaltenlimit wurde erfolgreich gespeichert.",
 			"collapse": "Spalte einklappen",
-			"bucketLimitReached": "Du hast das Limit dieses Buckets erreicht. Entferne Aufgaben oder erhöhe das Limit, um neue Aufgaben hinzuzufügen.",
-			"bucketOptions": "Bucketoptionen"
+			"bucketLimitReached": "Du hast das Limit dieser Spalte erreicht. Entferne Aufgaben oder erhöhe das Limit, um neue Aufgaben hinzuzufügen.",
+			"bucketLimitReachedShort": "Limit erreicht",
+			"bucketOptions": "Spaltenoptionen"
 		},
 		"pseudo": {
 			"favorites": {
@@ -551,6 +575,7 @@
 			"events": "Ereignisse",
 			"eventsHint": "Wähle alle Ereignisse aus, für die dieser Webhook Updates erhalten soll (innerhalb des aktuellen Projekts).",
 			"mustSelectEvents": "Du musst mindestens ein Ereignis auswählen.",
+			"selectAllEvents": "Alle auswählen",
 			"delete": "Diesen Webhook löschen",
 			"deleteText": "Bist du sicher, dass du diesen Webhook löschen möchtest? Externe Ziele werden nicht mehr über Ereignisse benachrichtigt.",
 			"deleteSuccess": "Der Webhook wurde erfolgreich gelöscht.",
@@ -567,8 +592,8 @@
 			"title": "Titel",
 			"actions": "Aktionen",
 			"kind": "Ansicht",
-			"bucketConfigMode": "Bucket-Konfigurationsmodus",
-			"bucketConfig": "Bucket-Konfiguration",
+			"bucketConfigMode": "Spaltenkonfigurationsmodus",
+			"bucketConfig": "Spaltenkonfiguration",
 			"bucketConfigManual": "Manuell",
 			"filter": "Filter",
 			"create": "Ansicht erstellen",
@@ -657,8 +682,8 @@
 					"priorityEqual": "Findet Aufgaben mit Priorität Level 4",
 					"dueDatePast": "Findet Aufgaben mit einem Fälligkeitsdatum in der Vergangenheit",
 					"undoneHighPriority": "Findet Aufgaben, die nicht erledigt sind und Priorität Level mindestens 3 haben",
-					"assigneesIn": "Findet Aufgaben, die entweder \"user1\" oder \"user2\" zugewiesen sind",
-					"createdByEqual": "Findet Aufgaben, die von \"user1\" erstellt wurden",
+					"assigneesIn": "Findet Aufgaben, die entweder „user1“ oder „user2“ zugewiesen sind",
+					"createdByEqual": "Findet Aufgaben, die von „user1“ erstellt wurden",
 					"priorityOneOrTwoPastDue": "Findet Aufgaben mit Priorität Level 1 oder 2 und einem Fälligkeitsdatum in der Vergangenheit"
 				}
 			}
@@ -712,7 +737,7 @@
 			"start": "Import starten"
 		},
 		"planka": {
-			"apiKeyHelp": "Ein API-Schlüssel muss für dein Konto von einem Planka-Administrator erstellt werden. Das Token aus dem Browser zu kopieren funktioniert nicht.",
+			"apiKeyHelp": "Ein API-Schlüssel muss für deinen Account von einem Planka-Administrator erstellt werden. Das Token aus dem Browser zu kopieren funktioniert nicht.",
 			"passwordHelp": "Funktioniert nur für lokale Planka-Konten ohne Zwei-Faktor-Authentifizierung, die sich mindestens einmal bei Planka angemeldet haben. Konten mit Single Sign-On benötigen einen API-Schlüssel."
 		},
 		"csv": {
@@ -900,7 +925,34 @@
 				"fixTables": "Tabellen reparieren"
 			},
 			"emoji": {
-				"empty": "Kein Emojis gefunden"
+				"empty": "Keine Emojis gefunden"
+			}
+		},
+		"emojiPicker": {
+			"title": "Emoji-Auswahl",
+			"search": "Emoji suchen",
+			"skinTone": "Hautfarbe",
+			"categories": "Emoji-Kategorien",
+			"results": "Suchergebnisse",
+			"loadError": "Emojis konnten nicht geladen werden.",
+			"tones": {
+				"light": "Hell",
+				"mediumLight": "Mittelhell",
+				"medium": "Mittel",
+				"mediumDark": "Mitteldunkel",
+				"dark": "Dunkel"
+			},
+			"groups": {
+				"recent": "Zuletzt verwendet",
+				"smileys": "Smileys & Emotionen",
+				"people": "Menschen & Körper",
+				"nature": "Tiere & Natur",
+				"food": "Essen & Trinken",
+				"travel": "Reisen & Orte",
+				"activities": "Aktivitäten",
+				"objects": "Objekte",
+				"symbols": "Symbole",
+				"flags": "Flaggen"
 			}
 		},
 		"multiselect": {
@@ -1016,6 +1068,7 @@
 			"removeDueDate": "Fälligkeitsdatum entfernen",
 			"removeStartDate": "Startdatum entfernen",
 			"removeEndDate": "Enddatum entfernen",
+			"removeColor": "Farbe entfernen",
 			"removeRepeat": "Wiederholungsintervall entfernen",
 			"removeAssignee": "{user} als Zugewiesenen entfernen",
 			"move": "Aufgabe in ein anderes Projekt verschieben",
@@ -1026,45 +1079,34 @@
 			"doneAt": "Erledigt {0}",
 			"titleRequired": "Der Aufgabentitel darf nicht leer sein.",
 			"updateSuccess": "Die Aufgabe wurde erfolgreich gespeichert.",
-			"deleteSuccess": "Die Aufgabe wurde erfolgreich gelöscht.",
+			"deleteSuccess": "Die Aufgabe wurde in den Papierkorb verschoben.",
 			"duplicateSuccess": "Die Aufgabe wurde erfolgreich dupliziert.",
 			"noBucket": "Keine Spalte",
-			"bucketSelectLabel": "Kanban bucket: {bucket}",
+			"bucketSelectLabel": "Kanban-Spalte: {bucket}",
 			"bucketChangedSuccess": "Die Spalte der Aufgabe wurde erfolgreich geändert.",
 			"belongsToProject": "Diese Aufgabe gehört zum Projekt „{project}“",
 			"back": "Zurück zum Projekt",
 			"due": "Fällig {at}",
+			"overdue": "Überfällig",
 			"closeTaskDetail": "Aufgabendetails schließen",
 			"title": "Aufgabendetails",
-			"markAsDone": "'{task}' als erledigt markieren",
+			"markAsDone": "„{task}“ als erledigt markieren",
 			"scrollToBottom": "Nach unten scrollen",
-			"organization": "Organisation",
-			"management": "Verwaltung",
-			"dateAndTime": "Datum und Uhrzeit",
-			"delete": {
-				"header": "Diese Aufgabe löschen",
-				"text1": "Willst du diese Aufgabe wirklich löschen?",
-				"text2": "Dies wird auch alle Anhänge, Erinnerungen und Verknüpfungen, die zu dieser Aufgabe gehören löschen und kann nicht rückgängig gemacht werden!"
+			"moreActions": "Weitere Aktionen",
+			"properties": {
+				"dueDate": "Fälligkeitsdatum",
+				"startDate": "Startdatum",
+				"endDate": "Enddatum"
 			},
 			"actions": {
-				"assign": "Benutzer:in zuweisen",
-				"label": "Label hinzufügen",
-				"priority": "Priorität setzen",
-				"dueDate": "Fälligkeitsdatum setzen",
-				"startDate": "Startdatum setzen",
-				"endDate": "Enddatum setzen",
-				"reminders": "Erinnerungen setzen",
-				"repeatAfter": "Wiederholung setzen",
-				"percentDone": "Fortschritt einstellen",
 				"attachments": "Anhänge hinzufügen",
 				"timeTracking": "Zeit erfassen",
-				"relatedTasks": "Beziehung hinzufügen",
+				"relatedTasks": "Aufgabenbeziehung hinzufügen",
 				"moveProject": "Verschieben",
 				"duplicate": "Duplizieren",
-				"color": "Farbe setzen",
 				"delete": "Löschen",
 				"favorite": "Zu Favoriten hinzufügen",
-				"unfavorite": "Aus Favoriten entfernen"
+				"unfavorite": "Von Favoriten entfernen"
 			}
 		},
 		"attributes": {
@@ -1155,6 +1197,7 @@
 		},
 		"assignee": {
 			"placeholder": "Tippe, um jemanden zuzuweisen …",
+			"placeholderMore": "Weitere Person zuweisen …",
 			"selectPlaceholder": "Diese:n Benutzer:in zuweisen",
 			"assignSuccess": "Der:die Benutzer:in wurde erfolgreich zugewiesen.",
 			"unassignSuccess": "Benutzer:innenzuweisung aufgehoben."
@@ -1225,11 +1268,18 @@
 			"everyDay": "Jeden Tag",
 			"everyWeek": "Jede Woche",
 			"every30d": "Alle 30 Tage",
+			"summary": {
+				"minutes": "Jede Minute | Alle {count} Minuten",
+				"hours": "Jede Stunde | Alle {count} Stunden",
+				"days": "Jeden Tag | Alle {count} Tage",
+				"weeks": "Jede Woche | Alle {count} Wochen",
+				"fromCurrentDate": "{interval}, ab Fertigstellungsdatum"
+			},
 			"mode": "Wiederholungsmodus",
 			"monthly": "Monatlich",
 			"fromCurrentDate": "Ab Fertigstellungsdatum",
 			"each": "Alle",
-			"specifyAmount": "Gib einen Anzahl an …",
+			"specifyAmount": "Gib eine Anzahl an …",
 			"hours": "Stunden",
 			"days": "Tage",
 			"weeks": "Wochen",
@@ -1257,9 +1307,9 @@
 			"dateWeekday": "jeder Wochentag, wird das nächste Datum mit diesem Tag verwenden",
 			"dateCurrentYear": "wird das laufende Jahr nutzen",
 			"dateNth": "wird den {day}. des aktuellen Monats verwenden",
-			"dateTime": "Kombiniere eines der Datumsformate mit \"{time}\" (oder {timePM}), um eine Zeit festzulegen.",
+			"dateTime": "Kombiniere eines der Datumsformate mit „{time}“ (oder {timePM}), um eine Zeit festzulegen.",
 			"repeats": "Wiederholende Aufgaben",
-			"repeatsDescription": "Um eine Aufgabe als Wiederholung in einem Intervall festzulegen, füge einfach '{suffix}' dem Aufgabentext hinzu. Der Betrag muss eine Zahl sein und kann weggelassen werden, um nur den Typ zu verwenden (siehe Beispiele)."
+			"repeatsDescription": "Um eine Aufgabe als Wiederholung in einem Intervall festzulegen, füge einfach „{suffix}“ dem Aufgabentext hinzu. Der Betrag muss eine Zahl sein und kann weggelassen werden, um nur den Typ zu verwenden (siehe Beispiele)."
 		}
 	},
 	"team": {
@@ -1397,7 +1447,7 @@
 		"urlPlaceholder": "z.B. https://localhost:3456",
 		"change": "ändern",
 		"use": "Verwende die Workman-Installation unter „{0}“",
-		"error": "Workman Installation unter \"{domain}\" konnte nicht gefunden oder verwendet werden. Bitte prüfe, ob die URL das richtige Format hat und direkt darauf zugreifen kannst und versuche es erneut.",
+		"error": "Die Workman-Installation unter „{domain}“ konnte nicht gefunden oder verwendet werden. Bitte prüfe, ob die URL das richtige Format hat und du sie direkt aufrufen kannst, und versuche es erneut.",
 		"success": "Verwende die Workman-Installation unter „{domain}“.",
 		"urlRequired": "Eine Url ist erforderlich."
 	},
@@ -1473,18 +1523,18 @@
 		"1016": "Diese:r Benutzer:in verwendet TOTP nicht.",
 		"1017": "Falscher TOTP Code.",
 		"1018": "Die Avatareinstellungen sind falsch.",
-		"1019": "Der OpenID-Anbieter hat keine E-Mail-Adresse angegeben. Bitte stelle sicher, dass der OpenID-Anbieter öffentlich eine E-Mail-Adresse für dein Konto angibt.",
+		"1019": "Der OpenID-Anbieter hat keine E-Mail-Adresse angegeben. Bitte stelle sicher, dass der OpenID-Anbieter öffentlich eine E-Mail-Adresse für deinen Account angibt.",
 		"1020": "Dieser Account ist deaktiviert. Überprüfe deine E-Mails oder frage deinen Administrator.",
 		"1021": "Dieser Account wird von einem Drittanbieter verwaltet.",
 		"1022": "Der Anmeldename darf keine Leerzeichen enthalten.",
 		"1023": "Du kannst das nicht als Linkfreigabe tun.",
 		"1024": "Ungültige Claim-Daten für das Feld {field} des Typs {type}.",
-		"1025": "Die Zeitzone '{timezone}' ist ungültig. Bitte wähle eine gültige Zeitzone aus der Liste.",
+		"1025": "Die Zeitzone „{timezone}“ ist ungültig. Bitte wähle eine gültige Zeitzone aus der Liste.",
 		"1035": "Es gibt keine ausstehende E-Mail-Änderung, die bestätigt werden muss.",
 		"1036": "Bitte warte eine Minute, bevor du eine weitere Bestätigungs-E-Mail anforderst.",
 		"2001": "Die ID kann nicht leer oder 0 sein.",
 		"2002": "Ein Teil der Anfragedaten ist ungültig.",
-		"2003": "Die Zeitzone '{timezone}' ist ungültig.",
+		"2003": "Die Zeitzone „{timezone}“ ist ungültig.",
 		"3001": "Das Projekt ist nicht vorhanden.",
 		"3004": "Um das zu machen, benötigst du eine Leseberechtigung für dieses Projekt.",
 		"3005": "Der Projekttitel darf nicht leer sein.",
@@ -1545,9 +1595,9 @@
 		"14001": "Das API-Token ist ungültig.",
 		"14002": "Die Berechtigung {permission} der Gruppe {group} ist ungültig.",
 		"14005": "Eine Migration von diesem Dienst läuft bereits. Bitte warte, bis sie fertig ist.",
-		"14201": "Planka hat die angegebenen Anmeldedaten abgelehnt. Überprüfe die URL und den API-Schlüssel oder den Benutzernamen und das Passwort.",
-		"14202": "Das Planka-Konto erfordert einen zusätzlichen Anmeldeschritt (Zwei-Faktor-Code oder das Akzeptieren der Nutzungsbedingungen). Melde dich einmal im Browser bei Planka an oder verwende stattdessen einen API-Schlüssel anstelle von Benutzername und Passwort.",
-		"14203": "Eine Planka-URL und entweder ein API-Schlüssel oder Benutzername und Passwort sind erforderlich.",
+		"14201": "Planka hat die angegebenen Anmeldedaten abgelehnt. Überprüfe die URL und den API-Schlüssel oder den Anmeldenamen und das Passwort.",
+		"14202": "Der Planka-Account erfordert einen zusätzlichen Anmeldeschritt (Zwei-Faktor-Code oder das Akzeptieren der Nutzungsbedingungen). Melde dich einmal im Browser bei Planka an oder verwende einen API-Schlüssel anstelle von Anmeldename und Passwort.",
+		"14203": "Eine Planka-URL und entweder ein API-Schlüssel oder Anmeldename und Passwort sind erforderlich.",
 		"14204": "Die Planka-API konnte unter der angegebenen URL nicht erreicht werden. Prüfe die URL und ob Workman die Instanz erreichen kann.",
 		"error": "Fehler",
 		"success": "Erfolgreich",
@@ -1556,7 +1606,18 @@
 		"10007": "Eine Projektansicht kann maximal 100 Spalten haben.",
 		"14018": "Der Import enthält mehr Elemente als erlaubt sind.",
 		"14019": "Der Migrationsstatus ist ungültig oder abgelaufen. Bitte starte die Migration erneut.",
-		"14205": "Die Planka-URL zeigt auf eine private oder lokale Netzwerkadresse, die Vikunja standardmäßig blockiert. Ein Admin kann das ändern, indem outgoingrequests.allownonroutableips eingeschaltet werden."
+		"14020": "Ein Projekt im Import hat mehr Ansichten als erlaubt.",
+		"14041": "Spalte {column} ist mehr als einmal zugeordnet. Ordne jede Spalte nur einem Attribut zu.",
+		"14042": "Zeile {row} der CSV-Datei hat mehr als {max} Labels.",
+		"14205": "Die Planka-URL zeigt auf eine private oder lokale Netzwerkadresse, die Vikunja standardmäßig blockiert. Ein Admin kann das ändern, indem outgoingrequests.allownonroutableips eingeschaltet werden.",
+		"15002": "Dieser Account beim Identitätsanbieter ist bereits mit einem anderen Vikunja-Account verknüpft.",
+		"15003": "Du hast bereits einen Account dieses Anbieters verknüpft. Hebe zuerst dessen Verknüpfung auf.",
+		"15004": "Dieser verknüpfte Account existiert nicht.",
+		"3020": "Diese Projekthierarchie ist zu groß, um unter das gewählte übergeordnete Projekt verschoben zu werden.",
+		"4041": "Diese Aufgabenhierarchie ist zu groß, um weitere Unteraufgaben oder übergeordnete Aufgaben hinzuzufügen.",
+		"3018": "Dieses Projekt ist im Papierkorb. Stelle es zuerst wieder her.",
+		"3019": "Das übergeordnete Projekt ist im Papierkorb. Stelle es zuerst wieder her.",
+		"4040": "Diese Aufgabe ist im Papierkorb."
 	},
 	"about": {
 		"title": "Über",
@@ -1567,8 +1628,10 @@
 	"timeTracking": {
 		"title": "Zeiterfassung",
 		"stop": "Timer stoppen",
+		"running": "Timer läuft",
 		"logTime": "Zeit buchen",
 		"editEntry": "Eintrag bearbeiten",
+		"commentLabel": "Kommentar",
 		"form": {
 			"task": "Aufgabe",
 			"taskSearch": "Nach einer Aufgabe suchen…",
@@ -1576,7 +1639,9 @@
 			"save": "Speichern",
 			"startTimer": "Timer starten",
 			"update": "Eintrag aktualisieren",
-			"smartFill": "Vom letzten Eintrag ausfüllen"
+			"smartFill": "Vom letzten Eintrag ausfüllen",
+			"endsSpanningEntriesAt": "Wenn du diesen Timer startest, beendet den überlappenden Timer um {time}.",
+			"privateHint": "Ohne Projekt oder Aufgabe kannst nur du diesen Eintrag sehen."
 		},
 		"list": {
 			"emptyTask": "Noch keine Zeit für diese Aufgabe getrackt.",
@@ -1588,7 +1653,8 @@
 		"browse": {
 			"selectRange": "Bereich wählen",
 			"userSearch": "Nach einer:m Benutzer:in suchen…"
-		}
+		},
+		"noProject": "Kein Projekt"
 	},
 	"time": {
 		"units": {
@@ -1654,7 +1720,7 @@
 			"confirmDeleteTitle": "Account löschen?",
 			"confirmDeleteIntro": "Wie soll der Account {username} gelöscht werden?",
 			"deleteModeScheduled": "Löschung planen",
-			"deleteModeScheduledHelp": "\"Löschung planen\" sendet eine Bestätigungs-E-Mail, analog zu einer selbst ausgelösten Kontolöschung.",
+			"deleteModeScheduledHelp": "„Löschung planen“ sendet eine Bestätigungs-E-Mail, analog zu einer selbst ausgelösten Account-Löschung.",
 			"deleteModeNow": "Jetzt löschen",
 			"deleteModeNowHelp": "Sofort-Löschen entfernt den Account und seine Daten umgehend. Dies kann nicht rückgängig gemacht werden."
 		},
@@ -1665,5 +1731,55 @@
 			"reassignedSuccess": "Projekteigentümer:in neu zugewiesen.",
 			"newOwnerLabel": "Neu:e Eigentümer:in"
 		}
+	},
+	"trash": {
+		"restoreSuccess": "Die Aufgabe wurde wiederhergestellt.",
+		"deleteForeverSuccess": "Die Aufgabe wurde endgültig gelöscht.",
+		"emptySuccess": "Der Papierkorb wurde geleert.",
+		"title": "Papierkorb",
+		"restore": "Wiederherstellen",
+		"deleteForever": "Endgültig löschen",
+		"empty": "Papierkorb leeren",
+		"noTasks": "Im Papierkorb sind keine Aufgaben.",
+		"deletedBy": "Von {user} {since} gelöscht",
+		"deleted": "{since} gelöscht",
+		"daysLeft": "Wird heute endgültig gelöscht | Wird in {count} Tag endgültig gelöscht | Wird in {count} Tagen endgültig gelöscht",
+		"deleteForeverModal": {
+			"header": "Diese Aufgabe endgültig löschen",
+			"text": "Damit wird „{task}“ mit allen Kommentaren, Anhängen, Erinnerungen und Verknüpfungen endgültig gelöscht. Die Zeiteinträge bleiben beim Projekt. Dies kann nicht rückgängig gemacht werden."
+		},
+		"emptyModal": {
+			"text": "Es gibt keine Aufgaben, die du löschen kannst. | Damit wird 1 Aufgabe endgültig gelöscht. Dies kann nicht rückgängig gemacht werden. | Damit werden {count} Aufgaben endgültig gelöscht. Dies kann nicht rückgängig gemacht werden.",
+			"byOthers": "Eine davon wurde von jemand anderem in den Papierkorb verschoben. | {count} davon wurden von anderen Personen in den Papierkorb verschoben.",
+			"includeOthers": "Auch Aufgaben löschen, die andere in den Papierkorb verschoben haben"
+		},
+		"open": "Papierkorb öffnen",
+		"taskInTrash": "Diese Aufgabe ist im Papierkorb. Sie wurde {since} gelöscht.",
+		"taskInTrashBy": "Diese Aufgabe ist im Papierkorb. {user} hat sie {since} gelöscht.",
+		"taskInTrashTitle": "Aufgabe im Papierkorb",
+		"inTrash": "Im Papierkorb",
+		"daysLeftShort": "wird heute endgültig gelöscht | noch {count} Tag | noch {count} Tage",
+		"deletedByYou": "Von dir {since} gelöscht",
+		"taskInTrashByYou": "Diese Aufgabe ist im Papierkorb. Du hast sie {since} gelöscht.",
+		"tabs": {
+			"label": "Bereiche des Papierkorbs"
+		},
+		"restoreProjectSuccess": "Das Projekt wurde wiederhergestellt.",
+		"restoreParentProject": "Übergeordnetes Projekt wiederherstellen",
+		"deleteProjectForeverSuccess": "Das Projekt wurde endgültig gelöscht.",
+		"noProjects": "Im Papierkorb sind keine Projekte.",
+		"subProjects": "+{count} Unterprojekt | +{count} Unterprojekte",
+		"deleteProjectForeverModal": {
+			"header": "Dieses Projekt endgültig löschen",
+			"text": "Damit wird „{project}“ mit allen Unterprojekten, Aufgaben, Ansichten und Freigaben endgültig gelöscht. Zeiteinträge bleiben ohne Projekt bei den Personen, die sie erfasst haben. Dies kann nicht rückgängig gemacht werden."
+		},
+		"emptyProjectsModal": {
+			"text": "Es gibt keine Projekte, die du löschen kannst. | Damit wird 1 Projekt mit allem, was darin ist, endgültig gelöscht. Dies kann nicht rückgängig gemacht werden. | Damit werden {count} Projekte mit allem, was darin ist, endgültig gelöscht. Dies kann nicht rückgängig gemacht werden.",
+			"byOthers": "Eines davon wurde von jemand anderem in den Papierkorb verschoben. | {count} davon wurden von anderen Personen in den Papierkorb verschoben.",
+			"includeOthers": "Auch Projekte löschen, die andere in den Papierkorb verschoben haben"
+		},
+		"projectInTrash": "Dieses Projekt ist im Papierkorb. Es wurde {since} gelöscht.",
+		"projectInTrashBy": "Dieses Projekt ist im Papierkorb. {user} hat es {since} gelöscht.",
+		"projectInTrashByYou": "Dieses Projekt ist im Papierkorb. Du hast es {since} gelöscht."
 	}
 }

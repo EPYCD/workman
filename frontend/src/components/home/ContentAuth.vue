@@ -263,7 +263,7 @@ onBeforeUnmount(() => {
 
 .keyboard-shortcuts-button {
 	position: fixed;
-	inset-block-end: var(--wm-space-4);
+	inset-block-end: calc(var(--bottom-banners-end-height, 0px) + var(--wm-space-4));
 	inset-inline-end: var(--wm-space-4);
 	z-index: 4500; // The modal has a z-index of 4000
 	display: flex;

@@ -1,17 +1,15 @@
 <script setup lang="ts">
 import type {IReactionPerEntity, ReactionKind} from '@/modelTypes/IReaction'
-import {VuemojiPicker} from 'vuemoji-picker'
+import EmojiPicker from '@/components/input/EmojiPicker.vue'
 import ReactionService from '@/services/reactions'
 import ReactionModel from '@/models/reaction'
 import BaseButton from '@/components/base/BaseButton.vue'
 import type {IUser} from '@/modelTypes/IUser'
 import {getDisplayName} from '@/models/user'
 import {useI18n} from 'vue-i18n'
-import {nextTick, onBeforeUnmount, onMounted, ref} from 'vue'
-import CustomTransition from '@/components/misc/CustomTransition.vue'
-import {closeWhenClickedOutside} from '@/helpers/closeWhenClickedOutside'
+import {nextTick, ref, useId} from 'vue'
+import Popup from '@/components/misc/Popup.vue'
 import {useAuthStore} from '@/stores/auth'
-import {useColorScheme} from '@/composables/useColorScheme'
 
 const props = withDefaults(defineProps<{
 	entityKind: ReactionKind,
@@ -26,7 +24,6 @@ const model = defineModel<IReactionPerEntity>()
 const authStore = useAuthStore()
 const {t} = useI18n()
 const reactionService = new ReactionService()
-const {isDark} = useColorScheme()
 
 async function addReaction(value: string) {
 	const reaction = new ReactionModel({
@@ -35,7 +32,7 @@ async function addReaction(value: string) {
 		value,
 	})
 	await reactionService.create(reaction)
-	showEmojiPicker.value = false
+	if (showEmojiPicker.value) closeEmojiPicker()
 
 	if (typeof model.value === 'undefined') {
 		model.value = {}
@@ -58,7 +55,7 @@ async function removeReaction(value: string) {
 		value,
 	})
 	await reactionService.delete(reaction)
-	showEmojiPicker.value = false
+	if (showEmojiPicker.value) closeEmojiPicker()
 
 	if (!model.value) return
 
@@ -96,35 +93,13 @@ function getReactionTooltip(users: IUser[], value: string | number) {
 }
 
 const showEmojiPicker = ref(false)
-const emojiPickerRef = ref<InstanceType<typeof VuemojiPicker> | null>(null)
+const emojiPickerButtonRef = ref<InstanceType<typeof BaseButton> | null>(null)
+const pickerId = useId()
 
-function hideEmojiPicker(e: MouseEvent) {
-	if (showEmojiPicker.value && emojiPickerRef.value?.$el) {
-		closeWhenClickedOutside(e, emojiPickerRef.value.$el, () => showEmojiPicker.value = false)
-	}
-}
-
-onMounted(() => document.addEventListener('click', hideEmojiPicker))
-onBeforeUnmount(() => document.removeEventListener('click', hideEmojiPicker))
-
-const emojiPickerButtonRef = ref<HTMLElement | null>(null)
-const reactionContainerRef = ref<HTMLElement | null>(null)
-const emojiPickerPosition = ref()
-
-function toggleEmojiPicker() {
-	if (!showEmojiPicker.value) {
-		const rect = emojiPickerButtonRef.value?.$el?.getBoundingClientRect()
-		const container = reactionContainerRef.value?.getBoundingClientRect()
-		if (rect && container) {
-			const left = rect.left - container.left + rect.width
-
-			emojiPickerPosition.value = {
-				'inset-inline-start': left === 0 ? undefined : left,
-			}
-		}
-	}
-
-	nextTick(() => showEmojiPicker.value = !showEmojiPicker.value)
+async function closeEmojiPicker() {
+	showEmojiPicker.value = false
+	await nextTick()
+	emojiPickerButtonRef.value?.$el?.focus()
 }
 
 function hasCurrentUserReactedWithEmoji(value: string | number): boolean {
@@ -144,10 +119,7 @@ async function toggleReaction(value: string | number) {
 </script>
 
 <template>
-	<div
-		ref="reactionContainerRef"
-		class="reactions"
-	>
+	<div class="reactions">
 		<BaseButton
 			v-for="(users, value) in (model as IReactionPerEntity)"
 			:key="'button' + value"
@@ -159,27 +131,32 @@ async function toggleReaction(value: string | number) {
 		>
 			{{ value }} {{ users.length }}
 		</BaseButton>
-		<BaseButton
+		<Popup
 			v-if="!disabled"
-			ref="emojiPickerButtonRef"
-			v-tooltip="$t('reaction.add')"
-			class="reaction-button"
-			@click.stop="toggleEmojiPicker"
+			v-model:open="showEmojiPicker"
 		>
-			<span class="is-sr-only">{{ $t('reaction.add') }}</span>
-			<Icon :icon="['far', 'face-laugh']" />
-		</BaseButton>
-		<CustomTransition name="fade">
-			<VuemojiPicker
-				v-if="showEmojiPicker"
-				ref="emojiPickerRef"
-				class="emoji-picker"
-				:style="{'inset-inline-start': emojiPickerPosition?.left + 'px'}"
-				data-source="/emojis.json"
-				:is-dark="isDark"
-				@emojiClick="detail => addReaction(detail.unicode)"
-			/>
-		</CustomTransition>
+			<template #trigger="{toggle}">
+				<BaseButton
+					ref="emojiPickerButtonRef"
+					v-tooltip="$t('reaction.add')"
+					class="reaction-button"
+					:aria-expanded="showEmojiPicker"
+					:aria-controls="showEmojiPicker ? pickerId : undefined"
+					@click.stop="toggle"
+				>
+					<span class="is-sr-only">{{ $t('reaction.add') }}</span>
+					<Icon :icon="['far', 'face-laugh']" />
+				</BaseButton>
+			</template>
+			<template #content>
+				<EmojiPicker
+					v-if="showEmojiPicker"
+					:id="pickerId"
+					@select="addReaction"
+					@keydown.esc.stop.prevent="closeEmojiPicker"
+				/>
+			</template>
+		</Popup>
 	</div>
 </template>
 
@@ -199,9 +176,12 @@ async function toggleReaction(value: string | number) {
 	}
 }
 
-.emoji-picker {
-	position: absolute;
-	z-index: 99;
-	margin-block-start: .5rem;
+// Workman's Popup has no anchor: it opens below the reactions row.
+.reactions {
+	position: relative;
+
+	:deep(.popup) {
+		inset-block-start: 100%;
+	}
 }
 </style>

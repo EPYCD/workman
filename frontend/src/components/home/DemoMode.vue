@@ -29,10 +29,7 @@ const enabled = computed(() => configStore.demoModeEnabled && !hide.value)
 
 <style scoped lang="scss">
 .demo-mode-banner {
-	position: fixed;
-	inset-block-end: 0;
-	inset-inline: 0;
-	z-index: 100;
+	position: relative;
 	padding: var(--wm-space-2);
 	text-align: center;
 	font-size: var(--wm-text-sm);

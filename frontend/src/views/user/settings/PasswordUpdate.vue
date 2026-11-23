@@ -11,8 +11,8 @@
 					for="password"
 				>{{ $t('user.settings.newPassword') }}</label>
 				<Password
+					v-model="passwordUpdate.newPassword"
 					:validate-initially="true"
-					@update:modelValue="v => passwordUpdate.newPassword = v"
 					@submit="updatePassword"
 				/>
 			</div>

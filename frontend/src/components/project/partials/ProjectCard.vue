@@ -62,6 +62,7 @@ import BaseButton from '@/components/base/BaseButton.vue'
 import {useProjectBackground} from '@/composables/useProjectBackground'
 import {useProjectStore} from '@/stores/projects'
 import {getProjectTitle} from '@/helpers/getProjectTitle'
+import {htmlToPreviewText} from '@/helpers/htmlToPreviewText'
 
 const props = defineProps<{
 	project: IProject,
@@ -71,9 +72,7 @@ const {background, blurHashUrl} = useProjectBackground(() => props.project)
 
 const projectStore = useProjectStore()
 
-const textOnlyDescription = computed(() => {
-	return props.project.description ? props.project.description.replace(/<[^>]*>/g, '') : ''
-})
+const textOnlyDescription = computed(() => htmlToPreviewText(props.project.description ?? ''))
 </script>
 
 <style lang="scss" scoped>

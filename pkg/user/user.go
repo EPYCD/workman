@@ -102,7 +102,7 @@ type User struct {
 	IsAdmin bool `xorm:"not null default false" json:"-"`
 
 	AvatarProvider string `xorm:"varchar(255) null" json:"-"`
-	AvatarFileID   int64  `xorm:"null" json:"-"`
+	AvatarFileID   int64  `xorm:"null index" json:"-"`
 
 	// Issuer and Subject contain the issuer and subject from the source the user authenticated with.
 	Issuer  string `xorm:"text null" json:"-"`
@@ -121,13 +121,16 @@ type User struct {
 	Language   string `xorm:"varchar(50) null" json:"-" valid:"language"`
 	Timezone   string `xorm:"varchar(255) null" json:"-"`
 
+	// The user who created this bot. Only set for bot users.
+	BotOwner *User `xorm:"-" json:"bot_owner,omitempty" readOnly:"true" doc:"The user who created this bot. Only set for bot users."`
+
 	DeletionScheduledAt      time.Time `xorm:"datetime null" json:"-"`
 	DeletionLastReminderSent time.Time `xorm:"datetime null" json:"-"`
 
 	FrontendSettings   interface{}    `xorm:"json null" json:"-"`
 	ExtraSettingsLinks map[string]any `xorm:"json null" json:"-"`
 
-	ExportFileID int64 `xorm:"bigint null" json:"-"`
+	ExportFileID int64 `xorm:"bigint null index" json:"-"`
 
 	// A timestamp when this task was created. You cannot change this value.
 	Created time.Time `xorm:"created not null" json:"created" readOnly:"true" doc:"A timestamp when this user was created. You cannot change this value."`
@@ -158,7 +161,12 @@ func (u *User) RouteForDB() int64 {
 	return u.ID
 }
 
-func (u *User) ShouldNotify(sessions ...*xorm.Session) (bool, error) {
+// deliveredToLockedAccount marks notifications a locked account needs to recover from the lock.
+type deliveredToLockedAccount interface {
+	deliveredToLockedAccount()
+}
+
+func (u *User) ShouldNotify(notification notifications.Notification, sessions ...*xorm.Session) (bool, error) {
 	if u.IsBot() {
 		return false, nil
 	}
@@ -170,6 +178,9 @@ func (u *User) ShouldNotify(sessions ...*xorm.Session) (bool, error) {
 		defer s.Close()
 	}
 	_, err := getUser(s, &User{ID: u.ID}, true)
+	if _, recovery := notification.(deliveredToLockedAccount); recovery && IsErrAccountLocked(err) {
+		return true, nil
+	}
 	if IsErrUserStatusError(err) {
 		return false, nil
 	}
@@ -261,7 +272,14 @@ func GetUserByID(s *xorm.Session, id int64) (user *User, err error) {
 		return &User{}, ErrUserDoesNotExist{}
 	}
 
-	return getUser(s, &User{ID: id}, false)
+	u, err := getUser(s, &User{ID: id}, false)
+	if err != nil {
+		return u, err
+	}
+	if err := AttachBotOwners(s, u); err != nil {
+		return &User{}, err
+	}
+	return u, nil
 }
 
 // Unlike GetUserByID, also refuses accounts awaiting email confirmation, which is how admins freeze one.
@@ -348,7 +366,50 @@ func GetUsersByIDs(s *xorm.Session, userIDs []int64) (users map[int64]*User, err
 		return users, nil
 	}
 
-	return GetUsersByCond(s, builder.In("id", userIDs))
+	users, err = GetUsersByCond(s, builder.In("id", userIDs))
+	if err != nil {
+		return nil, err
+	}
+
+	bots := make([]*User, 0, len(users))
+	for _, u := range users {
+		bots = append(bots, u)
+	}
+	if err := AttachBotOwners(s, bots...); err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
+// AttachBotOwners sets BotOwner on every bot in users, loading all owners in one query.
+// Owners skip the disabled/locked gate: a bot's activity stays visible after its owner is disabled.
+func AttachBotOwners(s *xorm.Session, users ...*User) error {
+	ownerIDs := make([]int64, 0, len(users))
+	for _, u := range users {
+		if u.IsBot() && u.BotOwner == nil {
+			ownerIDs = append(ownerIDs, u.BotOwnerID)
+		}
+	}
+	if len(ownerIDs) == 0 {
+		return nil
+	}
+
+	owners, err := GetUsersByCond(s, builder.In("id", ownerIDs))
+	if err != nil {
+		return err
+	}
+
+	copies := make(map[int64]*User, len(owners))
+	for id, o := range owners {
+		copied := *o
+		copies[id] = &copied
+	}
+	for _, u := range users {
+		if u.IsBot() && u.BotOwner == nil {
+			u.BotOwner = copies[u.BotOwnerID]
+		}
+	}
+	return nil
 }
 
 func GetUsersByCond(s *xorm.Session, cond builder.Cond) (users map[int64]*User, err error) {
@@ -415,7 +476,7 @@ func getUserByUsernameOrEmail(s *xorm.Session, usernameOrEmail string) (u *User,
 }
 
 // CheckUserCredentials checks user credentials. The context carries request
-// metadata for the audit trail of failed attempts.
+// metadata for the audit trail of failed attempts. Rolls s back on a wrong password.
 func CheckUserCredentials(ctx context.Context, s *xorm.Session, u *Login) (*User, error) {
 	// Check if we have any credentials
 	if u.Password == "" || u.Username == "" {
@@ -439,12 +500,7 @@ func CheckUserCredentials(ctx context.Context, s *xorm.Session, u *Login) (*User
 		return &User{}, ErrEmailNotConfirmed{UserID: user.ID}
 	}
 
-	// Check the users password
-	err = CheckUserPassword(user, u.Password)
-	if err != nil {
-		if IsErrWrongUsernameOrPassword(err) {
-			handleFailedPassword(ctx, user)
-		}
+	if err := CheckUserPasswordCountingFailures(ctx, s, user, u.Password); err != nil {
 		return user, err
 	}
 
@@ -463,9 +519,26 @@ func (u *User) IsLocalUser() bool {
 	return u.Issuer == IssuerLocal
 }
 
+// CheckUserPasswordCountingFailures is CheckUserPassword, but a wrong password
+// counts toward the account lockout. It rolls back s on a wrong password.
+func CheckUserPasswordCountingFailures(ctx context.Context, s *xorm.Session, user *User, password string) error {
+	err := CheckUserPassword(user, password)
+	if IsErrWrongUsernameOrPassword(err) {
+		// Rolled back first: a lockout needs its own write lock on SQLite.
+		_ = s.Rollback()
+		handleFailedPassword(ctx, user)
+	}
+	return err
+}
+
 func handleFailedPassword(ctx context.Context, user *User) {
 	if err := events.DispatchWithContext(ctx, &LoginFailedEvent{User: user}); err != nil {
 		log.Errorf("Could not dispatch login failed event: %s", err)
+	}
+
+	// Already locked or disabled: counting on would resend the lockout mail.
+	if user.Status != StatusActive {
+		return
 	}
 
 	key := user.GetFailedPasswordAttemptsKey()
@@ -480,23 +553,21 @@ func handleFailedPassword(ctx context.Context, user *User) {
 		log.Errorf("Could not get failed password attempts for user %d: %s", user.ID, err)
 		return
 	}
-	if attempts != 3 {
+	if attempts == 3 {
+		err = notifications.Notify(user, &FailedLoginAttemptNotification{
+			User: user,
+		})
+		if err != nil {
+			log.Errorf("Could not send invalid password mail to user: %s", err)
+		}
 		return
 	}
 
-	err = notifications.Notify(user, &FailedLoginAttemptNotification{
-		User: user,
-	})
-	if err != nil {
-		log.Errorf("Could not send invalid password mail to user: %s", err)
+	if attempts < maxFailedLoginAttempts {
 		return
 	}
 
-	err = keyvalue.Del(key)
-	if err != nil {
-		log.Errorf("Could not remove failed password attempts: %s", err)
-		return
-	}
+	lockAccount(user, key, &AccountLockedAfterInvalidPasswordNotification{User: user})
 }
 
 // CheckUserPassword checks and verifies a user's password. The user object needs to contain the hashed password from the database.

@@ -1,4 +1,5 @@
 import {test, expect} from '../../support/fixtures'
+import {clickTaskAction} from '../../support/taskDetail'
 import {ProjectFactory} from '../../factories/project'
 import {TaskFactory} from '../../factories/task'
 import {TaskScopeFactory} from '../../factories/task_scopes'
@@ -63,7 +64,7 @@ test.describe('Task scope', () => {
 		await page.goto(`/tasks/${tasks[0].id}`)
 
 		await expect(page.locator('.task-view .task-scope')).not.toBeVisible()
-		await page.locator('.task-view .action-buttons .button').filter({hasText: 'Set Scope'}).click()
+		await clickTaskAction(page, 'Set Scope')
 		await expect(page.locator('.task-view .task-scope')).toBeVisible()
 	})
 })
