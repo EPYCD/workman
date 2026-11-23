@@ -29,6 +29,16 @@
 			>
 				{{ $t('filters.attributes.includeNulls') }}
 			</FancyCheckbox>
+			<FancyCheckbox
+				v-if="showIncludeSubprojectsToggle"
+				v-model="includeSubprojects"
+				v-tooltip="includeSubprojectsFromView
+					? $t('project.views.includeSubprojectsFromView')
+					: $t('project.views.includeSubprojectsHint')"
+				:disabled="includeSubprojectsFromView"
+			>
+				{{ $t('project.views.includeSubprojects') }}
+			</FancyCheckbox>
 		</div>
 
 		<FilterInputDocs />
@@ -40,7 +50,7 @@
 			<XButton
 				variant="secondary"
 				class="mie-2"
-				:disabled="filterQuery === ''"
+				:disabled="filterQuery === '' && !overridesView"
 				@click.prevent.stop="clearFiltersAndEmit"
 			>
 				{{ $t('filters.clear') }}
@@ -62,6 +72,7 @@ import {useRoute} from 'vue-router'
 import type {TaskFilterParams} from '@/services/taskCollection'
 import {useLabels} from '@/composables/useLabels'
 import {useProjectStore} from '@/stores/projects'
+import {useIncludeSubprojects, type IncludeSubprojectsView} from '@/composables/useIncludeSubprojects'
 import {
 	hasFilterQuery,
 	transformFilterStringForApi,
@@ -76,12 +87,15 @@ const props = withDefaults(defineProps<{
 	changeImmediately?: boolean,
 	filterFromView?: string,
 	showClose?: boolean,
+	// The project view these filters apply to, if any.
+	view?: IncludeSubprojectsView,
 }>(), {
 	hasTitle: false,
 	hasFooter: true,
 	changeImmediately: false,
 	filterFromView: undefined,
 	showClose: false,
+	view: undefined,
 })
 
 const emit = defineEmits<{
@@ -116,6 +130,15 @@ watch(
 		filterQuery.value = filter || s
 	},
 )
+
+// A subproject's task has no bucket in a kanban view, so the api ignores the flag there.
+const showIncludeSubprojectsToggle = computed(() => (props.view?.projectId ?? 0) > 0 && props.view?.viewKind !== 'kanban')
+
+const {
+	includeSubprojects,
+	fromView: includeSubprojectsFromView,
+	overridesView,
+} = useIncludeSubprojects(() => props.view)
 
 const {getLabelByExactTitle} = useLabels()
 const projectStore = useProjectStore()
@@ -186,6 +209,9 @@ function changeAndEmitButton() {
 
 function clearFiltersAndEmit() {
 	filterQuery.value = ''
+	if (overridesView.value) {
+		includeSubprojects.value = false
+	}
 	changeAndEmitButton()
 }
 

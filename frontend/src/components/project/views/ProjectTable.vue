@@ -448,6 +448,7 @@ const taskList = useTaskList(
 	() => props.viewId, 
 	sortBy.value,
 	() => ['comment_count', 'is_unread'],
+	() => projectStore.projects[props.projectId]?.views.find(v => v.id === props.viewId),
 )
 
 const {

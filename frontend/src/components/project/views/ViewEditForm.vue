@@ -28,7 +28,7 @@ const emit = defineEmits<{
 	'cancel': [],
 }>()
 
-type LoadedProjectView = Omit<IProjectView, 'filter'> & {filter: IFilters}
+type LoadedProjectView = Omit<IProjectView, 'filter'> & {filter: IFilters & {include_subprojects: boolean}}
 
 const view = ref<LoadedProjectView>()
 
@@ -78,7 +78,10 @@ const transformFilterFromApi = (filterInput?: IFilters): IFilters => {
 function transformViewFromApi(modelValue: IProjectView): LoadedProjectView {
 	return {
 		...modelValue,
-		filter: transformFilterFromApi(modelValue.filter),
+		filter: {
+			...transformFilterFromApi(modelValue.filter),
+			include_subprojects: modelValue.filter?.include_subprojects ?? false,
+		},
 		bucketConfiguration: modelValue.bucketConfiguration.map(bc => ({
 			title: bc.title,
 			filter: transformFilterFromApi(bc.filter),
@@ -173,7 +176,10 @@ function save() {
 
 	emit('update:modelValue', {
 		...view.value,
-		filter: transformFilterForApi(view.value.filter),
+		filter: {
+			...transformFilterForApi(view.value.filter),
+			include_subprojects: view.value.filter.include_subprojects ?? false,
+		},
 		bucketConfiguration: view.value.bucketConfiguration.map(bc => ({
 			title: bc.title,
 			filter: transformFilterForApi(bc.filter),
@@ -250,6 +256,18 @@ function handleBubbleSave() {
 
 		<div class="is-size-7 mbe-2">
 			<FilterInputDocs />
+		</div>
+
+		<div
+			v-if="view.viewKind !== 'kanban'"
+			class="field mbe-3"
+		>
+			<FancyCheckbox
+				v-model="view.filter.include_subprojects"
+				v-tooltip="$t('project.views.includeSubprojectsHint')"
+			>
+				{{ $t('project.views.includeSubprojects') }}
+			</FancyCheckbox>
 		</div>
 
 		<div class="field mbe-3">

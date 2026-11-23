@@ -38,6 +38,17 @@
 					>
 						{{ $t('task.show.noDates') }}
 					</FancyCheckbox>
+					<FancyCheckbox
+						v-if="filters.projectId > 0"
+						v-model="includeSubprojects"
+						v-tooltip="includeSubprojectsFromView
+							? $t('project.views.includeSubprojectsFromView')
+							: $t('project.views.includeSubprojectsHint')"
+						:disabled="includeSubprojectsFromView"
+						is-block
+					>
+						{{ $t('project.views.includeSubprojects') }}
+					</FancyCheckbox>
 				</div>
 			</Card>
 
@@ -101,6 +112,7 @@ const baseStore = useBaseStore()
 const canWrite = computed(() => baseStore.currentProject?.maxPermission > PERMISSIONS.READ)
 
 const {route, viewId} = toRefs(props)
+const currentView = computed(() => baseStore.currentProject?.views.find(v => v.id === props.viewId))
 const {
 	filters,
 	hasDefaultFilters,
@@ -109,7 +121,9 @@ const {
 	isLoading,
 	addTask,
 	updateTask,
-} = useGanttFilters(route, viewId)
+	includeSubprojects,
+	includeSubprojectsFromView,
+} = useGanttFilters(route, viewId, () => currentView.value)
 
 const DEFAULT_DATE_RANGE_DAYS = 7
 
