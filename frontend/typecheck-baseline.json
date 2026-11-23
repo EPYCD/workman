@@ -171,7 +171,8 @@
 		"src/views/user/settings/BotUsers.vue": 2,
 		"src/views/user/settings/Caldav.vue": 4,
 		"src/views/user/settings/DataExport.vue": 4,
-		"src/views/user/settings/General.vue": 18,
+		"src/views/user/settings/General.vue": 6,
+		"src/views/user/settings/GeneralSettingsForm.vue": 12,
 		"src/views/user/settings/TOTP.vue": 2,
 		"src/views/user/settings/Webhooks.vue": 2
 	}

@@ -136,6 +136,14 @@
 						</template>
 					</FormField>
 
+					<XButton
+						class="admin-users__settings-link"
+						variant="secondary"
+						:to="{name: 'admin.userSettings', params: {id: detailTarget.id}}"
+					>
+						{{ $t('admin.users.editSettings') }}
+					</XButton>
+
 					<template v-if="!detailTarget.authProvider">
 						<FormField :label="$t('admin.users.newPasswordLabel')">
 							<template #default="{id}">
@@ -628,5 +636,9 @@ onMounted(load)
 	font-family: monospace;
 	font-size: 0.85rem;
 	word-break: break-all;
+}
+
+.admin-users__settings-link {
+	margin-block-end: var(--wm-space-4);
 }
 </style>
