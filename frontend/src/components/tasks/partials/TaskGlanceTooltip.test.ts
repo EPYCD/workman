@@ -16,7 +16,7 @@ vi.mock('@floating-ui/dom', () => ({
 
 // The real one reaches into the auth store for the date display setting.
 vi.mock('@/helpers/time/formatDate', () => ({
-	formatDisplayDate: (date: string) => date,
+	formatDisplayDate: (date: Date) => date.toISOString(),
 }))
 
 import TaskGlanceTooltip from './TaskGlanceTooltip.vue'
@@ -194,7 +194,7 @@ describe('TaskGlanceTooltip.vue — dates', () => {
 	})
 
 	async function showTooltipFor(taskProps: Partial<typeof task>) {
-		const wrapper = mountTooltip({...task, ...taskProps})
+		const wrapper = mountTooltip(new TaskModel({...task, ...taskProps}))
 		await wrapper.get('.task-glance-trigger').trigger('mouseenter')
 		await advancePastDelay()
 		return wrapper
@@ -202,8 +202,8 @@ describe('TaskGlanceTooltip.vue — dates', () => {
 
 	it('does not show an update for a task that was never changed', async () => {
 		const wrapper = await showTooltipFor({
-			created: '2024-01-01T10:00:00Z',
-			updated: '2024-01-01T10:00:00Z',
+			created: new Date('2024-01-01T10:00:00Z'),
+			updated: new Date('2024-01-01T10:00:00Z'),
 		})
 
 		expect(document.body.querySelector('.task-glance-created')).not.toBeNull()
@@ -214,11 +214,11 @@ describe('TaskGlanceTooltip.vue — dates', () => {
 
 	it('shows the update of a changed task', async () => {
 		const wrapper = await showTooltipFor({
-			created: '2024-01-01T10:00:00Z',
-			updated: '2024-01-05T10:00:00Z',
+			created: new Date('2024-01-01T10:00:00Z'),
+			updated: new Date('2024-01-05T10:00:00Z'),
 		})
 
-		expect(document.body.querySelector('.task-glance-updated')?.textContent).toContain('2024-01-05T10:00:00Z')
+		expect(document.body.querySelector('.task-glance-updated')?.textContent).toContain('2024-01-05T10:00:00.000Z')
 
 		wrapper.unmount()
 	})

@@ -273,7 +273,7 @@ watch(suggestionsRequested, async requested => {
 		return
 	}
 	try {
-		const result = await taskCollectionService.getAll({projectId: props.projectId}, {
+		const result = await taskCollectionService.getAll({projectId: props.projectId} as unknown as ITask, {
 			sort_by: ['updated'],
 			order_by: ['desc'],
 			// One extra so dropping the current task still leaves a full list.

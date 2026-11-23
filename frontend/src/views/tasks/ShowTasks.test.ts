@@ -80,8 +80,10 @@ describe('Upcoming filters', () => {
 	it('sorts by due date, then priority, then newest first', async () => {
 		await mountUpcoming()
 		await flushPromises()
-		expect(lastQuery().sort_by).toEqual(['due_date', 'priority', 'id'])
-		expect(lastQuery().order_by).toEqual(['asc', 'desc', 'desc'])
+		expect(loadTasks).toHaveBeenLastCalledWith(expect.objectContaining({
+			sort_by: ['due_date', 'priority', 'id'],
+			order_by: ['asc', 'desc', 'desc'],
+		}), null)
 	})
 
 	it('does not reload tasks when sidebar settings change', async () => {
